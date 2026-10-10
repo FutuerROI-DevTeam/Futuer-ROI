@@ -233,7 +233,7 @@
       "bytes": 70493
     }
   ],
-  "fileMoveValidation": "check-doc-migration.ps1は本文範囲と見出しの検査。フォルダrenameの全30fileは別のtask検査で旧Git blob/移動先を照合し、READMEのrole/相対リンク以外の全文を保持する。",
+  "fileMoveValidation": "check-doc-migration.ps1は本文範囲と見出しの検査。フォルダrenameの全30fileは別のtask検査で旧Git blob/移動先を照合。READMEはrole/相対リンク/元時点の表示を明示変更し、旧全文を保持したうえで同repoの記録に基づく日付付きcounter補足を追記する。",
   "readmeAllowedReplacements": [
     {
       "from": "**Supporting Doc / Not a Source of Truth.**",
@@ -242,6 +242,11 @@
     {
       "from": "[アートボード対応表](../artboard-map.md)",
       "to": "[アートボード対応表](../../ui/artboard-map.md)"
+    },
+    {
+      "from": "- 元[screen-map.json](screen-map.json)の`observedChecks.interceptedNotForwarded`は`3`だが、ZIPに集計receiptや計算規則はなく、対象操作・再実行分の扱いを特定できない。これを503注入全体の回数やmutationだけの件数と解釈しない。元mapの値は改変せず保持し、上記5種類の確認とは集計範囲を対応付けない。",
+      "to": "- **元ZIP受領時点の記録（2026-10-10）**：元[screen-map.json](screen-map.json)の`observedChecks.interceptedNotForwarded`は`3`だが、ZIPに集計receiptや計算規則はなく、対象操作・再実行分の扱いを特定できない。これを503注入全体の回数やmutationだけの件数と解釈しない。元mapの値は改変せず保持し、上記5種類の確認とは集計範囲を対応付けない。 [定義確定後の追記](#2026-10-10-旧f106の503集計定義確認後追記)を参照。"
     }
-  ]
+  ],
+  "readmeAppendixHeading": "## 2026-10-10 旧f106の503集計定義（確認後追記）"
 }

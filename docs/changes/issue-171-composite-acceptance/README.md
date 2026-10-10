@@ -16,7 +16,7 @@ Cの最終集約は25成功記録（重複1を除く24種類）・実API変更10
 
 - 昨日は実UI作成Goalの開始日を専用DBで2日前へ調整したfixture。DONE11補完→未送信訂正cancel（PUT0、入口focus）→DONE12訂正を実PUT200で確認し、今日SKIPPEDを保持。製品UIから開始日を遡る操作や、保存済み記録をUNKNOWNへ削除する操作の確認ではない。
 - 503は一覧GET・session GET・Today GET・Today PUT・Goal PATCHの5種類の確認で、ブラウザの`route.fulfill`により各確認で1回ずつ注入したとCが報告している。復帰は実API。Today保存は同じ17分の明示PUT200、Goal編集は明示PATCH200だけで回復。自動再送0は1.5秒の観測窓。本物の障害・commit後応答喪失・同owner再確認後の全失敗条件まで確認した意味ではない。
-- 元[screen-map.json](screen-map.json)の`observedChecks.interceptedNotForwarded`は`3`だが、ZIPに集計receiptや計算規則はなく、対象操作・再実行分の扱いを特定できない。これを503注入全体の回数やmutationだけの件数と解釈しない。元mapの値は改変せず保持し、上記5種類の確認とは集計範囲を対応付けない。
+- **元ZIP受領時点の記録（2026-10-10）**：元[screen-map.json](screen-map.json)の`observedChecks.interceptedNotForwarded`は`3`だが、ZIPに集計receiptや計算規則はなく、対象操作・再実行分の扱いを特定できない。これを503注入全体の回数やmutationだけの件数と解釈しない。元mapの値は改変せず保持し、上記5種類の確認とは集計範囲を対応付けない。 [定義確定後の追記](#2026-10-10-旧f106の503集計定義確認後追記)を参照。
 - C報告の合成HEAD検証はtypecheck/build、Web通常136 pass / browser-wrapper skip1（別実行18 browser成功）、Engine77、API198（失敗/skip0）、Foundation103 text / 1580 links / 7 ignore、生成後Vercel9件成功。本PRのFoundation/CI、各PR単体CIとは別の実行で、合成HEADのGitHub CI・公開deployは未実施。
 
 ## 画像と観測状態
@@ -59,3 +59,17 @@ Cの最終集約は25成功記録（重複1を除く24種類）・実API変更10
 原画全一覧と見た目/番号の1対1照合、R5、P-21の個別了承/最終UX、main基準commit単独での全画面・全状態390/1280は未完。通常記録由来のforecast、calculation/consistencyエラー、実期限切れ/429、一般router error、account/logout故障（PR216）、未記録昨日の量cancel、iOS/読み上げ/公開環境も今回未検証。A3/A4/A5やC2〜C7/D2/D3へ画像を推定で割り当てない。既存#146の別commitの検証を今回の実行へ合算しない。
 
 この部分受入で正式DecisionやIssueの全完了条件を変更しない。#171/#146等はOpenのまま、merge/deployとは別に追跡する。
+
+## 2026-10-10 旧f106の503集計定義（確認後追記）
+
+元ZIP受領時点の「集計定義は未確認」を、同じリポジトリの[PR216の検証欄](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/216)・[Issue83の追記](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/83)に記録されたCの定義で明確化する。ここでは旧f106の集計説明だけを引用し、別の合成6754dd9のEngine/API結果は本f106画面受入へ加算しない。
+
+| 集計 | 対象範囲 | Cの確定値 |
+| --- | --- | --- |
+| 元mapの`interceptedNotForwarded` | mutationのみ。GETを除外 | 3回（PUT2＋PATCH1） |
+| 全receiptの503注入 | 中断runを含むGET＋mutation | 8回（GET5＋mutation3） |
+| 完了した5種類の回復case | 一覧/session/Today GET、Today PUT、Goal PATCH。各1回 | 計5回（GET3＋mutation2） |
+
+記録済みの根拠は凍結`make-summary.cjs:4`と`acceptance-summary.json.mutationLedger.browserInterceptedWithoutServerWrite`。元mapの値はmutation集計を再利用している。実注入箇所は`extended-flow.cjs:30-32`、`extended-recovery.cjs:30-32`、`final-flow.cjs:37-38`で、Cは各receiptの`httpErrors`、成功caseの`hits=1`/`injected=1`と照合したと報告している。
+
+中断runの3回を成功回復へ加算しない。「3」は成功した5種類の全注入数ではない。すべてブラウザtransportの非転送注入であり、実サーバ/DB障害の証拠ではない。Cの記録は元証跡/ZIPを変更・再実行していない。本追記でも元mapの数値と28PNGを保持する。
