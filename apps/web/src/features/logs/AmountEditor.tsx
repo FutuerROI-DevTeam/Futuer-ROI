@@ -43,12 +43,15 @@ export function AmountEditor({
   const value = parseInteger(text);
   const valid = isRecordAmount(value);
   const hasDifferentAmount = valid && value !== sessionAmount;
+  // −／＋の刻み（1回の量に合わせたきりのよい幅。copy/amount.ts）
+  const stepSize = fmt.recordStep(sessionAmount);
+  const canDecrease = valid && stepRecordAmount(value, stepSize, -1) !== value;
   const step = (direction: -1 | 1) => {
     if (busy || !valid) return;
     // 同じevent batchの連打でも、前の更新後の入力値を基準にする。
     setText((previous) => {
       const current = parseInteger(previous);
-      return isRecordAmount(current) ? String(stepRecordAmount(current, sessionAmount, direction)) : previous;
+      return isRecordAmount(current) ? String(stepRecordAmount(current, stepSize, direction)) : previous;
     });
     setError(undefined);
   };
@@ -66,7 +69,7 @@ export function AmountEditor({
   return (
     <div className="fr-amount" ref={editor} role="group" aria-label={label} tabIndex={-1}>
       <div className="fr-amount__stepper">
-        <IconButton icon="minus" label={`${todayCopy.amountDecrease}（${fmt.record(sessionAmount)}ずつ）`} disabled={busy || !valid || value <= RECORD_AMOUNT_MIN} onClick={() => step(-1)} />
+        <IconButton icon="minus" label={`${todayCopy.amountDecrease}（${fmt.record(stepSize)}ずつ）`} disabled={busy || !canDecrease} onClick={() => step(-1)} />
         <Field id={id} label={label} error={error} help={help}>
           <NumberInput
             id={id}
@@ -97,7 +100,7 @@ export function AmountEditor({
             aria-describedby={hasDifferentAmount ? `${aria['aria-describedby']} ${id}-prediction-note` : aria['aria-describedby']}
           />
         </Field>
-        <IconButton icon="plus" label={`${todayCopy.amountIncrease}（${fmt.record(sessionAmount)}ずつ）`} disabled={busy || !valid || value >= RECORD_AMOUNT_MAX} onClick={() => step(1)} />
+        <IconButton icon="plus" label={`${todayCopy.amountIncrease}（${fmt.record(stepSize)}ずつ）`} disabled={busy || !valid || value >= RECORD_AMOUNT_MAX} onClick={() => step(1)} />
       </div>
       {hasDifferentAmount ? <p id={`${id}-prediction-note`} className="fr-amount__prediction-note">{todayCopy.amountPredictionNote(fmt.record(sessionAmount))}</p> : null}
       <div className="fr-amount__actions">

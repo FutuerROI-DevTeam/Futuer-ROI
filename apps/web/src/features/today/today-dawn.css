@@ -108,7 +108,14 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-progress__balance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; padding: 0; }
 .fr-page--today .fr-progress__balance dt { font-size: 12px; color: var(--fr-ink-2); }
 .fr-page--today .fr-progress__balance dd { margin: 2px 0 0; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
-.fr-page--today .fr-record__amount-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
+/*
+ * 量の一行（今日記録する量・−／＋・量を変更）は、320px幅でも1行に収めて下の帯を低く保つ（#199）。
+ * 文字が入りきらないときは「今日記録する量」の文字だけを折り返し、ボタンは折り返さない。
+ */
+.fr-page--today .fr-record__amount-controls { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 4px; width: 100%; }
+.fr-page--today .fr-record__amount-text { flex: 0 1 auto; min-width: 0; font-size: 14px; line-height: 1.4; text-align: left; }
+.fr-page--today .fr-record__amount-value { white-space: nowrap; }
+.fr-page--today .fr-record__amount-controls .fr-btn--text { flex-shrink: 0; padding: 0 var(--fr-space-1); }
 .fr-page--today .fr-record__amount-controls .fr-icon-btn { border: 1px solid var(--fr-line); border-radius: 12px; }
 .fr-page--today .fr-amount__prediction-note { font-size: 12px; line-height: 1.6; color: var(--fr-ink-2); }
 .fr-page--today .fr-outlook__assumption { font-size: 12px; }
