@@ -85,6 +85,12 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-yesterday { padding: 8px 0 0; border: 0; }
 .fr-page--today .fr-yesterday__head { flex-wrap: wrap; }
 .fr-page--today .fr-yesterday--summary { flex-wrap: wrap; }
+/*
+ * 昨日の2択は、下の今日の2択（幅いっぱい・64px・太い枠）と取り違えないよう、
+ * 文字の幅だけの小さなボタンを左に寄せて並べ、細い枠・小さめの文字にする（タップ領域44pxは保つ）。
+ */
+.fr-page--today .fr-yesterday__pair { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: var(--fr-space-2); }
+.fr-page--today .fr-yesterday__pair .fr-btn { flex: 0 1 auto; min-width: 7.5em; min-height: var(--fr-tap); padding: 0 var(--fr-space-4); font-size: 15px; border-width: 1px; background: transparent; }
 .fr-page--today .fr-first-day { padding: 0; }
 .fr-page--today .fr-today__details { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 24px; background: var(--fr-surface); }
 .fr-page--today .fr-today__right { display: flex; flex-direction: column; gap: 14px; margin: 0 16px; border: 0; border-radius: 0; overflow: visible; }

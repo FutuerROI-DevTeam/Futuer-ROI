@@ -46,6 +46,9 @@
 }
 
 .fr-icon-btn {
+  /* <a> で使っても（戻るリンクなど）ブラウザ既定の青・訪問済みの紫にせず、置いた場所の文字色にする */
+  color: inherit;
+  text-decoration: none;
   width: var(--fr-tap);
   height: var(--fr-tap);
   display: inline-flex;
