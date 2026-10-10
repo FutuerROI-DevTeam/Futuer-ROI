@@ -1,6 +1,6 @@
 # 合成HEADの画面・操作の部分受入
 
-**Supporting Doc / Not a Source of Truth.** [画面設計](../../design.md)・[アートボード対応表](../artboard-map.md)の比較材料。仕様の正本は[Product Spec](../../product-spec.md)・[Architecture](../../architecture.md)。
+**Supporting Artifact / Not a Source of Truth.** [画面設計](../../design.md)・[アートボード対応表](../../ui/artboard-map.md)の比較材料。仕様の正本は[Product Spec](../../product-spec.md)・[Architecture](../../architecture.md)。
 
 ## 実行対象と証拠の出所
 
