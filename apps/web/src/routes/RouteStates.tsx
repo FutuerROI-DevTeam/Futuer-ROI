@@ -1,6 +1,7 @@
 import { Link, useRouter, type ErrorComponentProps } from '@tanstack/react-router';
 import { SessionUnreachableError } from '../auth/session.ts';
 import { appCopy } from '../copy/app.ts';
+import { MainLandmark } from './MainLandmark.tsx';
 import { AppBar } from '../ui/components/AppBar.tsx';
 import { Button } from '../ui/components/Button.tsx';
 import { ErrorPanel } from '../ui/components/Notice.tsx';
@@ -16,7 +17,7 @@ const c = appCopy;
 /** 定義していないURL（ルーター全体の既定。デザイン B-notfound と同じ形）。 */
 export function NotFoundPage() {
   return (
-    <div className="fr fr-page">
+    <MainLandmark className="fr fr-page">
       <PageTitle title={c.notFound.title} />
       <AppBar title={c.name} />
       <section className="fr-route__top">
@@ -34,7 +35,7 @@ export function NotFoundPage() {
           {c.notFound.body}
         </ErrorPanel>
       </div>
-    </div>
+    </MainLandmark>
   );
 }
 
@@ -48,7 +49,7 @@ export function RouteErrorPage({ error, reset }: ErrorComponentProps) {
   const unreachable = error instanceof SessionUnreachableError;
   const title = unreachable ? c.error.unreachableTitle : c.error.title;
   return (
-    <div className="fr fr-page">
+    <MainLandmark className="fr fr-page">
       <PageTitle title={title} />
       <AppBar title={c.name} />
       <div className="fr-route__pad fr-route__pad--top">
@@ -69,19 +70,19 @@ export function RouteErrorPage({ error, reset }: ErrorComponentProps) {
           {unreachable ? c.error.unreachable : c.error.body}
         </ErrorPanel>
       </div>
-    </div>
+    </MainLandmark>
   );
 }
 
 /** ルートの読み込み中（ログインの確認が遅いとき。ルーターの既定の待ち時間を過ぎたら出す）。 */
 export function RoutePendingPage() {
   return (
-    <div className="fr fr-page">
+    <MainLandmark className="fr fr-page">
       <AppBar title={c.name} />
       <p className="fr-route__loading" role="status">
         <Spinner />
         {c.loading}
       </p>
-    </div>
+    </MainLandmark>
   );
 }

@@ -5,6 +5,7 @@ import { ApiError } from '../../api/client.ts';
 import { isNotFound, isUnauthenticated } from '../../api/http.ts';
 import { privateDataReady, usePrivateEpoch } from '../../api/session-cache.ts';
 import { useDraftGeneration } from '../../api/session-draft.ts';
+import { MainLandmark } from '../../routes/MainLandmark.tsx';
 import { AppBar } from '../../ui/components/AppBar.tsx';
 import { PageTitle } from '../../ui/components/PageTitle.tsx';
 import { ConfirmDialog } from '../../ui/components/ConfirmDialog.tsx';
@@ -24,7 +25,7 @@ function Frame({ goalId, children }: { goalId: string; children: React.ReactNode
   return <div className="fr fr-page fr-evaluation">
     <PageTitle title="予測と実績の記録" />
     <AppBar title="予測と実績の記録" leading={<Link to="/goals/$goalId" params={{ goalId }} className="fr-btn fr-btn--text">戻る</Link>} />
-    <main className="fr-evaluation__content"><h1>予測と実績の記録</h1>{children}</main>
+    <MainLandmark className="fr-evaluation__content"><h1>予測と実績の記録</h1>{children}</MainLandmark>
   </div>;
 }
 export function EvaluationPage({ goalId }: { goalId: string }) {
