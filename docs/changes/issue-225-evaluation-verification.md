@@ -44,11 +44,14 @@ node --test apps/web/tests/evaluation.browser-check.mjs
 ## 確認範囲
 
 - 実HTTP/専用合成DBの評価回帰31件：既定OFF、auth/Origin/owner、strict body、1Goal参加、Engine一致、同日最初の値保持・同時再送、actual amount、q+2、UNKNOWN、null/horizon、timezone、入力訂正・設定/回答版、期限・上限、解除・Goal/user cascade、purge rollback。保存の計算途中で量/設定/回答/現地日/解除/再参加/Goal削除が替わる8ケースを含む。同値PUTは保存できる。
+- 発行時入力の再現回帰3件：実HTTP/合成DBでDONE/SKIPPED両起点を発行し、当日記録訂正・1回量変更後も保存payloadが完全不変。凍結残量・sessionAmount・issuedTodayStatus・posterior/configだけを既存Engine内部adapterへ渡してP50/P80・computationが発行値と一致する。現在の1回量/起点を使うと値が変わるfixtureで確認した。
 - FEの実hook/QueryClient回帰19件：owner切替・A→B→A・同owner再確認・draft世代・遅延応答・自動送信なし・解除後GET復活防止、401/404後の正常GET回復、続く500で古い401/404を復活させない。
 - 実Chrome 154、実SPA・認証API・合成DB：説明checkbox→参加→発行→同日再操作1行→後日のDONE量7+3でP50未到達/P80到達→解除で評価0行かつ業務log3行保持、別ownerの新規navigationで404表示、既定OFF画面。390/1280pxでpage横overflowなし、画面PNGを確認する。
 - 独立敵対的レビューは解除前GETの履歴復活を発見して修正前/後の実QueryClientで検証。保持説明と401/404エラー回復のShouldも修正し専用runnerで再確認する。独立レビュー担当はDB/browserを別実行していない。
 
 最終全suite、build、exact HEAD CI結果はPR本文と検証追記に記録する。未実行結果を成功へ数えない。初回ブラウザrunは固定文言の期待値不一致で失敗し、実UI文言に合わせた再実行で上のflowを完了した。実データや公開環境の品質、別タブの保留応答のpixel描画、代表性、校正・学習効果、g50の因果効果は未検証。別ownerブラウザ検証はfresh navigationのアクセス拒否である。
+
+既存全APIのローカルrunは244/244 PASS（開始時に検出したsuite、後追加のpolicy3件は別PASS）。CIで新migrationに対する既存fixture期待値2件の未追従を検出し、filename順序と適用一覧だけを更新、DB/業務行の保全assertは維持した。改訂CIではAPI247/247 PASS。続くWeb4失敗は新しい読み取り`GET /api/evaluation`を旧browser通信mockが書き込みとして拒否したため、2runnerにこのGETの既定OFF応答だけを追加し、既存browser20/20 PASS。認証検査・書き込み拒否・assertは維持した。最新の発行時入力修正を含むexact HEAD CIはPR本文へ追記する。
 
 ## 合成画面の記録
 

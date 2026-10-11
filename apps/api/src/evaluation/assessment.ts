@@ -9,6 +9,7 @@ import type { TodaySnapshot } from '../prediction/store.ts';
 
 export type SavedEvaluation = Omit<EvaluationForecast, 'id' | 'issuedAt' | 'expiresAt' | 'p50State' | 'p80State'> & {
   schemaVersion: 'evaluation-v1'; prefixHash: string;
+  sessionAmount: number; issuedTodayStatus: 'DONE' | 'SKIPPED';
   // 数値の十分統計量。古い全日次記録や回答全文を複製する履歴機能ではない。
   observations: TodayR11['prediction']['observations']; posterior: TodayR11['prediction']['posterior'];
   config: TodayR11['prediction']['config']; provenance: TodayR11['provenance'];
@@ -34,6 +35,7 @@ export function makeEvaluation(snapshot: TodaySnapshot, buildVersion: string): S
   const completion = prediction.completion;
   return { schemaVersion: 'evaluation-v1', anchorDate: today, timezone: snapshot.goal.timezone, unit: snapshot.goal.unit,
     remainingAmount: prediction.progress.total - prediction.progress.done,
+    sessionAmount: snapshot.goal.sessionAmount, issuedTodayStatus: prediction.todayStatus,
     goalSettingsRevision: snapshot.goal.goalSettingsRevision, answerRevision: savedQuestion.revision,
     modelVersion: prediction.modelVersion, buildVersion,
     predictionStatus: completion.status === 'available' ? 'available' : 'insufficient',

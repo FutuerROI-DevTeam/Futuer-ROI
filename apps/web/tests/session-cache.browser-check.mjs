@@ -30,6 +30,10 @@ function setupSessionTransport() {
   const state = globalThis.__sessionTransport = { owner: 'A', failure: null, reads: 0, writes: 0, hold: false, held: [], allowSignOut: false, signOutCalls: 0, signOutFailure: false, signOutHold: false, signOutHeld: [] };
   globalThis.fetch = async (request, init) => {
     const url = typeof request === 'string' ? request : request instanceof URL ? request.href : request.url;
+    // GoalList reads the default-OFF capability. It is neither an auth read nor a write.
+    if (new URL(url, location.href).pathname === '/api/evaluation' && (!init?.method || init.method === 'GET')) {
+      return Response.json({ enabled: false, policyVersion: 'self-evaluation-v1', retentionDays: 90, maxSnapshots: 90, observationDays: 30 });
+    }
     if (state.allowSignOut && new URL(url, location.href).pathname === '/api/auth/sign-out' && init?.method === 'POST') {
       state.signOutCalls++;
       if (state.signOutHold) await new Promise((resolve) => state.signOutHeld.push(resolve));
