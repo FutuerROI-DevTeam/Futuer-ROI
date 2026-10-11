@@ -86,6 +86,13 @@ function YesterdayPromptForDate({
   } else {
     body = (
       <>
+        {/* 押すとすぐ保存されるため、記録する量を先に見せてから2択を置く（今日の操作帯と同じ読む順、#199） */}
+        <p className="fr-yesterday__amount">
+          {todayCopy.doneAmount(fmt.record(sessionAmount))}
+          <Button ref={amountEntry} variant="text" disabled={saver.isSaving} onClick={() => setEditingAmount(true)}>
+            {todayCopy.changeAmount}
+          </Button>
+        </p>
         <div className="fr-yesterday__pair">
           <Button icon="check" busy={saving?.status === 'DONE'} disabled={saver.isSaving} onClick={() => save({ status: 'DONE', amount: sessionAmount })}>
             {saving?.status === 'DONE' ? todayCopy.saving : todayCopy.yesterdayDone}
@@ -94,12 +101,6 @@ function YesterdayPromptForDate({
             {saving?.status === 'SKIPPED' ? todayCopy.saving : todayCopy.yesterdayRest}
           </Button>
         </div>
-        <p className="fr-yesterday__amount">
-          {todayCopy.doneAmount(fmt.record(sessionAmount))}
-          <Button ref={amountEntry} variant="text" disabled={saver.isSaving} onClick={() => setEditingAmount(true)}>
-            {todayCopy.changeAmount}
-          </Button>
-        </p>
         <Button variant="text" disabled={saver.isSaving} onClick={onLater}>
           {todayCopy.yesterdayLater}
         </Button>
