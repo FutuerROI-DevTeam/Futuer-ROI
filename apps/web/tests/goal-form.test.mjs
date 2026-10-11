@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { MutationObserver, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { ApiError } from '../src/api/client.ts';
 import { goalsCopy } from '../src/copy/goals.ts';
-import { answersLockReason, changesAnswerContext, emptyValues, errorCount, fieldErrorsFromApi, parseInteger, rebaseValues, reloadLatestGoal, targetDateChecks, toCreateBody, toPatchBody, validate, validateGoalForm, valuesFromGoal } from '../src/features/goals/goal-form.ts';
+import { answersLockReason, changesAnswerContext, emptyValues, errorCount, fieldErrorsFromApi, isEditSaveResultUnknown, parseInteger, rebaseValues, reloadLatestGoal, targetDateChecks, toCreateBody, toPatchBody, validate, validateGoalForm, valuesFromGoal } from '../src/features/goals/goal-form.ts';
 
 const e = goalsCopy.errors;
 const valid = { title: '英単語アプリ', unit: 'minutes', totalRequired: '3000', sessionAmount: '20', initialProgress: '0', timezone: 'Asia/Tokyo', targetDate: '', questionPrior: { a: null, b: null } };
@@ -263,4 +263,13 @@ test('単位固定は単位だけでも名称との同時変更でも全体を�
   }
   assert.deepEqual(toPatchBody({ ...valuesFromGoal(locked), title: '変更名' }, locked), { expectedGoalSettingsRevision: 0, title: '変更名' });
   assert.deepEqual(fieldErrorsFromApi(new ApiError(422, { error: { code: 'GOAL_UNIT_LOCKED', message: 'x' } })), { unit: e.unitLocked });
+});
+
+test('編集の保存結果が分からない失敗（通信・5xx・形の違い）だけを「保存を確認できません」に分ける（R5、#146）', () => {
+  // 応答が届かなかった・サーバーの不調・成功応答の形が契約と違う：保存されたか分からない
+  assert.equal(isEditSaveResultUnknown(new TypeError('Failed to fetch')), true);
+  assert.equal(isEditSaveResultUnknown(new Error('contract mismatch')), true);
+  for (const status of [500, 502, 503, 504]) assert.equal(isEditSaveResultUnknown(new ApiError(status, null)), true, String(status));
+  // サーバーがはっきり断った：まだ保存されていないと言い切れる
+  for (const status of [400, 401, 403, 404, 409, 410, 422, 429]) assert.equal(isEditSaveResultUnknown(new ApiError(status, null)), false, String(status));
 });

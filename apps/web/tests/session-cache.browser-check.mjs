@@ -139,6 +139,13 @@ test('#191 Today boundaries: response ordering, cancelled retry, and batched dra
   t.diagnostic(JSON.stringify(result));
 });
 
+test('#146 routes: signed-out/signed-in/unreachable/404/error move and render correctly with the real router', { timeout: 180000 }, async (t) => {
+  const result = await runBrowser(t, './routes.browser.tsx', false, true);
+  assert.equal(result.results.length, 5);
+  assert.equal(result.writes, 0);
+  t.diagnostic(JSON.stringify(result));
+});
+
 test('#215 logout: real SDK/AccountMenu/router show 503, release busy, and navigate only after explicit success', { timeout: 180000 }, async (t) => {
   const result = await runBrowser(t, './sign-out.browser.tsx', false, true);
   assert.equal(result.signOutCalls, 2);
