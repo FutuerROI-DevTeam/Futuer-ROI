@@ -1,0 +1,16 @@
+.fr-evaluation__content { max-width: 880px; margin: 0 auto; padding: 24px 20px 64px; }
+.fr-evaluation__content h1 { font-size: 1.6rem; }
+.fr-evaluation__section { padding: 20px 0; border-bottom: 1px solid var(--fr-line, #d5d1c8); }
+.fr-evaluation__section h2 { font-size: 1.2rem; }
+.fr-evaluation__section p { line-height: 1.8; }
+.fr-evaluation__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.fr-evaluation__accept { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0; line-height: 1.6; }
+.fr-evaluation__accept input { margin-top: 5px; }
+.fr-evaluation__summaries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.fr-evaluation__summaries dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.fr-evaluation__summaries dd { margin: 0; white-space: nowrap; }
+.fr-evaluation__records { list-style: none; padding: 0; }
+.fr-evaluation__records li { border-bottom: 1px solid var(--fr-line, #d5d1c8); padding: 12px 0; overflow-wrap: anywhere; }
+.fr-evaluation__metadata { font-size: .8rem; }
+.fr-evaluation__nav { display: block; padding: 8px 20px; }
+@media (max-width: 600px) { .fr-evaluation__summaries { grid-template-columns: 1fr; gap: 8px; } }

@@ -2,7 +2,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type test from 'node:test';
 import type { FastifyInstance } from 'fastify';
-import { buildApp } from '../../src/app.ts';
+import { buildApp, type AppOptions } from '../../src/app.ts';
 import { createAuth } from '../../src/auth/options.ts';
 import { migrate } from '../../src/db/migrate.ts';
 import { createAuthPool } from '../../src/db/pool.ts';
@@ -93,7 +93,7 @@ export class Client {
 }
 
 export type Stack = { app: FastifyInstance; close: () => Promise<void> };
-export type StackOptions = { baseURL?: string; signInMax?: number; trustProxyHops?: number; now?: () => Date };
+export type StackOptions = { baseURL?: string; signInMax?: number; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation'] };
 
 type StackFactories = { createAuthPool: typeof createAuthPool; createAuth: typeof createAuth; buildApp: typeof buildApp };
 
@@ -119,6 +119,7 @@ export async function startStack(db: TestDatabase, o: StackOptions = {}, factori
       logger: false,
       auth: { instance: auth, baseURL, allowedOrigins: [baseURL], trustProxyHops: o.trustProxyHops ?? 0 },
       ...(o.now ? { now: o.now } : {}),
+      ...(o.evaluation ? { evaluation: o.evaluation } : {}),
     });
     return { app, close };
   } catch (error) { return cleanupAfterFailure(error, close); }

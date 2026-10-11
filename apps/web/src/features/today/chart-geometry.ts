@@ -28,6 +28,11 @@ export interface OutlookAxis {
   axisRight: number;
   /** 到達予定日の位置（#157、B案）。設定がない・今日以前なら null。 */
   target: { x: number } | null;
+  /**
+   * 到達予定日が見通しより大きく先のとき、軸を途中で省いた位置（#187、案C）。省かないなら null。
+   * この位置より右は日付に比例しない。
+   */
+  cut: { x: number } | null;
 }
 
 /** 印のラベル同士が重なる横の距離（px）。 */
@@ -40,15 +45,32 @@ const MONTH_STEPS = [1, 2, 3, 6, 12] as const;
 
 const AXIS_LEFT = 20;
 const AXIS_RIGHT_PAD = 16;
+/**
+ * 到達予定日が「10回中8回（なければ目安）」のこの倍数より先なら、軸を途中で省いて右端に置く（#187、案C）。
+ * 比例のまま伸ばすと、印が「今日」に詰まって見分けられなくなるため。遠さは印の下のずれの文言で伝わる。
+ */
+const CUT_RATIO = 3;
+/** 省いた位置から右端（到達予定日）までの幅（px）。省いた印（//）を置く。 */
+const CUT_WIDTH = 40;
+/**
+ * 省いたとき、印をこれより右端に寄せない幅（px）。右端の「到達予定日 2029年12月31日」（11pxで約130px）と、
+ * 印のラベルの半分（「目安・10回中8回」で約40px）が重ならない幅。
+ */
+const CUT_LABEL_RESERVE = 170;
 
 export function outlookAxis(today: string, p50Days: number, p80Days: number | null, sameWeek: boolean, width: number, targetDays: number | null = null): OutlookAxis {
   const axisRight = width - AXIS_RIGHT_PAD;
-  // 到達予定日が見通しより先なら、軸をそこまで伸ばす
   const target = targetDays !== null && targetDays > 0 ? targetDays : null;
-  const last = Math.max(p80Days ?? p50Days, target ?? 0);
-  // 右端に少し余白を取り、短い期間でも3週間分は見せる
-  const span = Math.max(21, Math.ceil(last * 1.15) + 7);
-  const x = (days: number) => AXIS_LEFT + ((axisRight - AXIS_LEFT) * days) / span;
+  const outlook = p80Days ?? p50Days;
+  // 到達予定日が見通しより先なら、軸をそこまで伸ばす。ただし大きく先なら、見通しまでの軸を右端の手前で省き、
+  // 到達予定日は右端に置く
+  const cut = target !== null && target > outlook * CUT_RATIO;
+  const plotRight = cut ? axisRight - CUT_WIDTH : axisRight;
+  const last = cut ? outlook : Math.max(outlook, target ?? 0);
+  // 右端に少し余白を取り、短い期間でも3週間分は見せる。省いたときは、印が右端の到達予定日のラベルの下に入らないよう広げる
+  const markerRoom = axisRight - CUT_LABEL_RESERVE - AXIS_LEFT;
+  const span = Math.max(21, Math.ceil(last * 1.15) + 7, cut && markerRoom > 0 ? Math.ceil((outlook * (plotRight - AXIS_LEFT)) / markerRoom) : 0);
+  const x = (days: number) => AXIS_LEFT + ((plotRight - AXIS_LEFT) * days) / span;
 
   const markers: AxisMarker[] = [{ x: x(p50Days), kind: 'p50', labelY: 38 }];
   if (p80Days !== null && !sameWeek) {
@@ -60,14 +82,15 @@ export function outlookAxis(today: string, p50Days: number, p80Days: number | nu
   // 月の初日に目盛りを置く。間隔は 1・2・3・6・12か月から、ラベルが重ならない一番細かいものを選び、
   // 暦にそろえる（3か月おきなら1・4・7・10月）。「今日」に近すぎる目盛りは出さない
   const start = parseLocalDate(today);
-  const pxPerMonth = ((axisRight - AXIS_LEFT) * 30.44) / span;
+  const pxPerMonth = ((plotRight - AXIS_LEFT) * 30.44) / span;
   const step = MONTH_STEPS.find((s) => s * pxPerMonth >= TICK_GAP) ?? 12;
   const ticks: AxisTick[] = [];
   let lastYear = start.getUTCFullYear();
   for (let i = 1; ; i += 1) {
     const first = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, 1));
     const days = Math.round((first.getTime() - start.getTime()) / 86_400_000);
-    if (days > span) break;
+    // cutのラベル余白でspanがtargetを越えても、右端より未来の月をその左に置かない。
+    if (days > span || (cut && target !== null && days >= target)) break;
     if (first.getUTCMonth() % step !== 0) continue;
     const tickX = x(days);
     if (tickX - AXIS_LEFT < TICK_GAP) continue;
@@ -75,7 +98,15 @@ export function outlookAxis(today: string, p50Days: number, p80Days: number | nu
     ticks.push({ x: tickX, label: `${first.getUTCMonth() + 1}月`, yearLabel: year !== lastYear ? `${year}年` : null });
     lastYear = year;
   }
-  return { markers, ticks, sameWeek, axisLeft: AXIS_LEFT, axisRight, target: target === null ? null : { x: x(target) } };
+  return {
+    markers,
+    ticks,
+    sameWeek,
+    axisLeft: AXIS_LEFT,
+    axisRight,
+    target: target === null ? null : { x: cut ? axisRight : x(target) },
+    cut: cut ? { x: plotRight + CUT_WIDTH / 2 } : null,
+  };
 }
 
 // ---- これまでの積み上げ：記録開始日から今日までの累計（初期量＋DONE の量） ----

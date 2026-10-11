@@ -1,5 +1,7 @@
 # ArchitectureとTechnology Stack
 
+本人向け予測保存・照合の既定OFF追加機能（#225）は[Product R-12](product-spec.md#本人向けの予測保存実績照合r-12既定off)と[D-32](#d-32-本人向け評価の保存境界225)を参照する。実データ有効化・保持/削除運用は未採択。
+
 ## 現行状態（2026-09-30）
 
 Future ROI（[Product P-11](product-spec.md#p-11-future-roiの採用とcoreの境界)）の実現方式を記録する。予測モデル（[D-19](#d-19)〜[D-22](#d-22)）、Data Modelと記載済みの業務API・Prediction Engineの規則は確定。成功応答のデータ項目（DTO）・HTTP status等の未定義部分と文書間の解釈差は[契約の判断事項](contract-review-proposal.md)へ分ける。**2026-10-03、依頼者によるチーム合意報告を受け[D-23](#d-23)の基本構成を採用。[D-24](#d-24)／[D-25](#d-25)は検証・運用条件付きの第一候補。** [合意範囲](#2026-10-03の技術構成合意)を超えて認証・公開先・API細則を確定しない。2026-10-08時点のGoal・記録・Today APIと実APIを使う画面、既存ローカル検証記録、製品受入・公開配置等の残条件は[対応表](change-map.md#現在地の読み方)から確認する。純粋Prediction Engineと関連テストは[#103](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/103)でmain統合済みで、#77で`/today`から呼ぶ形でアプリへ結合した。構成の採用や下記の契約をアプリ動作確認済みとは扱わない。
@@ -162,7 +164,7 @@ Evidenceは[Compose検証](../scripts/smoke-compose.sh)と[Application CI](../.g
 | Cookie | HttpOnly・SameSite=Lax・Path=/。`BETTER_AUTH_URL`がhttpsなら`Secure`と`__Secure-`接頭辞。本番（`NODE_ENV=production`）はhttpsのURLを必須にし、ローカルのコンテナ確認だけ`BETTER_AUTH_ALLOW_HTTP=1`で許可 | staging／本番で`Secure`が付かない設定ミスを起動時に止める |
 | 回数制限 | DB保存（`rateLimit`表）。1 IPあたり60秒にsign-in／sign-up各5回（`AUTH_SIGN_IN_MAX`／`AUTH_SIGN_UP_MAX`で上書き）、その他の認証endpointは100回。429の`X-Retry-After`は整数秒で、画面は残り秒数を数えて表示し、経過後に再試行できる | 再起動・複数instance・並列要求をまたいで効く（#84で実測）。現行アプリの[並列受入回帰](../apps/api/tests/auth-concurrency.test.ts)（#142）で、2instance・IP/endpoint隔離・拒否時のDB不変・再起動・期限切れ窓からの並列再開を確認する。共有回線のデモ会場向けの上限は未合意のため環境変数で変えられる |
 | Secret・URL | `BETTER_AUTH_SECRET`（本番必須、32文字以上。開発では`apps/api/.local/auth-secret`に自動生成）、`BETTER_AUTH_URL`（本番必須）、`AUTH_TRUSTED_ORIGINS`（任意）、`TRUST_PROXY_HOPS`（既定0） | 実値をGitへ入れず、開発者ごとの生成を手順から外す。proxyのhop数は公開先の実形式で確認する（#83） |
-| 画面 | `/`は公開トップ（P-16）。`/login`・`/register`は[AuthPage](../apps/web/src/routes/AuthPage.tsx)。[router](../apps/web/src/router.tsx)はURLに現れない2つのまとまり（pathless layout route）で分ける：認証画面はログイン済みなら戻り先へ移り、Goal4画面はログインの確認を1か所で行う（未ログインは元のURLを戻り先にログインへ、確認できない通信失敗はログインへ送らず「接続できませんでした」）。ログイン後・ログアウト後は履歴を置き換える。戻り先はアプリ内pathだけ。ログアウトはGoal一覧のアカウントメニュー。セッション切れ（401）は理由付き（`reason=expired`）で再ログインへ誘導。404・エラー・読込中はルーター全体の既定の画面。Goalの記録の履歴は`/goals/$goalId/history`（カレンダー）。デスクトップ幅ではログイン必須の画面の外側（AppShell）に画面全体の上のバーを出。上のバーは1段にし、Goalの作成・編集と記録の履歴では画面ごとの上のバーの代わりに戻り先と見出し（[DeskHeader](../apps/web/src/ui/components/DeskHeader.tsx)）を出す（#146） | R-01の画面要件。Goal・記録の画面は#78〜#81、デザインに合わせた画面とルート構成は#146 |
+| 画面 | `/`は公開トップ（P-16）。`/login`・`/register`は[AuthPage](../apps/web/src/routes/AuthPage.tsx)。[router](../apps/web/src/router.tsx)はURLに現れない2つのまとまり（pathless layout route）で分ける：認証画面はログイン済みなら戻り先へ移り、Goalの5つの保護route（一覧・作成・Today・編集・履歴）はログインの確認を1か所で行う（未ログインは元のURLを戻り先にログインへ、確認できない通信失敗はログインへ送らず「接続できませんでした」）。ログイン後・ログアウト後は履歴を置き換える。戻り先はアプリ内pathだけ。ログアウトはmobileではGoal一覧、desktopでは全5保護routeで共有するAppShellのアカウントメニューから行う。セッション切れ（401）は理由付き（`reason=expired`）で再ログインへ誘導。404・エラー・読込中はルーター全体の既定の画面。Goalの記録の履歴は`/goals/$goalId/history`（カレンダー）。デスクトップ幅ではログイン必須の画面の外側（AppShell）に画面全体の上のバーを出す。上のバーは1段にし、Goalの作成・編集と記録の履歴では画面ごとの上のバーの代わりに戻り先と見出し（[DeskHeader](../apps/web/src/ui/components/DeskHeader.tsx)）を出す（#146） | R-01の画面要件。Goal・記録の画面は#78〜#81、デザインに合わせた画面とルート構成は#146 |
 
 #### ログアウトの失敗と明示再試行（#215）
 
@@ -584,6 +586,7 @@ timezoneの日付境界（23:59 / 0:00）はEngineではなくAPI層のテスト
 | 同じ内容の再送 | 同じGoal・日付に同じPUTを複数回送っても1件のまま。実績・遷移数・予測は1回保存の場合と同じ入力・configに対して一致する |
 | 昨日の量と既定値 | 昨日のDONE量を確認・編集できる。`sessionAmount`を後から変更しても過去の保存量は変わらず、量の訂正は対象日の上書きとして反映する |
 | timezone・日またぎ | ブラウザとGoalのtimezoneが異なってもGoal側で今日・昨日を決める。入力中に日をまたいだ場合も保存時の窓で検証し、2日以上前になった記録を受け付けない。YesterdayPromptの未保存入力は昨日の日付ごとに分け、同日再取得では保持し、日付が変わったら入力を閉じる。旧日の量を新しい昨日へ自動で持ち越さず、再度開いた入力は現在の1回量から始める（[日付跨ぎのブラウザ回帰](../apps/web/tests/yesterday-rollover.browser.tsx)、#193）。エラー時に保存成功と表示しない |
+| 記録済みの昨日の訂正（[P-14の2026-10-07](product-spec.md#p-14-記録のルール)） | 昨日のDONE 20→10、DONE↔SKIPPED、キャンセル（保存しない）、達成→未達成の再計算、訂正中の日またぎ（保存せず再取得を案内）、保存失敗（元の記録のまま表示）と保存成功後の再取得失敗の区別を確認する。今日の記録が変わらず二重加算がないこと、キーボード・モバイルでの操作、日付を含む操作名も確認する |
 | 行動日と入力時刻 | 10/3に入力した10/2分は10/2の行に保存する。入力・更新時刻は10/3でも行動日・隣接ペアを移動させない |
 | 保存と応答の競合 | 保存失敗では元の記録を成功扱いにしない。連続訂正・再取得で古い予測応答が後から返っても最新状態を上書きしない。未記録の問いかけは保存成功後だけ消し、既に記録された昨日の訂正入口を別に確認する |
 | 初期値・開始当日 | 新規Goalの初期量の既定は0。開始日10/3・初期量100（10/2まで、昨日の10を含む）なら10/2のPUTは422で実績100のまま、問いかけ・訂正入口も出さない。10/3 DONE 20は保存でき、実績120。昨日の10を再加算して110や130にしない |
@@ -839,3 +842,27 @@ Evidence: [Today回帰](../apps/web/tests/session-today.browser.tsx)は固定版
 追加Evidence（PR #191 review）: [Today境界回帰](../apps/web/tests/session-today-boundary.browser.tsx)は実Router・実hook・固定版Better Authと合成HTTP/通知で、同日Today先着、明示取消後の旧45非送信と新46送信、描画間のA→B→A/error→A/未ログイン→A/認証signal/storage通知、失敗状態・保留保存の破棄、正常確認の保持、既知翌日の拒否、同日Today503 fallback入力のpending/503/回復を通じた保持、確認中の未採用異日付cacheで入力を破棄しないことを検査する。異日付cache注入は境界の合成対照であり、本番到達性の証明ではない。専用Chrome profileのDOM/送信観測であり、実アカウント・公開環境・pixel描画は未検証。
 
 再検討する条件: 確認中の「保存中」が利用者に分かりにくい、Better Authの再取得の仕様が変わる、Goal一覧・作成・編集・履歴でも同じ問題が受入上の障害になる、またはresponse ownerを照合できるDTOを導入する場合。
+
+### D-32 本人向け評価の保存境界（#225）
+
+2026-10-11 / **CONDITIONAL：依頼者は既定OFF・独立作業ツリーでの最小実装と合成検証を許可。実データでの有効化、利用説明・保持/削除/バックアップ運用の採択はOPEN。** [Product R-12/P-22](product-spec.md#本人向けの予測保存実績照合r-12既定off)、[Issue #225](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/225)。
+
+Context: Todayは現在の記録から再計算するため、後日見た値だけでは発行時の予測と実績を照合できない。本人が明示発行した値を、評価対象の変更や未記録と区別して残す必要がある。現在のEngine数式・Must画面は維持する。
+
+Decision: 新しい[評価table 2個](../apps/api/migrations/0006_prediction_evaluation.sql)だけに参加と発行snapshotを保存する。既存の認証・owner付きGoal、TypeBox、PostgreSQL、QueryClientを使い、新しい依存・queue・学習基盤は追加しない。
+
+- `EVALUATION_ENABLED`は未設定/`0`ならOFF。保護された`GET /api/evaluation`だけが能力を返し、OFFでは評価tableを読まない。他の評価routeは登録しない。有効時のbuild識別は明示設定またはVercel commit SHAを必須にする。
+- 保護された`GET /api/goals/:goalId/evaluation`、`PUT/DELETE /evaluation/participation`、`POST /evaluation/forecasts`を追加する（後3つのpathにも同じGoal prefixが付く）。参加のbodyはpolicy版、発行のbodyは期待Goal設定版だけで、利用者から予測値・owner・モデル設定を受けない。既存Origin/auth/no-store境界を使う。
+- 1ownerにつき1Goal、1Goal/現地日につき最初の発行1件。参加のUUID世代は解除→再参加でも替わる。Goal・owner削除と解除は評価行をcascadeし、解除は業務Goal/日々の記録を消さない。
+- [store](../apps/api/src/evaluation/store.ts)はuser→Goalの順にlockし短い準備を行う。読み取りsnapshotを取得して接続を返してからEngineを1回計算し、最終transactionで参加UUID・設定版・回答版・現地日・発行日以前の記録hashを再確認する。競合は副作用なしの409。Engine計算中にDB接続を保持しない。同値ログPUTはhashを変えず、訂正は照合から分ける。
+- 凍結値は単位・残量・1回量（sessionAmount）・発行時DONE/SKIPPED起点（issuedTodayStatus）・anchor/timezone・設定/回答版・観測集計・使用prior/posterior・設定・出所・モデル/build/schema/state/feature/evaluation/presentation-policy版・実completion mode・P50/P80/null理由。1回量や当日起点が後日変わっても、凍結残量・起点・posterior/configだけで発行時のcompletionを再現する。タイトル、email、自由記述、token、全生ログは評価payloadへ複製しない。[Engine adapter](../apps/api/src/prediction/engine.ts)の内部診断入口を利用し、既存公開DTOと純粋Engine数式は変えない。
+- [照合](../apps/api/src/evaluation/assessment.ts)は発行時の残量に対する後日DONEの実量で判断する。q日後の昨日訂正期間が終わる現地q+2日までPENDING。未記録はUNKNOWN、null/30日超は別状態。設定/回答版が変わった場合はCONTEXT_CHANGED、過去入力hash変更はINPUT_CORRECTEDで、後から予測を上書きしない。設定を元へ戻した場合も版履歴から保守的に除外する。
+- 到達割合はREACHED/NOT_REACHED/UNKNOWNを分母に、UNKNOWNをすべて未到達/到達とした下限/上限だけを表示する。他の状態は別件数。本人の保存中sampleだけで、重複する日次記録は独立した人ではない。正式な離散CDF校正やg50因果効果・精度改善を主張しない。
+- 既定上限は参加開始から90日、発行最大90日・最新90件、照合30日。設定は保持3〜90日、件数1〜90、照合1〜30日、保持≥照合+2日を検証する。発行の期限は参加期限を超えない。GETのexpiry/age filterは物理TTLではない。新規発行時に期限切れ/上限超過を削除し、[手動purge](../apps/api/src/evaluation/purge-cli.ts)は評価tableだけをtransactionで掃除する。定期実行責任・頻度・バックアップは未採択。
+- FEは既存PrivateEpoch/draft世代に従い、開始/送信/採用時のownerを確認する。書き込み前に同じqueryを中断してローカル読取世代を更新するため、解除前の遅延GETで削除済み履歴を戻さない。401/404は旧記録を隠し、500は前回結果と取得失敗を分ける。書き込みの自動再送、画面を開くだけの発行はしない。
+
+Alternatives / Reason: 既存Todayを再取得するだけでは発行値が残らない。全利用者・全入力の無期限自動収集は同意/運用/データ量を広げる。event-sourcingや分析基盤は履歴の完全性を高めるが期限前の追加Shouldとして費用が大きい。明示発行＋有界snapshotは再現に必要な値とowner境界を残し、評価と学習/全体精度判定を分けられる。
+
+Consequences / Invariants: 読み取り期限は物理削除の実施日を保証しない。mutableな業務記録で途中の訂正履歴すべてを復元できず、設定変更は保守的にcensorする。複数人の代表性・accuracy改善は得られない。migrationの既存checksum、既存Engine式・認証設定は維持する。実DB適用、有効化、公開やmergeは別承認とする。
+
+Evidence / 再検討条件: [対応表](change-map.md#本人向け評価225)、[検証・手順・限界](changes/issue-225-evaluation-verification.md)。人数横断の校正、学習利用、長期保存、全編集履歴、運用負荷が必要になった時に新しい判断を行う。現在の合成テストの成功で実利用のOPENを採択へ昇格しない。

@@ -10,6 +10,7 @@ import { TodayPage } from './features/today/TodayPage.tsx';
 import { GoalCreatePage, GoalEditPage } from './features/goals/GoalFormPage.tsx';
 import { GoalListPage } from './features/goals/GoalListPage.tsx';
 import { HistoryPage } from './features/history/HistoryPage.tsx';
+import { EvaluationPage } from './features/evaluation/EvaluationPage.tsx';
 
 /*
  * ルートの構成（#146）。
@@ -115,10 +116,19 @@ const historyRoute = createRoute({
 
 const healthRoute = createRoute({ getParentRoute: () => rootRoute, path: '/health', component: HealthPage });
 
+const evaluationRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/goals/$goalId/evaluation',
+  component: function EvaluationRoute() {
+    const { goalId } = evaluationRoute.useParams();
+    return <EvaluationPage goalId={goalId} />;
+  },
+});
+
 export const routeTree = rootRoute.addChildren([
   indexRoute,
   authLayout.addChildren([loginRoute, registerRoute]),
-  appLayout.addChildren([goalsRoute, goalNewRoute, goalEditRoute, todayRoute, historyRoute]),
+  appLayout.addChildren([goalsRoute, goalNewRoute, goalEditRoute, todayRoute, historyRoute, evaluationRoute]),
   healthRoute,
 ]);
 

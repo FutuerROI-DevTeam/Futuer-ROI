@@ -46,6 +46,8 @@ export const todayCopy = {
   // 到達予定日（#157、B案）
   targetDate: '到達予定日',
   targetDateAxis: (date: string) => `到達予定日 ${date}`,
+  /** 到達予定日が大きく先で、軸を途中で省いたときの読み上げ（#187）。 */
+  targetDateAxisCut: '到達予定日は大きく先のため、軸を途中で省いて右端に示します。',
   targetGapPrefix: '到達予定日より',
   targetGapNote: '到達予定日とのずれは、その週の月曜日と到達予定日の差です。',
   /** total は総量を単位付きで書いたもの（例「50時間」）。 */
