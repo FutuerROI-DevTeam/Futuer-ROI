@@ -143,3 +143,5 @@ test('AmountEditor: contract boundaries, dock entry, keyboard, batched steps and
 
 // Todayの開閉と幅境界をnative入力の実ブラウザで検査する（新依存なし）。
 import './responsive-details.browser-check.mjs';
+// 同owner確認の失敗表示保全と、owner・訪問・作成操作の破棄境界。
+import './issue185-browser-check.mjs';
