@@ -197,3 +197,47 @@ test('Synthetic scoring accepts 65536 fixed paths and rejects an oversized work 
     { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' });
   assert.throws(() => forecastDurationModel(fit.artifact, { ...input, samples: 65537 }), RangeError);
 });
+
+test('Final refinement may converge after a coarse first rule; the historical difference remains diagnostic', () => {
+  const gammaPrior = [-Math.log(4), 0, Math.log(4)].map(gamma => ({ gamma, mass: 1 / 3 }));
+  const rows = [transition(0, 'DONE', 'DONE'), ...Array.from({ length: 8 }, (_, i) =>
+    transition(i + 1, 'SKIPPED', i < 4 ? 'DONE' : 'SKIPPED', 2))];
+  const result = fitDurationModel(rows, prior, { capDays: 2, gammaPrior });
+  assert.equal(result.status, 'available');
+  assert.ok(result.artifact.integration.maxDifference < 1e-7);
+  assert.ok(result.artifact.integration.maxObservedDifference > 1e-7);
+  assert.deepEqual(result.artifact.integration.checks.map(rule => rule.order), [16, 32]);
+});
+
+test('Actual-horizon survival rejects an endpoint-tail bias and old artifacts, preserving JSON replay', () => {
+  const rows = [transition(0, 'DONE', 'DONE'), transition(1, 'SKIPPED', 'SKIPPED', 1)];
+  const fit = fitDurationModel(rows, { a: prior.a, b: { alpha: .1, beta: .1 } }, { capDays: 2, gammaPrior: atoms });
+  assert.equal(fit.status, 'available'); const artifact = fit.artifact;
+  const H = 10000;
+  const discrete = artifact.joint.reduce((s, node) => {
+    const odds = Math.exp(node.gamma), p = node.pDoneAfterSkip, q = p * odds / (1 - p + p * odds);
+    return s + node.weight * -Math.expm1(H * Math.log1p(-q));
+  }, 0);
+  // Independent normalized Simpson integral after p=u^10 removes p^(-.9).
+  const steps = 100000; let numerator = 0, denominator = 0;
+  for (let i = 0; i <= steps; i++) {
+    const u = i / steps, p = u ** 10, density = (1 - p) ** .1;
+    const reached = atoms.reduce((s, atom) => {
+      const odds = Math.exp(atom.gamma), q = p * odds / (1 - p + p * odds);
+      return s + atom.mass * -Math.expm1(H * Math.log1p(-q));
+    }, 0);
+    const weight = i === 0 || i === steps ? 1 : i % 2 ? 4 : 2;
+    numerator += weight * density * reached; denominator += weight * density;
+  }
+  const continuous = numerator / denominator;
+  close(discrete, .6518722537116225, 1e-11); close(continuous, .61516620, 2e-6);
+  assert.ok(discrete - continuous > .036);
+  const input = { initialState: 'SKIPPED', initialRestDays: 2, remainingAmount: 1,
+    sessionAmount: 1, horizonDays: H, samples: 10000, seed: 20261011 };
+  assert.deepEqual(forecastDurationModel(artifact, input), { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' });
+  const safe = oracleFit().artifact, short = { ...input, horizonDays: 30, samples: 8192 };
+  const result = forecastDurationModel(safe, short); assert.equal(result.status, 'available');
+  assert.deepEqual(forecastDurationModel(JSON.parse(JSON.stringify(safe)), short), result);
+  const old = structuredClone(safe); delete old.integration.checks; delete old.integration.tolerance;
+  assert.deepEqual(forecastDurationModel(old, short), { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' });
+});

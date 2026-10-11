@@ -242,19 +242,24 @@ export function fitDurationModel(transitions: readonly DurationTransition[], pri
     .map(([age, group]) => ({ ...group, g: feature(age, options.capDays) }));
   try {
     let previous: ReturnType<typeof jointPosterior> | undefined;
-    let maximumDifference = 0;
+    let maximumDifference = 0, maximumObservedDifference = 0;
+    const checks: { order: 16 | 32; joint: readonly DurationJointNode[] }[] = [];
     let final: ReturnType<typeof jointPosterior> | undefined;
     for (const order of ORDERS) {
       const result = jointPosterior(b.alpha, b.beta, prior.b, atoms, groups, options.capDays, order);
-      if (previous) maximumDifference = Math.max(maximumDifference,
+      // The final refinement decides convergence; a coarse first rule is diagnostic only.
+      if (previous) maximumDifference = Math.max(
         ...result.diagnostics.map((value, i) => Math.abs(value - previous!.diagnostics[i]!)));
+      maximumObservedDifference = Math.max(maximumObservedDifference, maximumDifference);
+      if (order !== 64) checks.push({ order, joint: result.joint });
       previous = result; final = result;
     }
     if (!final || maximumDifference > tolerance) return insufficient('NUMERICAL_INSUFFICIENCY');
     return { status: 'available', artifact: { kind: 'DURATION_JOINT_V1', modelVersion: MODEL_VERSION,
       capDays: options.capDays, donePosterior: a, skipReferencePosterior: b, joint: final.joint,
       gammaPrior: atoms, training,
-      integration: { order: 64, converged: true, maxDifference: maximumDifference, logEvidence: final.logEvidence } } };
+      integration: { order: 64, converged: true, maxDifference: maximumDifference, logEvidence: final.logEvidence,
+        checks, tolerance, maxObservedDifference: maximumObservedDifference } } };
   } catch (error) {
     if (!(error instanceof NumericalInsufficiency)) throw error;
     return insufficient('NUMERICAL_INSUFFICIENCY');
@@ -308,6 +313,57 @@ function quantile(cdf: readonly number[], q: number): number | null {
   const day = cdf.findIndex(value => value >= q - 1e-12); return day < 0 ? null : day;
 }
 
+/** Actual-horizon SKIP-spell survival refinement. These finite functionals are
+ * necessary diagnostics, not a universal completion-CDF error certificate. */
+function survivalRefined(artifact: Extract<DurationArtifact, { kind: 'DURATION_JOINT_V1' }>,
+  input: DurationForecastInput): boolean {
+  const { checks, tolerance } = artifact.integration;
+  if (artifact.integration.order !== 64 || !checks || checks.length !== 2 ||
+      !positive(tolerance ?? NaN) || tolerance! > 1e-3) return false;
+  const low = checks.find(rule => rule.order === 16), middle = checks.find(rule => rule.order === 32);
+  if (!low || !middle) return false;
+  const rules = [low.joint, middle.joint, artifact.joint];
+  const atoms = artifact.gammaPrior.map(atom => atom.gamma), atomIndex = new Map(atoms.map((g, i) => [g, i]));
+  if (atoms.length === 0 || atoms.length > MAX_ATOMS || atomIndex.size !== atoms.length) return false;
+  for (const [index, nodes] of rules.entries()) {
+    if (!integer(nodes.length, 1, MAX_ATOMS * ORDERS[index]!) ||
+        nodes.some(node => !Number.isFinite(node.pDoneAfterSkip) || node.pDoneAfterSkip <= 0 ||
+          node.pDoneAfterSkip >= 1 || !atomIndex.has(node.gamma) || !Number.isFinite(node.weight) || node.weight < 0) ||
+        Math.abs(sum(nodes.map(node => node.weight)) - 1) > 1e-10) return false;
+  }
+  // Later SKIP spells start at age 1; the current spell may start further along.
+  const ages = [...new Set([1, ...(input.initialState === 'SKIPPED' ?
+    [Math.min(input.initialRestDays!, artifact.capDays)] : [])])];
+  const count = rules.reduce((n, nodes) => n + nodes.length, 0);
+  if (BigInt(count) * BigInt(input.horizonDays) * BigInt(ages.length) > 10_000_000n ||
+      BigInt(count) * BigInt(artifact.capDays + 1) > 1_000_000n) return false;
+  const hazards = rules.map(nodes => nodes.map(node => Array.from({ length: artifact.capDays + 1 }, (_, age) =>
+    age === 0 ? 0 : 1 - skipProbability(node.pDoneAfterSkip, node.gamma, feature(age, artifact.capDays)))));
+  for (const age of ages) {
+    const masses = rules.map(nodes => nodes.map(node => node.weight));
+    for (let day = 0; day <= input.horizonDays; day++) {
+      const values = rules.map((nodes, rule) => {
+        const result = Array<number>(atoms.length + 1).fill(0);
+        nodes.forEach((node, i) => {
+          const value = masses[rule]![i]!;
+          result[atomIndex.get(node.gamma)!] = result[atomIndex.get(node.gamma)!]! + value;
+          result[atoms.length] = result[atoms.length]! + value;
+        });
+        return result;
+      });
+      // 16 is retained for audit. As in fit, use the final 32 -> 64 refinement.
+      if (values[2]!.some((value, i) => !Number.isFinite(value) ||
+          Math.abs(value - values[1]![i]!) > tolerance!)) return false;
+      if (day === input.horizonDays) break;
+      const nextAge = Math.min(age + day, artifact.capDays);
+      rules.forEach((nodes, rule) => nodes.forEach((_, i) => {
+        masses[rule]![i] = masses[rule]![i]! * hazards[rule]![i]![nextAge]!;
+      }));
+    }
+  }
+  return true;
+}
+
 /** Deterministic given input+seed. Joint p0/gamma and independent p1 are fixed per path.
  * Horizon tail mass remains missing, never re-normalized into a finite completion date. */
 export function forecastDurationModel(artifact: DurationArtifact, input: DurationForecastInput): DurationForecastResult {
@@ -355,6 +411,7 @@ export function forecastDurationModel(artifact: DurationArtifact, input: Duratio
     BigInt(artifact.joint.length) * BigInt(artifact.capDays + 1) > 1_000_000n) {
     return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
   }
+  if (!survivalRefined(artifact, input)) return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
   const cumulative: number[] = []; let accumulated = 0;
   artifact.joint.forEach(node => { accumulated += node.weight; cumulative.push(accumulated); });
   cumulative[cumulative.length - 1] = 1;
