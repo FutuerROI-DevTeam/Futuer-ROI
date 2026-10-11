@@ -50,6 +50,10 @@ export const todayCopy = {
   targetDateAxisCut: '到達予定日は大きく先のため、軸を途中で省いて右端に示します。',
   targetGapPrefix: '到達予定日より',
   targetGapNote: '到達予定日とのずれは、その週の月曜日と到達予定日の差です。',
+  /** 到達予定日が今日より前（#186）。ずれの行の代わりに、到達予定日の行に1回だけ出す。 */
+  targetDatePassed: '過ぎています',
+  /** 到達予定日が今日（#186）。 */
+  targetDateToday: '今日が到達予定日です',
   /** total は総量を単位付きで書いたもの（例「50時間」）。 */
   outlookTitle: (total: string) => `${total}に届くのは？`,
   recordedTitle: '今日は記録済みです',

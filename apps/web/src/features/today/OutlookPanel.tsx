@@ -7,7 +7,7 @@ import { useElementWidth } from '../../ui/useElementWidth.ts';
 import { DEFAULT_CHART_WIDTH, outlookAxis } from './chart-geometry.ts';
 import { shortDate, fullDate, parseLocalDate } from '../../copy/date.ts';
 import { Icon } from '../../ui/components/Icon.tsx';
-import { daysUntil, targetGap, targetGapText } from './target-gap.ts';
+import { daysUntil, targetDateState, targetGap, targetGapText } from './target-gap.ts';
 import type { CompletionPresentation, Plan } from '../prior/presentation-types.ts';
 
 /** スマホの進捗近くへ置く同じ予測の要約。未保存量で再計算せず、日付の欠如も保持する。 */
@@ -42,7 +42,7 @@ export function OutlookPanel({
         {title}
       </h2>
       {/* 材料が足りないときも、到達予定日だけは出す（ずれは出さない） */}
-      {targetDate ? <TargetDateRow targetDate={targetDate} /> : null}
+      {targetDate ? <TargetDateRow today={today} targetDate={targetDate} /> : null}
       {completion.kind === 'estimate' ? (
         <Estimate completion={completion} today={today} targetDate={targetDate} session={fmt.record(sessionAmount)} showDetails={showDetails} />
       ) : completion.kind === 'insufficient' ? (
@@ -85,14 +85,15 @@ export function CompletionDetails({ completion, today, targetDate = null }: { co
       <p className="fr-note">
         {completionNoteFor(completion.sources)}
         {todayCopy.axisNote}
-        {targetDate ? todayCopy.targetGapNote : null}
+        {targetDate && targetDateState(today, targetDate) === 'ahead' ? todayCopy.targetGapNote : null}
       </p>
     </ResponsiveDetails>
   );
 }
 
-/** 到達予定日（#157、B案、デザイン B案 Today）。 */
-function TargetDateRow({ targetDate }: { targetDate: string }) {
+/** 到達予定日（#157、B案、デザイン B案 Today）。今日以前なら、ずれの行の代わりにこの行で1回だけ伝える（#186）。 */
+function TargetDateRow({ today, targetDate }: { today: string; targetDate: string }) {
+  const state = targetDateState(today, targetDate);
   return (
     <p className="fr-outlook__due">
       <span className="fr-outlook__due-label">
@@ -100,6 +101,9 @@ function TargetDateRow({ targetDate }: { targetDate: string }) {
         {todayCopy.targetDate}
       </span>
       <span className="fr-outlook__due-value">{fullDate(targetDate)}</span>
+      {state === 'ahead' ? null : (
+        <span className="fr-outlook__due-state">{state === 'past' ? todayCopy.targetDatePassed : todayCopy.targetDateToday}</span>
+      )}
     </p>
   );
 }

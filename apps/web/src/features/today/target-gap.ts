@@ -20,9 +20,18 @@ function isoOf(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 }
 
-/** 目安などの週（今日から days 日目を含む週）の月曜日と、到達予定日のずれ。日数がない（3年より先）ときは null。 */
+/**
+ * 到達予定日が今日以前か（#186）。日付はどちらも YYYY-MM-DD（Goal の timezone の今日）なので文字列で比べられる。
+ * 今日以前なら、週の月曜日と比べたずれ（「早い」「ごろ」）は意味を持たないため出さない。
+ */
+export function targetDateState(today: string, targetDate: string): 'past' | 'today' | 'ahead' {
+  if (targetDate < today) return 'past';
+  return targetDate === today ? 'today' : 'ahead';
+}
+
+/** 目安などの週（今日から days 日目を含む週）の月曜日と、到達予定日のずれ。日数がない（3年より先）とき、到達予定日が今日以前のときは null。 */
 export function targetGap(today: string, days: number | null, targetDate: string): TargetGap | null {
-  if (days === null) return null;
+  if (days === null || targetDateState(today, targetDate) !== 'ahead') return null;
   const monday = isoOf(mondayOf(addDays(today, days)));
   const diff = daysBetween(targetDate, monday); // 正なら到達予定日より後（遅い）
   if (Math.abs(diff) <= NEAR_DAYS) return { kind: 'near' };

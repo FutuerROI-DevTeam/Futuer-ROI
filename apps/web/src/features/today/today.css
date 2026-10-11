@@ -430,6 +430,14 @@
   font-size: var(--fr-fs-button);
   font-weight: 700;
 }
+/* 到達予定日が今日以前（#186）。行の右下に1回だけ、遅いと同じ琥珀の文字で出す */
+.fr-outlook__due-state {
+  flex-basis: 100%;
+  text-align: right;
+  font-size: var(--fr-fs-help);
+  font-weight: 700;
+  color: var(--fr-warn);
+}
 .fr-gap {
   display: flex;
   align-items: flex-start;
