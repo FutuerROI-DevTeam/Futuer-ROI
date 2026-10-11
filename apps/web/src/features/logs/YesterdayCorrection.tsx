@@ -1,4 +1,4 @@
-import { useState, type Ref } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import type { Log } from '@contracts';
 import { longDate, parseLocalDate, shortDate } from '../../copy/date.ts';
 import { amountFormat, type AmountFormat } from '../../copy/amount.ts';
@@ -6,6 +6,7 @@ import { todayCopy } from '../../copy/today.ts';
 import { Button } from '../../ui/components/Button.tsx';
 import { ErrorPanel } from '../../ui/components/Notice.tsx';
 import { AmountEditor } from './AmountEditor.tsx';
+import { RecordChoices, useRecordAmount } from './RecordChoices.tsx';
 import { choiceFromLog, classifySaveError, describeChoice, type RecordChoice } from './record-log.ts';
 import { SaveFailure } from './SaveFailure.tsx';
 import type { useSaveLog } from './useSaveLog.ts';
@@ -16,7 +17,8 @@ import './logs.css';
  * - 普段は「昨日（10月6日（火））：やった・20分［変更］」の1行。未記録の昨日は YesterdayPrompt（補完）で扱い、ここには来ない
  * - ［変更］で訂正の状態へ入る。対象日は押した時点の昨日に固定し、日付が変わったら黙って別の日へ切り替えず、画面を新しくするよう案内する
  * - 初期値は保存済みの記録（DONE は保存済みの量。今の1回の量に置き換えない）。DONE の量の訂正と DONE↔SKIPPED を扱い、未記録へは戻さない
- * - 「キャンセル」は保存しない。保存に失敗しても、今の記録のまま（未記録とは表示しない）であることを書く
+ * - 今日の「記録を変更」と同じ形（#221）：量の行（−／＋・量を変更）と大きい2択。押した2択でそのまま上書き保存する
+ * - 「変更をやめる」は保存しない。保存に失敗しても、今の記録のまま（未記録とは表示しない）であることを書く
  */
 export function YesterdayCorrection({
   log,
@@ -51,8 +53,22 @@ export function YesterdayCorrection({
   const currentText = describeChoice(current, sessionAmount, fmt.record, todayCopy.recordedRest);
   // 対象日。訂正中は、親（TodayPage）が訂正を始めた時点の記録を固定して渡す
   const target = log.localDate;
-  const [draft, setDraft] = useState<RecordChoice>(current);
   const date = longDate(target);
+  const [editingAmount, setEditingAmount] = useState(false);
+  const amount = useRecordAmount({
+    date: target,
+    sessionAmount,
+    fmt,
+    current,
+    blocked: saver.isSaving,
+    editingAmount,
+    onEditingAmountChange: setEditingAmount,
+  });
+  // 「変更」を押すとそのボタンが消えるので、訂正の見出しへフォーカスを移す（今日の「記録を変更」と同じ）
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (editing) headingRef.current?.focus();
+  }, [editing]);
 
   if (!editing) {
     return (
@@ -111,51 +127,38 @@ export function YesterdayCorrection({
       />
     );
   } else {
-    body = (
-      <>
-        <p className="fr-yesterday__note">{todayCopy.yesterdayCorrectNote(currentText)}</p>
-        <div className="fr-yesterday__pair" role="group" aria-label={todayCopy.yesterdayCorrectTitle(date)}>
-          <Button
-            icon="check"
-            aria-pressed={draft.status === 'DONE'}
-            disabled={saver.isSaving}
-            onClick={() => setDraft({ status: 'DONE', amount: current.status === 'DONE' ? current.amount : sessionAmount })}
-          >
-            {todayCopy.yesterdayDone}
-          </Button>
-          <Button icon="moon" aria-pressed={draft.status === 'SKIPPED'} disabled={saver.isSaving} onClick={() => setDraft({ status: 'SKIPPED', amount: null })}>
-            {todayCopy.yesterdayRest}
-          </Button>
-        </div>
-        {draft.status === 'DONE' ? (
-          <AmountEditor
-            label={todayCopy.amountYesterdayLabel}
-            initial={draft.amount ?? sessionAmount}
-            sessionAmount={sessionAmount}
-            fmt={fmt}
-            busy={saver.isSaving}
-            submitLabel={todayCopy.saveChange}
-            cancelLabel={todayCopy.cancel}
-            onSubmit={(amount) => save({ status: 'DONE', amount })}
-            onCancel={cancel}
-          />
-        ) : (
-          <div className="fr-amount__actions">
-            <Button variant="primary" busy={saver.isSaving} onClick={() => save({ status: 'SKIPPED', amount: null })}>
-              {saver.isSaving ? todayCopy.saving : todayCopy.saveChange}
-            </Button>
-            <Button variant="secondary" disabled={saver.isSaving} onClick={cancel}>
-              {todayCopy.cancel}
-            </Button>
-          </div>
-        )}
-      </>
+    body = editingAmount ? (
+      <AmountEditor
+        label={todayCopy.amountYesterdayLabel}
+        initial={amount.steppedInitial ?? amount.currentAmount}
+        sessionAmount={sessionAmount}
+        fmt={fmt}
+        busy={saver.isSaving}
+        onSubmit={(value) => save({ status: 'DONE', amount: value })}
+        onCancel={amount.closeAmount}
+      />
+    ) : (
+      <RecordChoices
+        amount={amount}
+        fmt={fmt}
+        sessionAmount={sessionAmount}
+        amountLabel={todayCopy.amountYesterdayLabel}
+        doneLabel={todayCopy.yesterdayDone}
+        restLabel={todayCopy.yesterdayRest}
+        changeNote={todayCopy.yesterdayChangeNote}
+        current={current}
+        saving={saver.saving?.choice.status}
+        isSaving={saver.isSaving}
+        locked={false}
+        onSave={save}
+        onCancelChange={cancel}
+      />
     );
   }
 
   return (
     <section className="fr-yesterday" aria-labelledby="fr-yesterday-correct-title">
-      <h2 id="fr-yesterday-correct-title" className="fr-yesterday__title">
+      <h2 id="fr-yesterday-correct-title" className="fr-yesterday__title" tabIndex={-1} ref={headingRef}>
         {todayCopy.yesterdayCorrectTitle(date)}
       </h2>
       {body}

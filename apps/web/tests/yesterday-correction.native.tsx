@@ -53,5 +53,6 @@ export function yesterdayCorrectionState(host: HTMLElement) {
   return { correctionVisible: !!host.querySelector('#fr-yesterday-correct-title'),
     correctionSummary: !!host.querySelector('.fr-yesterday--summary button'),
     correctionInput: host.querySelector<HTMLInputElement>('.fr-yesterday input')?.value,
+    correctionAmount: host.querySelector('.fr-yesterday .fr-record__amount-value')?.textContent,
     puts, pageErrors: [...pageErrors], appText: host.textContent?.slice(0, 400) };
 }

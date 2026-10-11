@@ -16,18 +16,20 @@
   font-size: var(--fr-fs-dialog-title);
   font-weight: 700;
 }
-.fr-yesterday__date,
-.fr-yesterday__amount {
+.fr-yesterday__date {
   font-size: var(--fr-fs-help);
   color: var(--fr-ink-2);
 }
-.fr-yesterday__amount {
-  text-align: center;
-}
-.fr-yesterday__pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--fr-space-3);
+/* 昨日の問いかけ・訂正も今日の記録と同じ量の行と2択を使う（#221）。昨日の枠の中では下に固定しない */
+.fr-yesterday .fr-actionbar {
+  position: static;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 .fr-yesterday > .fr-btn--text {
   align-self: center;
@@ -71,8 +73,7 @@
   align-items: center;
   gap: 2px;
 }
-.fr-record__note .fr-btn--text,
-.fr-yesterday__amount .fr-btn--text {
+.fr-record__note .fr-btn--text {
   min-height: var(--fr-tap);
   padding: 0 var(--fr-space-2);
   font-size: var(--fr-fs-help);
@@ -92,16 +93,6 @@
   color: var(--fr-ink-2);
   min-width: 0;
   overflow-wrap: anywhere;
-}
-.fr-yesterday__note {
-  font-size: var(--fr-fs-help);
-  line-height: 1.75;
-  color: var(--fr-ink-2);
-}
-.fr-yesterday__pair .fr-btn[aria-pressed='true'] {
-  background: var(--fr-dot-soft);
-  border-color: var(--fr-dot);
-  border-width: 2px;
 }
 .fr-yesterday--summary > .fr-btn {
   flex-shrink: 0;
