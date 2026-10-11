@@ -205,5 +205,41 @@ test('Today responsive details: real viewport, native keyboard and preserved use
       evidence.push({ scenario: 'actual Today native yesterday cancel', status, ...value });
     }
   });
+  await t.test('actual outlook SVG: cut dates stay ordered, bounded and separated at narrow/PC widths (PR212)', async () => {
+    const cases = [[3, 3, 10], [0, 0, 1], [30, 30, 91], [3, 3, 12], [5, 8, 365], [200, null, 1500], [30, 45, 135], [null, null, 365]];
+    for (const width of [252, 322, 581, 600]) {
+      await resize(width === 252 ? 320 : width === 322 ? 390 : 1280);
+      for (const [p50, p80, targetDays] of cases) {
+        const label = `${width}px ${p50}/${p80}/${targetDays}`;
+        await evaluate('window.__responsiveFixture.mountOutlook("2026-10-20",' + [p50, p80, targetDays, width].map(value => JSON.stringify(value)).join(',') + ')');
+        const value = await until(() => evaluate('window.__responsiveFixture.outlookState()'), v => v?.width === (p50 === null ? null : width), 'axis width ' + label);
+        if (p50 === null) { assert.equal(value.texts.length, 0); continue; }
+        assert.equal(value.visible, true, label); assert.equal(value.fontLoaded, true, label);
+        const points = [{ x: 20, day: 0 }, ...value.markers.map((x, i) => ({ x, day: i === 0 ? p50 : p80 })), { x: value.target, day: targetDays }];
+        let year = 2026;
+        for (const tick of value.ticks) {
+          if (tick.year) year = Number(tick.year.slice(0, -1));
+          const day = (Date.UTC(year, Number(tick.label.slice(0, -1)) - 1, 1) - Date.parse('2026-10-20T00:00:00Z')) / 86400000;
+          if (value.cut) assert.ok(day < targetDays, label + ': month must precede target');
+          points.push({ x: tick.x, day });
+        }
+        points.sort((a, b) => a.x - b.x);
+        for (let i = 1; i < points.length; i++) assert.ok(points[i].day >= points[i - 1].day, label + ': date order');
+        for (const text of value.texts) {
+          assert.ok(text.font.includes('Zen Maru Gothic') && text.size === '11px', label + ': actual chart font ' + JSON.stringify(text));
+          assert.ok(text.x >= -0.25 && text.x + text.width <= width + 0.25, label + ': text bounds ' + text.label);
+          // SVGは製品CSSでoverflow:visible。baseline近くのglyphをSVGの130pxで切らず、実際の親領域内に収まることを検査する。
+          assert.ok(text.paintedTop >= 0 && text.paintedBottom <= value.frameHeight, label + ': vertical paint bounds ' + JSON.stringify(text));
+        }
+        for (let i = 0; i < value.texts.length; i++) for (let j = i + 1; j < value.texts.length; j++) {
+          const a = value.texts[i], b = value.texts[j];
+          const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+          const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+          assert.ok(overlapX <= 0.25 || overlapY <= 0.25, label + ': overlapping labels ' + a.label + '/' + b.label);
+        }
+        evidence.push({ scenario: 'actual outlook SVG', width, p50, p80, targetDays, ...value });
+      }
+    }
+  });
   t.diagnostic(JSON.stringify({ browserEndpointSource: session.diagnostics().endpointSource, results: evidence }));
 });

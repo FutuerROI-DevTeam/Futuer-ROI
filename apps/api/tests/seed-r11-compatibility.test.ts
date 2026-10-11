@@ -89,8 +89,8 @@ test('0004適用済みDBへ0003を後から適用しても、既存Goal/log/mark
   const before = await allRows();
   const migration = await migrate(db.pool, 'app');
   assert.ok(migration.app);
-  // 後から適用する0003と、#157の0005（到達予定日）の両方が既存行を保全する
-  assert.deepEqual(migration.app.applied, ['0003_goal_question_prior.sql', '0005_goal_target_date.sql']);
+  // 後着0003、#157の0005、#225の0006を適用しても既存業務/認証行は保全する。
+  assert.deepEqual(migration.app.applied, ['0003_goal_question_prior.sql', '0005_goal_target_date.sql', '0006_prediction_evaluation.sql']);
   const after = await allRows();
   for (const row of after.goal!) {
     assert.deepEqual(row.row.question_prior, { a: null, b: null });

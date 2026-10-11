@@ -7,6 +7,7 @@ import { createAuth } from './auth/options.ts';
 import { loadAuthConfig, loadConfig } from './config.ts';
 import { createAppPool, createAuthPool } from './db/pool.ts';
 import { errorBody } from './http/errors.ts';
+import { loadEvaluationOptions } from './evaluation/policy.ts';
 
 // Vercelだけの起動境界。常駐serverのlisten/signal処理やmigrationには関与しない。
 async function initialize(): Promise<FastifyInstance> {
@@ -28,6 +29,7 @@ async function initialize(): Promise<FastifyInstance> {
       // cwd/ProviderのWEB_DISTに依存せず、配備物内のWebを使う。SPA fallbackはbuildAppの既存実装。
       webDist: fileURLToPath(new URL('../../web/dist/', import.meta.url)),
       logLevel: config.logLevel,
+      evaluation: loadEvaluationOptions(),
       auth: { instance: auth, baseURL: authConfig.baseURL,
         allowedOrigins: [authConfig.baseURL, ...authConfig.trustedOrigins], trustProxyHops: authConfig.trustProxyHops } });
     await app.ready();

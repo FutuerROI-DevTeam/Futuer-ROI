@@ -2,6 +2,8 @@
 
 Supporting Artifact / Not a Source of Truth。正式な状態と結論は[Architecture](../architecture.md#architecture-decision-log)のD-19〜D-22、モデル仕様は[Prediction Engine](../architecture.md#prediction-engine)を正本とする。[判断記録](decision-log.md)は比較理由・代替案・影響を説明するSupporting Doc。
 
+[エンジン全体の実験・速度・失敗と根拠の索引](experiment-history.md)から、後続の閉形式CDF、公開proxy評価、校正、native・メモリ・GCと最終J13の状態を確認する。以下は当時の合成Evidenceを保持した記録で、後続実装・実評価へ一括して読み替えない。
+
 - **種別**：LOCAL_POC（合成データによる数値実験）。実ユーザーデータでの検証は未実施。
 - **実施日・環境**：2026-09-30にNode 25.2.0で実施。2026-10-02、PR #86のレビューで見つかった分位点の境界誤差とDPの微小確率の打ち切りを直し、全スクリプトを候補Runtime（Node 24.21.0）で再実行した。`results/`はこの再実行の出力。スクリプトは[実験フォルダ](https://github.com/jogi-hack-2026-team/jogi-hack-2026/blob/77c71a5f248a4dce4ce9fb8af6619b41541be9d8/experiments/prediction-model-validation/README.md)に保存。
 - **共通条件**：必要回数 `N = 120`（例：30分×120回）。記録なし（UNKNOWN）をランダムに10%混ぜる。「連続中」の文脈（昨日まで2日以上続けていた状態で今日を判断）で差が出やすいので、主にこの文脈で評価した。

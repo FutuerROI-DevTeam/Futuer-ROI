@@ -1,0 +1,288 @@
+{
+  "createdAt": "2026-10-10T16:48:35.343Z",
+  "product": "Future ROI",
+  "source": {
+    "mainBaseline": "86b396d5ae15e1b3e735a4df310e9e4216a086e4",
+    "combinedHead": "f106496863d47a2f2ebeec2f3e845ecc3117684d",
+    "includedUnmergedPRs": {
+      "210": "a173c131b7a5e58470060dd4c8296d64cfe1585b",
+      "214": "11fe8283bd68648a789bcaca5d3addd62d981bbe"
+    },
+    "notIncluded": {
+      "216": "c041e54e4807b74406ed37e2ec31d90cb16f3e4d",
+      "designOnly217": "b4bf1345daa117694b953897d8e1c0a03b508d47"
+    }
+  },
+  "scope": "Reused screenshots from dedicated synthetic production API/DB acceptance; NOT execution evidence for main alone or PR216",
+  "runtime": "dedicated headless installed Chrome via existing Playwright-core; PostgreSQL18.4/UTC/synthetic A; no real credentials",
+  "privacy": "masked auth/account fields; synthetic Goal labels only; no private credentials/cookies/browser state/full HTTP traces/Goal UUID/loopback URL included",
+  "observedChecks": {
+    "successfulRecords": 25,
+    "distinct": 24,
+    "actualGoalMutations": 10,
+    "interceptedNotForwarded": 3
+  },
+  "unexecuted": [
+    "full artboard visual fidelity/original artwork correspondence",
+    "R5 acceptance as a full artboard",
+    "missing-yesterday amount-editor cancel",
+    "iOS/screen reader",
+    "standard history-based forecast/calculation-consistency error/real expiry-rate-limit states",
+    "PR216 logout failure/retry",
+    "Human Review/public HTTPS/deploy"
+  ],
+  "screens": [
+    {
+      "file": "screenshots/real-home-390.png",
+      "viewportWidth": 390,
+      "state": "public home",
+      "operation": "home→Goal一覧",
+      "transport": "actual UI",
+      "bytes": 57435,
+      "sha256": "46624aaa33196afacf0720ce9aba66a53bc5f02d58d88061f3b803bf7550aebd"
+    },
+    {
+      "file": "screenshots/real-home-1280.png",
+      "viewportWidth": 1280,
+      "state": "public home",
+      "operation": "home→Goal一覧",
+      "transport": "actual UI",
+      "bytes": 87898,
+      "sha256": "356c66fc3aab1590ae290b4493f26bd6b698c608af7848963b2624159230632f"
+    },
+    {
+      "file": "screenshots/real-register-validation-390.png",
+      "viewportWidth": 390,
+      "state": "register validation",
+      "operation": "empty submit; auth POST0",
+      "transport": "actual UI",
+      "bytes": 48351,
+      "sha256": "0a40751e7d5cdf11a85e199ef6a5725b8644e1b3f42c54ddc58c46480455457c"
+    },
+    {
+      "file": "screenshots/real-auth-required-390.png",
+      "viewportWidth": 390,
+      "state": "login required",
+      "operation": "anonymous /goals→/login, redirect=/goals",
+      "transport": "actual UI",
+      "bytes": 27939,
+      "sha256": "d7dca845ec11eb4c96cbdbab597e7a617a9c6675910b48b52eebf9f8907e28ec"
+    },
+    {
+      "file": "screenshots/real-empty-goals-390.png",
+      "viewportWidth": 390,
+      "state": "empty Goals",
+      "operation": "registration/login→empty list",
+      "transport": "actual API/UI",
+      "bytes": 48332,
+      "sha256": "fe7a41ba8e02a406e8e724e9d362c15eeb81a3e2c67df864c0190f6061bc9a76"
+    },
+    {
+      "file": "screenshots/real-create-390.png",
+      "viewportWidth": 390,
+      "state": "Goal create",
+      "operation": "form input→POST201",
+      "transport": "actual API/UI",
+      "bytes": 50530,
+      "sha256": "2bbad39754c607c3719f38d9235146c7cd8cd16e2079d0b302d60f2ecb642339"
+    },
+    {
+      "file": "screenshots/real-goals-edited-390.png",
+      "viewportWidth": 390,
+      "state": "Goal list",
+      "operation": "title PATCH200, today SKIPPED preserved",
+      "transport": "actual API/UI",
+      "bytes": 34726,
+      "sha256": "d9414d79ef167c841c52a7311458b003e318cf3d99f79369b8dd5776a16e94e7"
+    },
+    {
+      "file": "screenshots/real-goals-1280.png",
+      "viewportWidth": 1280,
+      "state": "Goal list desktop",
+      "operation": "list→Today",
+      "transport": "actual API/UI",
+      "bytes": 40767,
+      "sha256": "3b61efeb4c0461ff7220cad0cb80bc19f77677189376092c994d656d35ed07b5"
+    },
+    {
+      "file": "screenshots/real-today-insufficient-390.png",
+      "viewportWidth": 390,
+      "state": "Today insufficient",
+      "operation": "fresh Goal no usable transitions",
+      "transport": "actual API/UI",
+      "bytes": 81939,
+      "sha256": "3f83cad77974f040d268ab5939b8d41f636a01b86b12014ea24383760c67c3ea"
+    },
+    {
+      "file": "screenshots/real-today-done23-390.png",
+      "viewportWidth": 390,
+      "state": "Today recorded DONE",
+      "operation": "amount23 PUT200",
+      "transport": "actual API/UI",
+      "bytes": 64136,
+      "sha256": "3376dd60425ec405a0e7d4f5b21e2aa52ec2ec0b9d10f626e8cfdb7cfad00e02"
+    },
+    {
+      "file": "screenshots/real-today-skipped-390.png",
+      "viewportWidth": 390,
+      "state": "Today recorded SKIPPED",
+      "operation": "DONE→SKIPPED PUT200",
+      "transport": "actual API/UI",
+      "bytes": 61181,
+      "sha256": "e0e34b153f067fda886b14a56c977f80c6772c39b9cb156180db8b2ad5387ed7"
+    },
+    {
+      "file": "screenshots/real-today-recorded-1280.png",
+      "viewportWidth": 1280,
+      "state": "Today recorded desktop",
+      "operation": "recorded two-column; viewport=scrollWidth1280",
+      "transport": "actual API/UI",
+      "bytes": 105140,
+      "sha256": "9d34ff3b41e69b2db953ca60cb63227fcee3f0bacf10f5a66128db0ba712cf6a"
+    },
+    {
+      "file": "screenshots/real-yesterday-done11-390.png",
+      "viewportWidth": 390,
+      "state": "yesterday completed",
+      "operation": "missing→DONE11 PUT200",
+      "transport": "actual API/UI, dedicated start-date fixture",
+      "bytes": 70493,
+      "sha256": "82564d0e8233328ead9f73e76b23b64e00ac35f1ba1735fb47492784c7e499a5"
+    },
+    {
+      "file": "screenshots/real-yesterday-corrected12-390.png",
+      "viewportWidth": 390,
+      "state": "yesterday corrected",
+      "operation": "saved11→cancel PUT0/focus→DONE12 PUT200",
+      "transport": "actual API/UI, dedicated start-date fixture",
+      "bytes": 72032,
+      "sha256": "1a87166fda4e216cac7915a0b26e062070d9d05c7e95e8281efa7a11a958ec25"
+    },
+    {
+      "file": "screenshots/real-history-390.png",
+      "viewportWidth": 390,
+      "state": "history",
+      "operation": "start-month boundary",
+      "transport": "actual API/UI",
+      "bytes": 30443,
+      "sha256": "e8c3961f858e9253664546afdf8fd23153957670dd91c666ffdd96bdf398e715"
+    },
+    {
+      "file": "screenshots/real-history-1280.png",
+      "viewportWidth": 1280,
+      "state": "history desktop",
+      "operation": "Today→history",
+      "transport": "actual API/UI",
+      "bytes": 46035,
+      "sha256": "486702937b84375880bdee968fc4c1dc3f7bd1c33dfbeb96b8ccec6820274cbf"
+    },
+    {
+      "file": "screenshots/real-edit-1280.png",
+      "viewportWidth": 1280,
+      "state": "Goal edit desktop",
+      "operation": "edit→cancel PATCH0",
+      "transport": "actual API/UI",
+      "bytes": 91004,
+      "sha256": "faba6696c5f106de2530f1002860e851a4fcb803729f040946a05a7957c789a6"
+    },
+    {
+      "file": "screenshots/real-achieved-390.png",
+      "viewportWidth": 390,
+      "state": "achieved",
+      "operation": "disposable Goal initialProgress=totalRequired",
+      "transport": "actual API/UI",
+      "bytes": 75996,
+      "sha256": "8aca1bcaedc8fb6380d1cfb88785ecaf1601d702825205ee6fbf4794f3cc7559"
+    },
+    {
+      "file": "screenshots/real-achieved-1280.png",
+      "viewportWidth": 1280,
+      "state": "achieved desktop",
+      "operation": "disposable Goal initialProgress=totalRequired",
+      "transport": "actual API/UI",
+      "bytes": 113253,
+      "sha256": "25d9bbe773d5943466c1b780441d7ad819806ee6e73d44f7f9e6f28d17b51090"
+    },
+    {
+      "file": "screenshots/real-delete-confirm-1440.png",
+      "viewportWidth": 1440,
+      "state": "delete confirmation",
+      "operation": "disposable Goal cancel0→DELETE204→GET404",
+      "transport": "actual API/UI, extra PC width1440",
+      "bytes": 111522,
+      "sha256": "5668cdce2a911ffd2ba372fc96c64efa590b6e4237f846164a980a7e4bd9d6a4"
+    },
+    {
+      "file": "screenshots/real-route404-390.png",
+      "viewportWidth": 390,
+      "state": "unknown route 404",
+      "operation": "undefined URL→Japanese404",
+      "transport": "actual route",
+      "bytes": 25364,
+      "sha256": "17b4fd89ce01ee28c3fab739940c115ab5503e4638bb4a281d4934e2504d1a3d"
+    },
+    {
+      "file": "screenshots/real-goal404-390.png",
+      "viewportWidth": 390,
+      "state": "missing Goal404",
+      "operation": "nonexistent Goal→Goal-specific404",
+      "transport": "actual API/UI",
+      "bytes": 27200,
+      "sha256": "00c122e51f551fa9460f51cd28c5a2b2bd421a35e860fbfc02914fe431bc0b7b"
+    },
+    {
+      "file": "screenshots/injected-goals503-390.png",
+      "viewportWidth": 390,
+      "state": "list GET error",
+      "operation": "503 panel→explicit retry realGET200",
+      "transport": "Playwright route.fulfill503; actual API recovery",
+      "bytes": 39157,
+      "sha256": "45d53670177b55325e95e453f2df175d1b8dda0c24705ba9ce2f9fe256fcac02"
+    },
+    {
+      "file": "screenshots/injected-session503-390.png",
+      "viewportWidth": 390,
+      "state": "session communication error",
+      "operation": "protected URL retained→healthy actual session",
+      "transport": "Playwright route.fulfill503; actual API recovery",
+      "bytes": 26236,
+      "sha256": "cdeb44c10b8de3e2a0224cf9bf3a96af69c62292a2e59151bdea90b935e23867"
+    },
+    {
+      "file": "screenshots/injected-save503-390.png",
+      "viewportWidth": 390,
+      "state": "Today save error",
+      "operation": "DB unchanged, auto resend0/1.5s→same17 retry PUT200 once",
+      "transport": "Playwright route.fulfill503; actual API recovery",
+      "bytes": 69599,
+      "sha256": "9377976322a94c7d8d14d7555221aa5bb60d6b48c9fb63c6e8a066af2b21f8d4"
+    },
+    {
+      "file": "screenshots/injected-today-get503-390.png",
+      "viewportWidth": 390,
+      "state": "Today GET error",
+      "operation": "protected URL retained→explicit realGET200",
+      "transport": "Playwright route.fulfill503; actual API recovery",
+      "bytes": 48682,
+      "sha256": "c5c6723279814310d92200e75801589f579014a10c444e3a8a07ab31237ab543"
+    },
+    {
+      "file": "screenshots/injected-goal-patch503-390.png",
+      "viewportWidth": 390,
+      "state": "Goal edit save error",
+      "operation": "raw title held, auto resend0/1.5s→explicit PATCH200 once",
+      "transport": "Playwright route.fulfill503; actual API recovery, viewport portion",
+      "bytes": 83614,
+      "sha256": "f2d970782239bba8f86cd4cf101ca8676e80f86dcd1ca7471ba365e23a7b22c9"
+    },
+    {
+      "file": "screenshots/real-goal-patch-recovered-390.png",
+      "viewportWidth": 390,
+      "state": "Goal edit recovered",
+      "operation": "title saved, logs unchanged",
+      "transport": "actual API/UI recovery",
+      "bytes": 35866,
+      "sha256": "2c1558ba4f291054640e13ae5b1c12643379e2226207b098657ae3189dd5b812"
+    }
+  ]
+}

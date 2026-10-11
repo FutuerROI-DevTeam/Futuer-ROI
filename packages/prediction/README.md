@@ -1,5 +1,7 @@
 # Prediction Engine（Refs #71・#72・#73）
 
+[実験・速度・失敗と根拠の横断索引](../../docs/prediction/experiment-history.md)から、現行計算と後続研究の実施範囲・採否・未確認をたどれる。
+
 **Supporting Doc / Not a Source of Truth.** 正式仕様は[Prediction Engine D-19〜D-22・D-31](../../docs/architecture.md#prediction-engine)と[Test Strategy T-01〜T-15](../../docs/architecture.md#test-strategy)。このpackageはDB・HTTP・UI・時計から独立した計算本体とローカルテストを持つ。現在はAPIへ結合済みで、公開環境・製品受入の完了とは区別する。純粋Engineの型検査・数値テストCIは[検証CI](#検証ci)を参照する。
 
 ## 承認範囲と現在の状態

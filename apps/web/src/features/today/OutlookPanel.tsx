@@ -182,6 +182,8 @@ function labelAnchor(x: number, width: number, edge: number): 'start' | 'middle'
 }
 
 const AXIS_HEIGHT = 130;
+/** 軸を省いた印（//）の、中心からの片側の幅（px）。 */
+const CUT_GAP = 4;
 
 function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: string; p50Days: number; p80Days: number | null; sameWeek: boolean; targetDate: string | null }) {
   // 実際の幅で描く（縮めて表示すると文字まで小さくなるため）
@@ -193,10 +195,21 @@ function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: s
       : axis.sameWeek
         ? `日付の軸。目安も10回中8回の日付も同じ週です。`
         : `日付の軸。今日から目安の日付、10回中8回の日付の順に印。`;
+  const label = axis.cut ? `${description}${todayCopy.targetDateAxisCut}` : description;
   return (
     <div ref={ref} className="fr-chart-box">
-      <svg className="fr-chart" width={width} height={AXIS_HEIGHT} viewBox={`0 0 ${width} ${AXIS_HEIGHT}`} role="img" aria-label={description}>
-        <line x1={axis.axisLeft} y1="92" x2={axis.axisRight} y2="92" className="fr-chart__axis" />
+      <svg className="fr-chart" width={width} height={AXIS_HEIGHT} viewBox={`0 0 ${width} ${AXIS_HEIGHT}`} role="img" aria-label={label}>
+        {axis.cut ? (
+          <>
+            {/* 到達予定日が大きく先なので、軸を途中で省く（#187）。ここから右は日付に比例しない */}
+            <line x1={axis.axisLeft} y1="92" x2={axis.cut.x - CUT_GAP} y2="92" className="fr-chart__axis" />
+            <line x1={axis.cut.x + CUT_GAP} y1="92" x2={axis.axisRight} y2="92" className="fr-chart__axis" />
+            <line x1={axis.cut.x - CUT_GAP - 3} y1="99" x2={axis.cut.x - CUT_GAP + 3} y2="85" className="fr-chart__axis" />
+            <line x1={axis.cut.x + CUT_GAP - 3} y1="99" x2={axis.cut.x + CUT_GAP + 3} y2="85" className="fr-chart__axis" />
+          </>
+        ) : (
+          <line x1={axis.axisLeft} y1="92" x2={axis.axisRight} y2="92" className="fr-chart__axis" />
+        )}
         {axis.ticks.map((t) => (
           <g key={`${t.label}-${t.x}`}>
             <line x1={t.x} y1="92" x2={t.x} y2="97" className="fr-chart__axis" />
@@ -229,7 +242,8 @@ function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: s
           <g>
             <line x1={axis.target.x} y1="18" x2={axis.target.x} y2="92" className="fr-chart__due" />
             <text x={axis.target.x} y="12" textAnchor={labelAnchor(axis.target.x, width, 60)} className="fr-chart__text fr-chart__text--strong">
-              {todayCopy.targetDateAxis(shortDate(parseLocalDate(targetDate)))}
+              {/* 軸を省いたときは位置から遠さが読めないので、年まで書く（#187） */}
+              {todayCopy.targetDateAxis(axis.cut ? fullDate(targetDate) : shortDate(parseLocalDate(targetDate)))}
             </text>
           </g>
         ) : null}
