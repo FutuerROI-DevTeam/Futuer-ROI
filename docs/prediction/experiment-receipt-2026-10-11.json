@@ -1,0 +1,2132 @@
+{
+  "kind": "ANONYMOUS_AGGREGATE_DOCUMENTATION_RECEIPT",
+  "asOfUtc": "2026-10-11",
+  "issue": 222,
+  "documentationBaseMain": "8e5a82722f859cd5420ab5b18306fa57df13c44d",
+  "publicationScope": {
+    "included": [
+      "aggregate counts and metrics",
+      "fixed numerical gate",
+      "source and evidence SHA256",
+      "measurement conditions"
+    ],
+    "excluded": [
+      "personal rows or identifiers",
+      "history or future labels",
+      "raw input",
+      "full score, pool or memory trace",
+      "private URLs",
+      "absolute local paths",
+      "secrets",
+      "native binary"
+    ],
+    "sourceAvailability": "Research source hashes identify preserved unpublished snapshots; this file is not a raw-data or fit reproduction package.",
+    "verificationScope": "Saved aggregate readback and receipt comparison; no new experiment or fit in this documentation task."
+  },
+  "pooledLogistic": {
+    "sourceHead": "d3664420f8589633c7204024115a1813fdd08ab5",
+    "baselineHead": "5b479e688d7e04562f844ac7b6049b7b7c119a87",
+    "protocolSha256": "d42d6cd5b1acdd6e19a0c94a631cd830b1dab168662ab26276b57bd50d29eb04",
+    "modelSha256": "65b54231d478727f1f9b40e07b6b657640bc9e1702c0421a8f7d85ccde43eb59",
+    "evaluationSha256": "0686ebdae8718fde75ad61110e9208355f392585bd028bf5dddf74517574f662",
+    "refitBootstrapSha256": "05af7c9b451961cf8ba68cd419843cb76fa6cc0fa735c656c46540e0a34e07b4",
+    "independentVerificationSha256": "55a6b610697ebf5637d2445820e25d5ab4f4b2b6de11e51a912b15d1edb3cfd6",
+    "sourceReceiptSha256": "accb13f272601d5412fed347b25daa16be579c051fa63035fa02d101a90d79e7",
+    "condition": {
+      "training": 300,
+      "calibration": 100,
+      "development": 150,
+      "historyDays": [
+        61,
+        119,
+        61
+      ],
+      "originDays": [
+        60,
+        118,
+        60
+      ],
+      "target": 10,
+      "amountProxy": 1,
+      "horizon": 30
+    },
+    "summary": {
+      "own": {
+        "markov": {
+          "total": 150,
+          "available": 144,
+          "knownY": 140,
+          "censored": 4,
+          "p50Null": 63,
+          "p80Null": 87,
+          "loss": 1.9767857142857144,
+          "brier": 0.26293330285692024,
+          "p50Coverage": {
+            "finite": 81,
+            "covered": 6,
+            "rate": 0.07407407407407407
+          },
+          "p80Coverage": {
+            "finite": 57,
+            "covered": 14,
+            "rate": 0.24561403508771928
+          }
+        },
+        "iidBeta": {
+          "total": 150,
+          "available": 150,
+          "knownY": 146,
+          "censored": 4,
+          "p50Null": 70,
+          "p80Null": 92,
+          "loss": 1.9866438356164395,
+          "brier": 0.2505684436762966,
+          "p50Coverage": {
+            "finite": 79,
+            "covered": 6,
+            "rate": 0.0759493670886076
+          },
+          "p80Coverage": {
+            "finite": 58,
+            "covered": 14,
+            "rate": 0.2413793103448276
+          }
+        },
+        "pooled": {
+          "total": 150,
+          "available": 150,
+          "knownY": 146,
+          "censored": 4,
+          "p50Null": 91,
+          "p80Null": 117,
+          "loss": 0.9215753424657535,
+          "brier": 0.16602364829643182,
+          "p50Coverage": {
+            "finite": 59,
+            "covered": 17,
+            "rate": 0.288135593220339
+          },
+          "p80Coverage": {
+            "finite": 33,
+            "covered": 15,
+            "rate": 0.45454545454545453
+          }
+        }
+      },
+      "paired": {
+        "markov": {
+          "commonAvailable": 144,
+          "commonKnownY": 140,
+          "commonCensored": 4,
+          "gained": 6,
+          "lost": 0,
+          "baselineLoss": 1.9767857142857144,
+          "candidateLoss": 0.9521428571428572,
+          "relativeLossReduction": 0.5183378500451671,
+          "lossDelta": -1.0246428571428574,
+          "brierDelta": -0.08979449171012972,
+          "bootstrap": {
+            "B": 2000,
+            "seed": 207202610,
+            "students": 140,
+            "loss95": [
+              -1.3375446428571423,
+              -0.7295982142857147
+            ],
+            "brier95": [
+              -0.12111502603726036,
+              -0.05719452220494713
+            ],
+            "unit": "student cluster, fixed forecast, paired differences; type7"
+          },
+          "censorSensitivity": {
+            "students": 144,
+            "lossMeanBounds": [
+              -0.9961805555555558,
+              -0.9961805555555558
+            ],
+            "brierMeanBounds": [
+              -0.08912335330480235,
+              -0.08165505303045015
+            ],
+            "assumption": "All legal outcomes within each common Y interval; no independent-censoring/IPCW assumption"
+          }
+        },
+        "iidBeta": {
+          "commonAvailable": 150,
+          "commonKnownY": 146,
+          "commonCensored": 4,
+          "gained": 0,
+          "lost": 0,
+          "baselineLoss": 1.9866438356164395,
+          "candidateLoss": 0.9215753424657535,
+          "relativeLossReduction": 0.536114463023617,
+          "lossDelta": -1.065068493150685,
+          "brierDelta": -0.08454479537986472,
+          "bootstrap": {
+            "B": 2000,
+            "seed": 207202610,
+            "students": 146,
+            "loss95": [
+              -1.4014469178082198,
+              -0.7366352739726025
+            ],
+            "brier95": [
+              -0.12095577504136433,
+              -0.051315190900249524
+            ],
+            "unit": "student cluster, fixed forecast, paired differences; type7"
+          },
+          "censorSensitivity": {
+            "students": 150,
+            "lossMeanBounds": [
+              -1.0383333333333336,
+              -1.0383333333333336
+            ],
+            "brierMeanBounds": [
+              -0.08520661093412799,
+              -0.07750958206365921
+            ],
+            "assumption": "All legal outcomes within each common Y interval; no independent-censoring/IPCW assumption"
+          }
+        }
+      }
+    },
+    "criteria": {
+      "comparisons": {
+        "markov": {
+          "criteria": {
+            "availability": true,
+            "commonKnownY": true,
+            "relativeLoss": true,
+            "lossCI": true,
+            "brierCI": true,
+            "censorConclusion": true
+          },
+          "pass": true
+        },
+        "iidBeta": {
+          "criteria": {
+            "availability": true,
+            "commonKnownY": true,
+            "relativeLoss": true,
+            "lossCI": true,
+            "brierCI": true,
+            "censorConclusion": true
+          },
+          "pass": true
+        }
+      },
+      "explanationBootstrapPass": true,
+      "decision": "RESEARCH_GATE_PASS_PRODUCT_ADOPTION_SEPARATE",
+      "policy": "Protocol fixed criteria; no post-development refit/offset/history/gate tuning; product adoption is a separate human decision"
+    },
+    "refitBootstrap": {
+      "B": 1000,
+      "seed": 207202611,
+      "successes": 1000,
+      "failures": 0,
+      "intervals": {
+        "coefficient0": {
+          "estimate": 2.235326917825274,
+          "percentile95": [
+            2.0580878946723655,
+            2.430403248708063
+          ],
+          "signs": {
+            "negative": 0,
+            "zero": 0,
+            "positive": 1000
+          },
+          "sameSignSuccessful": 1,
+          "sameSignAllAttempts": 1
+        },
+        "coefficient1": {
+          "estimate": 0.4176156893154205,
+          "percentile95": [
+            0.32844832136650237,
+            0.5029040932521602
+          ],
+          "signs": {
+            "negative": 0,
+            "zero": 0,
+            "positive": 1000
+          },
+          "sameSignSuccessful": 1,
+          "sameSignAllAttempts": 1
+        },
+        "coefficient2": {
+          "estimate": -0.14750803258256046,
+          "percentile95": [
+            -0.3896283260243517,
+            0.07338682102991495
+          ],
+          "signs": {
+            "negative": 891,
+            "zero": 0,
+            "positive": 109
+          },
+          "sameSignSuccessful": 0.891,
+          "sameSignAllAttempts": 0.891
+        },
+        "coefficient3": {
+          "estimate": 0,
+          "percentile95": [
+            0,
+            0
+          ],
+          "signs": {
+            "negative": 0,
+            "zero": 1000,
+            "positive": 0
+          },
+          "sameSignSuccessful": 1,
+          "sameSignAllAttempts": 1
+        },
+        "coefficient4": {
+          "estimate": 0.2715175776862311,
+          "percentile95": [
+            0.16499510217848434,
+            0.3807201804042335
+          ],
+          "signs": {
+            "negative": 0,
+            "zero": 0,
+            "positive": 1000
+          },
+          "sameSignSuccessful": 1,
+          "sameSignAllAttempts": 1
+        },
+        "coefficient5": {
+          "estimate": 0.7271326688292097,
+          "percentile95": [
+            0.6430813623832599,
+            0.8112580376718413
+          ],
+          "signs": {
+            "negative": 0,
+            "zero": 0,
+            "positive": 1000
+          },
+          "sameSignSuccessful": 1,
+          "sameSignAllAttempts": 1
+        },
+        "rawIntercept": {
+          "estimate": -2.167173491466725,
+          "percentile95": [
+            -2.294825776550477,
+            -2.049317546580226
+          ],
+          "signs": {
+            "negative": 1000,
+            "zero": 0,
+            "positive": 0
+          },
+          "sameSignSuccessful": 1,
+          "sameSignAllAttempts": 1
+        },
+        "offset": {
+          "estimate": 0.1406749667215798,
+          "percentile95": [
+            -0.04251572375955485,
+            0.30968786241507684
+          ],
+          "signs": {
+            "negative": 60,
+            "zero": 0,
+            "positive": 940
+          },
+          "sameSignSuccessful": 0.94,
+          "sameSignAllAttempts": 0.94
+        },
+        "calibratedRawIntercept": {
+          "estimate": -2.0264985247451452,
+          "percentile95": [
+            -2.213303476188592,
+            -1.8501616843955753
+          ],
+          "signs": {
+            "negative": 1000,
+            "zero": 0,
+            "positive": 0
+          },
+          "sameSignSuccessful": 1,
+          "sameSignAllAttempts": 1
+        }
+      }
+    },
+    "productAdoption": false
+  },
+  "cdfPower": {
+    "condition": {
+      "calibration": 100,
+      "confirmation": 150,
+      "pointY": 146,
+      "horizon": 30,
+      "target": 10,
+      "gridPoints": 1001
+    },
+    "gamma": 0.39174859347467034,
+    "status": "PROBABILITY_AND_DATE_SCREENS_NOT_PASSED",
+    "confirmationRawCandidate": {
+      "loss": [
+        0.894863,
+        1.502055
+      ],
+      "brier30": [
+        0.144638,
+        0.220292
+      ],
+      "rps": [
+        0.049918,
+        0.088308
+      ]
+    },
+    "finiteCoverage": {
+      "p50": [
+        7,
+        68
+      ],
+      "p80": [
+        16,
+        46
+      ]
+    },
+    "protocolSha256": "18b9f9b955a3c2570c27cd27180df35d38420077aca0bcf06fd94683c7237377",
+    "frozenModelSha256": "d5b0c78bd2b2412d6eabf997a271fce188e5fd16cbc2625633be6ab41e9ea2c8",
+    "confirmationEvaluationSha256": "3c15581cd1c1e32febaddc5346bf4ea8058dab22cf4889b26e11878071218afd"
+  },
+  "h90Audit": {
+    "condition": {
+      "J2013": 300,
+      "J2014": 300,
+      "modules": 6,
+      "origin": 60,
+      "history": 61,
+      "target": 10,
+      "amountProxy": 1,
+      "horizon": 90,
+      "additionalFit": 0
+    },
+    "status": "J14_IID_RELATIVE_SCREEN_PASS_BOTH_DATE_SCREENS_NOT_PASSED",
+    "protocolSha256": "ecf87dab57388dd6959fe7d4628332c418a10ccc9859994a85802f5d29b3c107",
+    "J13EvaluationSha256": "54daccf9715e015edf49cd75c118f67565f4a10651a12d2c74513916d7702dc2",
+    "J14EvaluationSha256": "acf8608ea623aa23e156713ac31ee08ec1427b6f8029074e6c68ed2f66679b9f",
+    "diagnosticSha256": "f6d5a3a861881fede6499bca510c74378ccd74bc0cd8c6365e2ba3e9250355d2",
+    "independentDiagnosticSha256": "8c566d61118abc4477bf316aefc9eb3897f3e72321f822e0f8809b59584e2ed9"
+  },
+  "nllV1": {
+    "sourceHead": "88068c7cb5447f848cafa92d2f529d96d901ade0",
+    "sourceFreezeSha256": "736682f20c13137ef5d72854e9d4039605022950f8e4bf41e729cb776d826b1b",
+    "condition": {
+      "selected": 300,
+      "supported": 286,
+      "gridPoints": 1681,
+      "Q": [
+        32,
+        64,
+        128
+      ]
+    },
+    "status": "HELD_NO_CONFIRMATION",
+    "wallSeconds": 86.062,
+    "maximumPolledParentRssBytes": 77631488,
+    "resultSha256": "e6fea54323748d27f8369c8ea561d5af8e115dc678baac389552a3d40a5e5249",
+    "allGridArraySha256": "8db9d3b6752b354cc610c9825f245c394de195929b350971ccf63457307faec1"
+  },
+  "nllV2": {
+    "sourceHead": "1889cd6cb00b6593c3ee20d3bf22eacd071ea103",
+    "sourceFreezeSha256": "d6414cf4fb841e6fe3ecf46a48dfe086258bf8f97e182014910204bea4c84e15",
+    "condition": {
+      "selected": 300,
+      "supported": 286,
+      "gridPoints": 1681,
+      "addedQ": [
+        256,
+        512
+      ],
+      "fullGrid1024Executed": false
+    },
+    "status": "PASS_V2_CALIBRATION_NUMERICS_CONFIRMATION_SEPARATE",
+    "wallSeconds": 319.547,
+    "maximumPolledParentRssBytes": 80969728,
+    "resultSha256": "c6352b94063cbef23b05d89e0502948d17f0ae7973aab39f2188b24b5295b376",
+    "allGridArraySha256": "a5d1eca2ee232d620d59a30d59ae6f37d4dd80f48ac041effa4ee9d90171d8ff"
+  },
+  "nllJ14Confirmation": {
+    "condition": {
+      "selected": 300,
+      "supported": 289,
+      "pairedPointY": 269,
+      "modules": 6,
+      "origin": 60,
+      "history": 61,
+      "target": 10,
+      "amountProxy": 1,
+      "horizon": 90,
+      "M": 20000,
+      "seeds": [
+        207202690,
+        207202691
+      ],
+      "delta": -0.4,
+      "lambda": 0.3
+    },
+    "status": "RESEARCH_CONFIRMATION_SCREEN_NOT_PASSED",
+    "rps": {
+      "markov": 0.156638768,
+      "candidate": 0.104155533,
+      "pairedRelativeReduction": 0.335059038,
+      "pairedDelta95": [
+        -0.062830699,
+        -0.042267536
+      ]
+    },
+    "coverage": {
+      "p50Finite": 239,
+      "p80Finite": 202,
+      "p50ExpandedWilson95": [
+        0.285816911,
+        0.439492938
+      ],
+      "p80ExpandedWilson95": [
+        0.510271178,
+        0.664139947
+      ]
+    },
+    "preservedFailedResultSha256": "f49b589fecac5d2534360f2086d704cf29ed483a1e1eae9fbae4e408e452cb18",
+    "productAdoption": false
+  },
+  "nativeAndStream": {
+    "status": "SYNTHETIC_PARITY_AND_RESOURCE_CHECKS_ONLY",
+    "samePoolSourceFreezeSha256": "5b26bb56313fe7670c000490d1bb24ab87ba239ebfed82873fa3a47cd5a76f6d",
+    "goldenResultSha256": "6eee40a683436ad5a75ce88958a5dbe8065dfbc6c8f8c29b7e7511a6ebd90045",
+    "streamQaSha256": "8350418004df939a96abd296dafabedc4215ec0b064b7b783a50ae84678f32dd",
+    "entryQaSha256": "7b9b77e240b09c448d0acfaac88387477b26bdecb77eb76300d09ccc64e96b50",
+    "censorAllDaysAggregateSha256": "233a63c7ae7ab3cf7571d52e180dd4702144ddda0c6c5f4990c64b8c5c6fca40",
+    "differentRngCppSynthetic": {
+      "compiler": "GCC15.1.0",
+      "wallSeconds": 6.484,
+      "peakWorkingSetKiB": 6276,
+      "M": 2048,
+      "gridPoints": 1681,
+      "shapes": 4,
+      "seeds": 3
+    },
+    "samePoolSmallStream": {
+      "selected": 7,
+      "supported": 6,
+      "stages": 8,
+      "cells": 484128,
+      "wallSeconds": 42.762,
+      "parentRssBytes": 128520192,
+      "successfulNativePeakKiB": 7196
+    },
+    "modelOrProductionNativeAdopted": false
+  },
+  "boundedJ13": {
+    "sourceHead": "213361c05e52f8971505233983eed10faef77331",
+    "sourceFreezeSha256": "b94122e22dd8b0ccc558401c76d9fe21af31216f42bda64f41b50ef564843bba",
+    "condition": {
+      "selected": 300,
+      "supported": 286,
+      "M": [
+        512,
+        1024,
+        2048,
+        4096
+      ],
+      "seeds": [
+        207202690,
+        207202691
+      ],
+      "gridPoints": 1681
+    },
+    "status": "HELD",
+    "reasons": [
+      "MC_OBJECTIVE_DIFFERENCE",
+      "GAP_RUNNER"
+    ],
+    "wallSeconds": 1884.483,
+    "parentRssBytes": 174555136,
+    "successfulNativePeakKiB": 7212,
+    "conservativeCombinedBytes": 181940224,
+    "resultSha256": "da8f306411cf5c466568cb59d24291802d7826476f842b0c5e8f5638831682c4",
+    "syntheticAnonymousBundleSha256": "90aad99f91f0d94007a2c54b9609fc59fbeb3a5acbbebf17b19d6feb079703ba"
+  },
+  "precisionBoundary": {
+    "oldSourceHead": "fff56c7010928cf267dce8de9559c0e44c600d2d",
+    "oldSourceFreezeSha256": "413a68cb9dbabe34f8bc3ad1b96a815a305ffc8f19087355e6b6954cfed8661c",
+    "oldSyntheticStopSha256": "1d7c62da794b99de07e6500c327f5c1eabf1ba31928091c61a27e18ee19468d7",
+    "oldStop": "COMBINED_RSS",
+    "repairReviewAnonymousBundle": {
+      "name": "future-roi-precision-boundary-repair-review-v1.zip",
+      "sha256": "9a72516face13a4fb10fc09bf81cf5e2bf777c94aaa7d8f5c105db1a20b96e19"
+    },
+    "fullSyntheticAssessmentSha256": "12cceae27b4c1bdb579f77990a5e5f03f292831d4b85133e2c0790834c319609",
+    "fullSynthetic": {
+      "wallMs": 5917479.2149,
+      "parentRssBytes": 75730944,
+      "successfulNativePeakKiB": 16076,
+      "conservativeCombinedBytes": 92192768,
+      "resourceOnly": true
+    },
+    "actual": {
+      "status": "COMPLETE_ACTUAL_J13_READBACK_PASS_NUMERICAL_GATE_HELD",
+      "sourceHead": "ed1e2bd6439058fd53a5ccf5b4f5054a08e3d6f6",
+      "historicalSourceFreezeSha256": "383ebdcf88980be796a0567ac66e5a16ae41e1d0d102bae04d676b1a41183c11",
+      "nativeExeSha256": "783c272c86f70ef2745d4198ad83da2a1d4800a5e29512fa150e2502dde73677",
+      "fixedProtocol": {
+        "MSTAGES": [
+          8192,
+          16384
+        ],
+        "SEEDS": [
+          207202690,
+          207202691
+        ],
+        "grid": 1681,
+        "budgetMs": 9000000,
+        "rssLimitBytes": 268435456,
+        "nativeReserveBytes": 69206016,
+        "nativeCapBytes": 67108864,
+        "nativeTimeoutMs": 180000,
+        "rowYieldTurns": 2,
+        "hashBufferBytes": 65536,
+        "fullExpectedRows": 1200,
+        "fullExpectedReserves": 1144,
+        "fullExpectedTraceSamples": 8535
+      },
+      "rows": 1200,
+      "stages": 4,
+      "cells": 12103200,
+      "finiteSupportedCells": 11538384,
+      "unsupportedNaNCells": 564816,
+      "meansModuleEqualBitExact": true,
+      "identitySameTDeltaZero": true,
+      "allStreamHashAndShapeChecks": true,
+      "poolEntries": 1144,
+      "normalGuardReportedRssMaximumBytes": 76275712,
+      "authoritativeAllSampleRssMaximumBytes": 76275712,
+      "recordDefinitionDifferenceBytes": 0,
+      "successfulNativeMaximumPeakKiB": 16076,
+      "conservativeAllSampleParentPlusSuccessfulNativeMaximumBytes": 92737536,
+      "allSampleMaximumPlusFixedReserveBytes": 145481728,
+      "traceSamples": 8535,
+      "postTraceSamples": 36,
+      "reserveSamples": 1144,
+      "maxKnownLiveReusableBytes": 25026608,
+      "wallMs": 6091002.0956,
+      "gate": {
+        "status": "HELD",
+        "reasons": [
+          "GAP_RUNNER"
+        ],
+        "best": 1354,
+        "runner": 1353,
+        "identity": 1640,
+        "maxStageDiff": 0.00017307420892220815,
+        "maxSeedDiff": 0.00016505881393369393,
+        "gapChecks": {
+          "identity": {
+            "gap": 0.06702429134162997,
+            "range": 0.00026806828104548874,
+            "pass": true
+          },
+          "runner": {
+            "gap": 9.023730421034437e-05,
+            "range": 2.052883236235148e-05,
+            "pass": false
+          }
+        },
+        "coefficientSelected": false,
+        "limits": "Synthetic QA is not adoption or confirmation; independent review required"
+      },
+      "rawResultSha256": "08ad82d424242238c856f468b1206c240f180b3981311a4221d9435483ea1c4e",
+      "independentActualReadbackSha256": "070c74a697d59d5bbebea5fa8f28c200f82d0fc39f8d3cd8cde863b1e2614daa",
+      "savedGateReadbackSha256": "405f935b30c1ab08803fc6c51a5d368f281906eaf5f397cd1f83ca110c84c93a",
+      "coefficientSelected": false,
+      "adopted": false,
+      "J14OrReserveEvaluated": false,
+      "forcedGc": false,
+      "resourceMeasurementLimits": [
+        "Sampled parent/native checkpoints; no continuous hard-cap guarantee",
+        "Native abnormal-exit peak unavailable",
+        "Parent CPU excludes native CPU; no provider CPU conversion"
+      ]
+    },
+    "actualSourceReceiptSha256": "7c031bf5f99b07128b59e8f87b0c216cc4609ee37113ab9995d3f737ec0845d9",
+    "anonymousBundle": {
+      "name": "future-roi-actual-j13-precision-anonymous-receipt-v1.zip",
+      "sha256": "d7e27bc5a7a40a1416306729ae6e1ad5e4a9ff2ae66b14f209f36af05fadb1f9"
+    },
+    "source43Sha256": {
+      "experiments/pause-candidate-synthetic/semi-markov.mjs": "ec34d76fa621d464ae4d10ad22552983ad93e75a2168850da83073bfa4373325",
+      "experiments/pooled-logistic-preflight/baseline.mjs": "1629b7b604616bee08e1243b464b8d918ad028444d27f7d7d967327fae2b8a43",
+      "experiments/pooled-logistic-preflight/model.mjs": "820f82996cd440c5097357fb9514535e95c6c253e2078b9e9b3135219bd59591",
+      "experiments/semi-markov-residual-audit/bounded_acceptance.mjs": "cefe4fe0d43884983526b2b4e76f9ecc1dc5337da5e22fe30ac7ee1fc7079782",
+      "experiments/semi-markov-residual-audit/bounded_disk_readback.py": "13c52ac525164df4d1622187496690df45d1a6e0faacdbac7393eafcec755b2a",
+      "experiments/semi-markov-residual-audit/bounded_reserve_qa.mjs": "7d9773ce329847d1f588c516bbfec96db3bdfd3cdab7abfc396676985b26ad99",
+      "experiments/semi-markov-residual-audit/bounded_resource_preflight.mjs": "a07a2899677cef4c702be48af780e21827505ba46ffe468cbe1819c2686ba9f0",
+      "experiments/semi-markov-residual-audit/MEMORY-BOUND-PROTOCOL.md": "d4c77b41fcfab0afc465867163ea85967cc00c6d0b6c05e89ee42b8c16050850",
+      "experiments/semi-markov-residual-audit/memory_alloc_diagnostic.mjs": "a04196a4eb3041a94675bbcadec30b7b285cc290815ec1107591d7febf8624ca",
+      "experiments/semi-markov-residual-audit/memory_alloc_diagnostic_v2.mjs": "02d64d276d581b12905111fb44166f4e175b15dac37fc901f46752e083ba4118",
+      "experiments/semi-markov-residual-audit/memory_meter.mjs": "1494b5e8fa6b45c96f12941e1551201ebc9e4e4cbf4a14b97a0ffd06c7e51e13",
+      "experiments/semi-markov-residual-audit/native_same_pool.cpp": "e76222066c9f305ebc5a3d3d9c82491a22369f545a8abfafd05e796f05aa4c14",
+      "experiments/semi-markov-residual-audit/NEXT-RPS-PLAN.md": "cc70d251bbff5dd57028ca76a707971336b440977e9b4bcde1bded69d8b68d4a",
+      "experiments/semi-markov-residual-audit/rps_bounded_runner.mjs": "42e14bd53100aee600128cf70ce0844282daf5040eaa605578f363e48f9b0d89",
+      "experiments/semi-markov-residual-audit/rps_stream_runner.mjs": "11dad61bce81d7fcad7f6eb80f25786c80c8b32a1794b4d81641f2fec3bf86dc",
+      "experiments/semi-markov-residual-audit/run_same_pool.py": "dd0a2f5d6326765170c58846623dcbc6e6bc369a10a0bcf5c858bcc83b72b894",
+      "experiments/semi-markov-residual-audit/SAME-POOL-PROTOCOL.md": "0d3af9f70ee2d125e481f90b525487a0dba11d6f45dac518fadbf972093bab76",
+      "experiments/semi-markov-residual-audit/same_pool_adapter.mjs": "e00044c6e4bcb679c3d8432b23ae2147e651dbe486e98d645ee27df938f050b4",
+      "experiments/semi-markov-residual-audit/same_pool_bounded.mjs": "8c31c1152180d274570dbefcf8297ed9966858151fc9039c36e13dbb69ffc14d",
+      "experiments/semi-markov-residual-audit/synthetic_crn.mjs": "b3b363d71ab70385bc22711ddf214055a890c19baaf02eab8f06de7cd0c8305d",
+      "packages/prediction/dist/src/completion-integrated.js": "a6c75b73883c4f964993effec63f2240340abf9127d3533fe54b4038112fa52a",
+      "packages/prediction/dist/src/completion.js": "de8a9bd884bc3005f0eb873812fcff302caa87ffd59a72046a0b98c1a90a2cc7",
+      "packages/prediction/dist/src/errors.js": "b5da7382d0f8014a412617d20b25d1682272d43fed43f397a41733aaf2bd7ba4",
+      "packages/prediction/dist/src/random.js": "4c263dee6211e3e659a19127e53bc4c0cd7f2171e9666c6fc5c3fb37287908e3",
+      "experiments/semi-markov-residual-audit/same_pool_precision16384.mjs": "f62e7ebea49105ca380e9c0154d03312f9752f69c1ddb0b164c2304e4bfe8156",
+      "experiments/semi-markov-residual-audit/rps_precision_runner.mjs": "f8e14ea28b41ab159050c279abb2b549ceffd37d17113ff534713a8d6e761659",
+      "experiments/semi-markov-residual-audit/rps_precision_gate.mjs": "e65eb5d73c5171ae7d1ff1f6bd7b89cc1b054a63c309f7ab9bdf27f2b04c889f",
+      "experiments/semi-markov-residual-audit/precision_gate_qa.mjs": "addfb9780ffeec8c337571b92d41d50855476b899e18ad7279f4ddb19a927050",
+      "experiments/semi-markov-residual-audit/precision_legacy_runner_qa.mjs": "3dbc18d700a16518b424fb3c094ced5292059c18e2a9024b40bfd6b46b6be39e",
+      "experiments/semi-markov-residual-audit/precision_legacy_acceptance.mjs": "a814ce0d74d235987a71b2410d32f26d601f0cbe9e3c9c427e57b32de174615a",
+      "experiments/semi-markov-residual-audit/precision_max_pool_qa.mjs": "2313f7be9fb0f8c9b0ee561e89f1fc0e187a8e82a4f1faf6157b653f62ebb804",
+      "experiments/semi-markov-residual-audit/precision_stop_qa.mjs": "71f31ecb89b4fda47e542ed96acc9b457c8f5b669b2e03a5067b6117ae018642",
+      "experiments/semi-markov-residual-audit/precision_resource_preflight.mjs": "05490ed7f84b875052764455dbb526a1f4c64dad433d71204b970413da9d6dbe",
+      "experiments/semi-markov-residual-audit/precision_reserve_qa.mjs": "5307f98483c7b5742034fbeac040f2ccfa7af60c75599b932f354e59333a23f2",
+      "experiments/semi-markov-residual-audit/precision_disk_readback.py": "c204907d7f0b04ac21c02852aa58c0351229d63680f79c81a6b8b55ca5bbf071",
+      "experiments/semi-markov-residual-audit/PRECISION-8192-16384-PROTOCOL.md": "14df66794c0f8d453eb9098ab02fe45e9d8450446b99e4e083c454b6cda0d613",
+      "experiments/semi-markov-residual-audit/precision_guarded_hash.mjs": "ec3513fb37ba5e4307e7e3b1e7ac7f762fdc881679dcb594f7111387b8118ecb",
+      "experiments/semi-markov-residual-audit/precision_boundary_meter.mjs": "1de2ea0e094aa3801a5739bb18c255270d7c4a19d9ff251c708cd76ccdb745a5",
+      "experiments/semi-markov-residual-audit/rps_precision_boundary_runner.mjs": "7106f6b7cbd35250f1e90ae8c8058f44cd2589651583404ebb2d3261d5cf719c",
+      "experiments/semi-markov-residual-audit/precision_boundary_resource_preflight.mjs": "c96c5650cfca916668a61cb842445408e98274288740705bf0a05b863f91032f",
+      "experiments/semi-markov-residual-audit/precision_boundary_qa.mjs": "ed9bf6f98be4d91bad9a0c20e483e28e6f000292c9940a035e896a69867bac63",
+      "experiments/semi-markov-residual-audit/PRECISION-BOUNDARY-REPAIR-PROTOCOL.md": "285b8c5524bee291a3ea4c3863f1ff0f2b0a7366237ddf9eb5fa4146569d074c",
+      "experiments/semi-markov-residual-audit/precision_boundary_disk_readback.py": "0da43cff4c40e5348ac7c94cbca184c805e99760a2b35e0104b8c62e5f6f89e4"
+    },
+    "independentReviewScope": "Anonymous means and fixed gate independently recalculated; private full-score/pool/trace and original input checks are execution-receipt claims."
+  },
+  "notPerformed": [
+    "new experiment in documentation task",
+    "new RPS J14 confirmation",
+    "reserved activity/label/result evaluation",
+    "post-result coefficient adoption or threshold relaxation",
+    "production native adoption",
+    "deployment",
+    "provider CPU conversion",
+    "real-user P80 calibration guarantee"
+  ],
+  "historicalEngineHandoff": {
+    "bundleSha256": "c8496662add8c30d902ee58924a611ea67e8dda418094002ea704542cca2ece5",
+    "bundleBytes": 148822,
+    "members": 27,
+    "inventoryPhaseCount": 20,
+    "sourceIndex": [
+      {
+        "owner": "C",
+        "artifact": "hmm-fit-result/FIT-RECEIPT.json",
+        "bytes": 2363,
+        "sha256": "42bb552e5f65648b6b77d351562f31cba1cbf3cb4fcd9b5bcfd7ee2181e12cce",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-evaluation-result/COMPARISON-SUMMARY.json",
+        "bytes": 200556,
+        "sha256": "92f5b285c4c749ecdf9b856dcb772a9262d5a6592142963f7e6c01a82788ade9",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-evaluation-result/QUICK-READOUT.json",
+        "bytes": 21608,
+        "sha256": "bef55bf5ad3ede51ceb43872b944a882966986977814cff2f20a0199a0d89007",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-evaluation-result/AGGREGATE-VERIFICATION.json",
+        "bytes": 806,
+        "sha256": "56f0ac14cbf09c7af9efee116cb46403b757ee161bf793a8f2395f3f73afc47f",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-training-diagnosis/DIAGNOSIS-SUMMARY.json",
+        "bytes": 70687,
+        "sha256": "dd1c75da52d2557f3b971b071cd5b60ed90447b1f0888da8db26e2b1bb114d3e",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-training-diagnosis/J14-ROSTER-IDENTIFICATION.json",
+        "bytes": 1523,
+        "sha256": "718b14db6f1040a140b8728dd8e309dda9e48f6ffae536b83b64e43d1afa9510",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-training-diagnosis/LONG-S-COMPARATOR-EXTRACTION.json",
+        "bytes": 12042,
+        "sha256": "34290d8568747529928616c5ac8e8d877ae3f58ceb4f369a1cb2309549fd2be3",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-multitarget-diagnosis/MULTITARGET-QUICK-READOUT.json",
+        "bytes": 9337,
+        "sha256": "5ba02e0bb615bc202b75870baa6196d366a56bdeb7cfbf5e8b31eebb0178038f",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-multitarget-diagnosis/MULTITARGET-SUMMARY.json",
+        "bytes": 632413,
+        "sha256": "f6d1986029eb1dca5a022d2f337045a368f7d439b36a2a263934d58c663cc353",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-multitarget-diagnosis/QUANTILE-HORIZON-AVAILABILITY.json",
+        "bytes": 155397,
+        "sha256": "da109121ef01fe5b6dc3ffe3fa60f8684f1366450aca7c1e162ea87f8bf4768a",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-multitarget-diagnosis/MULTITARGET-INDEPENDENT-VERIFICATION.json",
+        "bytes": 1204,
+        "sha256": "72a57b437d6d7d0f86f02671adefeaf9cc6bb4a7b3a590fca1646fc0f978a3b6",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-multitarget-diagnosis/PROBABILITY-BIN-VERIFICATION.json",
+        "bytes": 493,
+        "sha256": "f2926426c8c35649a17cc2f319152c93bb97fb6d72387ccbe638f5337e73c55b",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-secondseed-diagnosis/SECOND-SEED-RPS-SUMMARY.json",
+        "bytes": 97257,
+        "sha256": "708b7d2672975660e88fd0633ef14a3a633974caf57b54d9cd07c4fc62f076db",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-secondseed-diagnosis/INDEPENDENT-VERIFICATION.json",
+        "bytes": 466,
+        "sha256": "0194ab285c357d42b22a6b0b90f8d6323b7e767b1ae857b4928331fd40c71db7",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "bocpd-J13-diagnosis/DIAGNOSTIC-RESULT.json",
+        "bytes": 18016,
+        "sha256": "1ee2c37e1cd74da76ed74ecabe20df8ad88171d5e2cac2c367b4bd72cbc30e7c",
+        "copied": true
+      },
+      {
+        "owner": "C",
+        "artifact": "engine-validation-evidence/REPORT.md",
+        "bytes": 14942,
+        "sha256": "015bdae066c4323b4a088be3739643d6da3e959576181ff3c6a390fba6359046",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "engine-comparison-evidence/REPORT.md",
+        "bytes": 14684,
+        "sha256": "27a1dcce749e2e317f744cc65f0c2b472e68478650b2a18ef0717fe231d697f8",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "engine-comparison-evidence/quadrature/REPORT.md",
+        "bytes": 6732,
+        "sha256": "517d34ce14d727e01c0469daf74979260e23055270937be63eb09b6fad8366ae",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "engine-comparison-evidence/quadrature-followup/REPORT.md",
+        "bytes": 11113,
+        "sha256": "e3ca422295375cb98809e4db92f870b7ad3383f5394f946abcefdaa841180d5c",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "engine-comparison-evidence/recency/REPORT.md",
+        "bytes": 14355,
+        "sha256": "a7ba7978f55010f03974ed6b2ea4f2fd434e0a851aef4f63d7e3bd3ed556f7ca",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "engine-integration-evidence/REPORT-FINAL.md",
+        "bytes": 9434,
+        "sha256": "285a799a3df3c9447cad59bdee02753c9cf4d836d904bd658db31f105de98028",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "engine-integration-evidence/release-v2/full-engine.json",
+        "bytes": 20916,
+        "sha256": "d7e98b83c017bf4a7a1a9e95323a8ef6d6f58cdc79ee3aaf3ac6600b77f30bde",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "engine-integration-evidence/full-engine.json",
+        "bytes": 20059,
+        "sha256": "4243e1f5e1722fff7a3c08393064ed1a427888365da2702f39e77448345e612c",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "oulad-reevaluation-204/REPORT.md",
+        "bytes": 19878,
+        "sha256": "70f7f3e6b3213918441ce96d627faea864cd6d99eed5dbf854f7bad252ccda62",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "oulad-reevaluation-204/DELIVERY-RECEIPT.md",
+        "bytes": 1409,
+        "sha256": "2962de3518b0ced9b888c9d6c8a8d991b57f39e7d0b9dce1604b185d3d39018e",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "oulad-c1-v2-development/REPORT.md",
+        "bytes": 10208,
+        "sha256": "4812b68bd7558b0010a0b0afc8faa184c9af16da64d37313bc4e5a89fdd01c6b",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "oulad-c1-v2-development/DELIVERY-RECEIPT.md",
+        "bytes": 2174,
+        "sha256": "4a43bfb80762915aac1bc81015b519f0a2f64b24a0935b8966c3cd5ea7452cbd",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "bocpd-research/REPORT-J13.md",
+        "bytes": 8460,
+        "sha256": "c9fb78a143762f4c5445a3a02ea0d17217b940dec1f2fbb8f4123ca2d33e2d96",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "bocpd-J13-diagnosis/DIAGNOSIS.md",
+        "bytes": 5993,
+        "sha256": "4154c7a5b38656cb9df9001bf12434c27c62f134256e8c8000f3313bd0aea9de",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-evaluation-result/REPORT.md",
+        "bytes": 6239,
+        "sha256": "21544c67407f6b80dd7007e1b1c00220b9800ac2a8d68d1661b6a550b7e47423",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-training-diagnosis/REPORT.md",
+        "bytes": 9304,
+        "sha256": "75adda331851ec0a5efbeba05cea214ee7f3b2b81a5d607cbb98be3fd7a4acc6",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-training-diagnosis/LONG-S-REPORT.md",
+        "bytes": 4565,
+        "sha256": "ad5e5687771b6a62270cd535bc52b77de85e9c0497b548650da098941791755f",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-multitarget-diagnosis/REPORT.md",
+        "bytes": 11361,
+        "sha256": "cd60db7ccc31e58265fc4110e39d5f6b9d78ca8296e10ad61c02771796e3953f",
+        "copied": false
+      },
+      {
+        "owner": "C",
+        "artifact": "hmm-secondseed-diagnosis/REPORT.md",
+        "bytes": 5436,
+        "sha256": "fea73b52592545c1b1d8090817177fb5457effe82b09b324c1bcf76292d6d11a",
+        "copied": false
+      },
+      {
+        "owner": "B",
+        "artifact": "experiments/semi-markov-confirmation/RESULT.md",
+        "bytes": 21878,
+        "sha256": "a1405bdfad866559ccfb7937d8b67f23d3d9f1a9954cd3ad83929dd0b2ababef",
+        "copied": false,
+        "access": "Existing anonymous report only; no private inputs opened"
+      },
+      {
+        "owner": "B",
+        "artifact": "experiments/pause-candidate-synthetic/CALIBRATION.md",
+        "bytes": 4428,
+        "sha256": "0bf11f31fa86d0569bb1108bb6e443abdd1666d8c234ac080e1af9152f130b8c",
+        "copied": false,
+        "access": "Existing anonymous report only; no private inputs opened"
+      },
+      {
+        "owner": "B",
+        "artifact": "OWNER-NEW-J13-FINAL.md",
+        "bytes": 1212,
+        "sha256": "9d280f1f58886294183383f45e38a87463d79ea029ad05c20c5a5fdd389d464c",
+        "copied": true,
+        "access": "Exact completed anonymous final report snapshot"
+      }
+    ],
+    "verifiedMemberSha256": {
+      "aggregates/bocpd-J13-diagnosis/DIAGNOSTIC-RESULT.json": "1ee2c37e1cd74da76ed74ecabe20df8ad88171d5e2cac2c367b4bd72cbc30e7c",
+      "aggregates/hmm-evaluation-result/AGGREGATE-VERIFICATION.json": "56f0ac14cbf09c7af9efee116cb46403b757ee161bf793a8f2395f3f73afc47f",
+      "aggregates/hmm-evaluation-result/COMPARISON-SUMMARY.json": "92f5b285c4c749ecdf9b856dcb772a9262d5a6592142963f7e6c01a82788ade9",
+      "aggregates/hmm-evaluation-result/QUICK-READOUT.json": "bef55bf5ad3ede51ceb43872b944a882966986977814cff2f20a0199a0d89007",
+      "aggregates/hmm-fit-result/FIT-RECEIPT.json": "42bb552e5f65648b6b77d351562f31cba1cbf3cb4fcd9b5bcfd7ee2181e12cce",
+      "aggregates/hmm-multitarget-diagnosis/MULTITARGET-INDEPENDENT-VERIFICATION.json": "72a57b437d6d7d0f86f02671adefeaf9cc6bb4a7b3a590fca1646fc0f978a3b6",
+      "aggregates/hmm-multitarget-diagnosis/MULTITARGET-QUICK-READOUT.json": "5ba02e0bb615bc202b75870baa6196d366a56bdeb7cfbf5e8b31eebb0178038f",
+      "aggregates/hmm-multitarget-diagnosis/MULTITARGET-SUMMARY.json": "f6d1986029eb1dca5a022d2f337045a368f7d439b36a2a263934d58c663cc353",
+      "aggregates/hmm-multitarget-diagnosis/PROBABILITY-BIN-VERIFICATION.json": "f2926426c8c35649a17cc2f319152c93bb97fb6d72387ccbe638f5337e73c55b",
+      "aggregates/hmm-multitarget-diagnosis/QUANTILE-HORIZON-AVAILABILITY.json": "da109121ef01fe5b6dc3ffe3fa60f8684f1366450aca7c1e162ea87f8bf4768a",
+      "aggregates/hmm-secondseed-diagnosis/INDEPENDENT-VERIFICATION.json": "0194ab285c357d42b22a6b0b90f8d6323b7e767b1ae857b4928331fd40c71db7",
+      "aggregates/hmm-secondseed-diagnosis/SECOND-SEED-RPS-SUMMARY.json": "708b7d2672975660e88fd0633ef14a3a633974caf57b54d9cd07c4fc62f076db",
+      "aggregates/hmm-training-diagnosis/DIAGNOSIS-SUMMARY.json": "dd1c75da52d2557f3b971b071cd5b60ed90447b1f0888da8db26e2b1bb114d3e",
+      "aggregates/hmm-training-diagnosis/J14-ROSTER-IDENTIFICATION.json": "718b14db6f1040a140b8728dd8e309dda9e48f6ffae536b83b64e43d1afa9510",
+      "aggregates/hmm-training-diagnosis/LONG-S-COMPARATOR-EXTRACTION.json": "34290d8568747529928616c5ac8e8d877ae3f58ceb4f369a1cb2309549fd2be3",
+      "B-TRANSFER-NOTE.md": "2f74f1959b91ee39cc58e534dc130d8cfb9a395de6782b56f3dbd3ed2eb8966b",
+      "CATALOG-LOCAL-VERIFICATION.json": "dbc5e79de347c3c24e546f7276c4d3f3af97517b177305c0cb6cec9efab61e0a",
+      "FULL-ENGINE-FINAL-SPEED.json": "39c000418fd0cbc9d2cd83775e6f1bcf07867e2a67d889f3e0af57e40681de26",
+      "HANDOFF.md": "36a0c8ae1033bdf030066966e67cb57130f3180af2d28907cdc15b1a0c83f6f3",
+      "INVENTORY.json": "328f550dbc054c4b724d3249bdd85649b1b905fd8691dd921c2716194a1d6011",
+      "LIBRARY-CATALOG.json": "a3ac073054d14d5eaac225fea3f6cfe8e81cd16c1be3cd8688d6d658a0e93911",
+      "MULTI-N-TABLES.md": "0ddb6e1c0fbc804ac0ab9bc9ece07bce04392e3e103ef9c2862579b0b2da3c4f",
+      "OWNER-NEW-J13-FINAL.md": "9d280f1f58886294183383f45e38a87463d79ea029ad05c20c5a5fdd389d464c",
+      "REFERENCES.md": "d66dea80d712f0865ffe06f73a884ade8409ecd17f93d22b0b08c2df54860bd9",
+      "SOURCE-INDEX.json": "e96fe6faa89a5e20f536b45ff43b6fd7655c3fd7afe3b2dc1ef2d423f8865a9f",
+      "SPEED.md": "e24a91c6e2b5f4969b3d3f907147083c92a5e94919914353435c9f951924435b"
+    },
+    "scope": "Existing anonymous aggregates and reports only; no input, label, individual score, pool, trace or holdout was opened in this documentation task."
+  },
+  "cdfMassShape": {
+    "status": "SYNTHETIC16_PASS_OLD_ACTORS_AND_LEDGER_UNCHANGED_NO_REAL_FIT",
+    "resultSha256": "bbe5d1edd12420a7a4cba442b1f6a77563e38f4b1238a64601e892d55603122c",
+    "prefitPlanSha256": "6c1e92e77652bdfb1b4d009541de41ed16a1f485fc90c530ada8cbf46cd07701",
+    "realFit": false
+  },
+  "bocpd": {
+    "selected": 300,
+    "commonCDF": 286,
+    "pointY": 273,
+    "reportSha256": "c9fb78a143762f4c5445a3a02ea0d17217b940dec1f2fbb8f4123ca2d33e2d96",
+    "savedWeightDiagnosticSha256": "1ee2c37e1cd74da76ed74ecabe20df8ad88171d5e2cac2c367b4bd72cbc30e7c",
+    "hazard": 0.01,
+    "prior": [
+      2,
+      2
+    ],
+    "runLengths": 60,
+    "futureRegimePolicy": "Conditional continuation; future changepoints not generated",
+    "pointRpsBaseline": 0.156501,
+    "pointRpsCandidate": 0.151308,
+    "pairedRpsDifference": -0.00519314,
+    "pairedRpsCI95": [
+      -0.011746,
+      0.001439
+    ],
+    "sameLegalTIdentificationBounds": [
+      -0.006633,
+      -0.004297
+    ],
+    "finiteP50": 256,
+    "finiteP80": 227,
+    "coverageBoundsP50": [
+      0.1562,
+      0.168
+    ],
+    "coverageBoundsP80": [
+      0.3436,
+      0.3568
+    ],
+    "noChangeWeightMean": 0.6356805129994787,
+    "expectedRunLengthMean": 48.06064758888938,
+    "recentMajorityCount": 10,
+    "noChangeMajorityCount": 229,
+    "adopted": false
+  },
+  "hmm2": {
+    "sourceSha256": "8ce8bdcdf364632126ee18b4f9d333bf84812f983bd0c29df761b4fca0f7f6c9",
+    "fitReceiptSha256": "42bb552e5f65648b6b77d351562f31cba1cbf3cb4fcd9b5bcfd7ee2181e12cce",
+    "fit": {
+      "fixedStarts": 8,
+      "wallSeconds": 14.838899399968795,
+      "runnerExitCode": 0,
+      "seed": null,
+      "seedPolicy": "Deterministic weighted exact EM, fixed eight starts, exact CDF DP; no RNG or Monte Carlo.",
+      "status": "FIT_COMPLETED_EXPLORATORY_ONLY",
+      "fitStatus": "synthetic_numerical_gate_pass",
+      "independentConfirmation": false,
+      "adoptionAuthorized": false,
+      "fitArtifactCanonicalSHA256": "f20b5fac99c029ddb6d08857690de314ce2add9fbe97ed83cb69e66fc7a806c0",
+      "coefficientCanonicalSHA256": "5454e7a2229c7c802ec83cfce104e541473c13bb2b00735527c20aa4b542a262"
+    },
+    "training": {
+      "selected": 300,
+      "observations": 44458,
+      "transitions": 44158,
+      "terminalNullSlots": 842,
+      "knownDays": 151,
+      "inSampleSuffixUsed": true
+    },
+    "j14A": {
+      "resultSha256": "bef55bf5ad3ede51ceb43872b944a882966986977814cff2f20a0199a0d89007",
+      "selected": 300,
+      "commonCDFSupport": 294,
+      "commonPointY": 278,
+      "availability": {
+        "hmm": {
+          "selected": 300,
+          "prefixKnown61": 300,
+          "modelAvailable": 300,
+          "availableFraction": 1.0,
+          "validFullCDF": 300,
+          "inputUnavailable": 0,
+          "unavailableReasons": {},
+          "quantiles": {
+            "p50": {
+              "available": 300,
+              "beyond_horizon": 0,
+              "held_numerical_boundary": 0
+            },
+            "p80": {
+              "available": 300,
+              "beyond_horizon": 0,
+              "held_numerical_boundary": 0
+            }
+          }
+        },
+        "markov204": {
+          "selected": 300,
+          "prefixKnown61": 300,
+          "modelAvailable": 294,
+          "availableFraction": 0.98,
+          "validFullCDF": 294,
+          "inputUnavailable": 6,
+          "unavailableReasons": {
+            "NO_DONE_ORIGIN_TRANSITION": 6
+          },
+          "quantiles": {
+            "p50": {
+              "available": 273,
+              "beyond_horizon": 21,
+              "held_numerical_boundary": 0
+            },
+            "p80": {
+              "available": 240,
+              "beyond_horizon": 54,
+              "held_numerical_boundary": 0
+            }
+          }
+        },
+        "iidBeta": {
+          "selected": 300,
+          "prefixKnown61": 300,
+          "modelAvailable": 300,
+          "availableFraction": 1.0,
+          "validFullCDF": 300,
+          "inputUnavailable": 0,
+          "unavailableReasons": {},
+          "quantiles": {
+            "p50": {
+              "available": 259,
+              "beyond_horizon": 41,
+              "held_numerical_boundary": 0
+            },
+            "p80": {
+              "available": 229,
+              "beyond_horizon": 71,
+              "held_numerical_boundary": 0
+            }
+          }
+        },
+        "allNull": {
+          "selected": 300,
+          "prefixKnown61": 300,
+          "modelAvailable": 300,
+          "availableFraction": 1.0,
+          "validFullCDF": 300,
+          "inputUnavailable": 0,
+          "unavailableReasons": {},
+          "quantiles": {
+            "p50": {
+              "available": 0,
+              "beyond_horizon": 300,
+              "held_numerical_boundary": 0
+            },
+            "p80": {
+              "available": 0,
+              "beyond_horizon": 300,
+              "held_numerical_boundary": 0
+            }
+          }
+        },
+        "semiFixed": {
+          "selected": 300,
+          "prefixKnown61": 300,
+          "modelAvailable": 294,
+          "availableFraction": 0.98,
+          "validFullCDF": 294,
+          "inputUnavailable": 6,
+          "unavailableReasons": {
+            "MISSING_ORIGIN_TRANSITION": 6
+          },
+          "quantiles": {
+            "p50": {
+              "available": 230,
+              "beyond_horizon": 64,
+              "held_numerical_boundary": 0
+            },
+            "p80": {
+              "available": 198,
+              "beyond_horizon": 96,
+              "held_numerical_boundary": 0
+            }
+          }
+        },
+        "pacePoint": {
+          "selected": 300,
+          "prefixKnown61": 300,
+          "modelAvailable": 300,
+          "availableFraction": 1.0,
+          "validFullCDF": 0,
+          "inputUnavailable": 0,
+          "unavailableReasons": {},
+          "pointOnly": true,
+          "finitePoint": 249,
+          "p50p80": "NOT_PROBABILITY_QUANTILES",
+          "rpsAndProbabilisticPinball": "NOT_APPLICABLE"
+        }
+      },
+      "commonPointRPS": {
+        "hmm": {
+          "pooled": 0.16192756212109366,
+          "moduleBalanced": 0.1617005365261936,
+          "moduleSupport": {
+            "AAA": 47,
+            "BBB": 47,
+            "DDD": 45,
+            "EEE": 43,
+            "FFF": 48,
+            "GGG": 48
+          }
+        },
+        "markov204": {
+          "pooled": 0.17670740609743163,
+          "moduleBalanced": 0.17719007191169747,
+          "moduleSupport": {
+            "AAA": 47,
+            "BBB": 47,
+            "DDD": 45,
+            "EEE": 43,
+            "FFF": 48,
+            "GGG": 48
+          }
+        },
+        "iidBeta": {
+          "pooled": 0.1681949799405683,
+          "moduleBalanced": 0.16873858395692543,
+          "moduleSupport": {
+            "AAA": 47,
+            "BBB": 47,
+            "DDD": 45,
+            "EEE": 43,
+            "FFF": 48,
+            "GGG": 48
+          }
+        },
+        "allNull": {
+          "pooled": 0.3756594724220623,
+          "moduleBalanced": 0.3775750199041748,
+          "moduleSupport": {
+            "AAA": 47,
+            "BBB": 47,
+            "DDD": 45,
+            "EEE": 43,
+            "FFF": 48,
+            "GGG": 48
+          }
+        },
+        "semiFixed": {
+          "pooled": 0.11026279461141086,
+          "moduleBalanced": 0.11075944671345289,
+          "moduleSupport": {
+            "AAA": 47,
+            "BBB": 47,
+            "DDD": 45,
+            "EEE": 43,
+            "FFF": 48,
+            "GGG": 48
+          }
+        }
+      },
+      "pairedRPSLegalBounds": {
+        "markov204": [
+          -0.02618547699621894,
+          -0.011000511953048457
+        ],
+        "iidBeta": [
+          -0.02021577416642801,
+          -0.0027868340358227304
+        ],
+        "allNull": [
+          -0.22548324885148432,
+          -0.18567173182432695
+        ],
+        "semiFixed": [
+          0.03948115419294617,
+          0.05471518539747642
+        ]
+      },
+      "HMMownQuantiles": {
+        "p50": {
+          "finite": 300,
+          "finiteOverSelected": 1.0,
+          "coverageBounds": {
+            "pooled": [
+              0.23,
+              0.2633333333333333
+            ],
+            "moduleBalanced": [
+              0.23,
+              0.26333333333333336
+            ],
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "meanFofQ": {
+            "pooled": 0.5107827387487959,
+            "moduleBalanced": 0.5107827387487959,
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "coverageMinusMeanFofQBounds": {
+            "pooled": [
+              -0.28078273874879583,
+              -0.2474494054154625
+            ],
+            "moduleBalanced": [
+              -0.28078273874879583,
+              -0.24744940541546254
+            ],
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "knownAtQ": 290,
+          "knownAtQCoverage": 0.23793103448275862,
+          "finitePointY": 283,
+          "finitePointYCoverage": 0.24381625441696114,
+          "nominalTau": 0.5,
+          "discreteQuantileReference": "Mean F(q), not exact nominal tau."
+        },
+        "p80": {
+          "finite": 300,
+          "finiteOverSelected": 1.0,
+          "coverageBounds": {
+            "pooled": [
+              0.5966666666666667,
+              0.6466666666666666
+            ],
+            "moduleBalanced": [
+              0.5966666666666668,
+              0.6466666666666666
+            ],
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "meanFofQ": {
+            "pooled": 0.8040609687586904,
+            "moduleBalanced": 0.8040609687586904,
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "coverageMinusMeanFofQBounds": {
+            "pooled": [
+              -0.2073943020920237,
+              -0.1573943020920237
+            ],
+            "moduleBalanced": [
+              -0.2073943020920237,
+              -0.15739430209202368
+            ],
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "knownAtQ": 285,
+          "knownAtQCoverage": 0.6280701754385964,
+          "finitePointY": 283,
+          "finitePointYCoverage": 0.6325088339222615,
+          "nominalTau": 0.8,
+          "discreteQuantileReference": "Mean F(q), not exact nominal tau."
+        }
+      },
+      "independentConfirmation": false,
+      "adoptionAuthorized": false,
+      "horizons": {
+        "30": {
+          "support": 300,
+          "meanF": {
+            "pooled": 0.4022416894785677,
+            "moduleBalanced": 0.40224168947856764,
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "observedLegalYBounds": {
+            "pooled": [
+              0.20666666666666667,
+              0.23333333333333334
+            ],
+            "moduleBalanced": [
+              0.2066666666666667,
+              0.2333333333333333
+            ],
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          }
+        },
+        "60": {
+          "support": 300,
+          "meanF": {
+            "pooled": 0.6930174339290386,
+            "moduleBalanced": 0.6930174339290387,
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "observedLegalYBounds": {
+            "pooled": [
+              0.5066666666666667,
+              0.55
+            ],
+            "moduleBalanced": [
+              0.5066666666666667,
+              0.55
+            ],
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          }
+        },
+        "90": {
+          "support": 300,
+          "meanF": {
+            "pooled": 0.884378038438598,
+            "moduleBalanced": 0.884378038438598,
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          },
+          "observedLegalYBounds": {
+            "pooled": [
+              0.65,
+              0.7066666666666667
+            ],
+            "moduleBalanced": [
+              0.6499999999999999,
+              0.7066666666666667
+            ],
+            "moduleSupport": {
+              "AAA": 50,
+              "BBB": 50,
+              "DDD": 50,
+              "EEE": 50,
+              "FFF": 50,
+              "GGG": 50
+            }
+          }
+        }
+      },
+      "reusedExistingCohort": true,
+      "overlapWithJ14B": 0
+    },
+    "multiN": {
+      "1": {
+        "common": 286,
+        "pointIdentified": 283,
+        "partialIdentified": 3,
+        "semiGatePassed": true,
+        "observed": {
+          "30": [
+            0.8354988662131518,
+            0.8392025699168556
+          ],
+          "60": [
+            0.9034807256235826,
+            0.9143603552532124
+          ],
+          "90": [
+            0.918064058956916,
+            0.9289436885865457
+          ]
+        },
+        "methods": {
+          "markov204": {
+            "F": {
+              "30": 0.9684719550232539,
+              "60": 0.9902963508583554,
+              "90": 0.9956239398824275
+            },
+            "rpsPoint": 0.10762902037054134,
+            "rpsBounds": [
+              0.10835968728755783,
+              0.11447908287163612
+            ],
+            "finiteP50": 286,
+            "finiteP80": 286
+          },
+          "iidBeta": {
+            "F": {
+              "30": 0.9708115291095804,
+              "60": 0.9912938949887614,
+              "90": 0.9962482460084324
+            },
+            "rpsPoint": 0.11052700251278436,
+            "rpsBounds": [
+              0.1112265466468318,
+              0.11736036022631935
+            ],
+            "finiteP50": 286,
+            "finiteP80": 286
+          },
+          "semiFixed": {
+            "F": {
+              "30": 0.927510325916478,
+              "60": 0.9703591743197278,
+              "90": 0.9842699903628119
+            },
+            "rpsPoint": 0.09024330953557251,
+            "rpsBounds": [
+              0.0907338450552276,
+              0.09590812386181195
+            ],
+            "finiteP50": 286,
+            "finiteP80": 285
+          },
+          "hmm": {
+            "F": {
+              "30": 0.9796105966144811,
+              "60": 0.9993372188352176,
+              "90": 0.9999784555308439
+            },
+            "rpsPoint": 0.11738241578635304,
+            "rpsBounds": [
+              0.1182861028020163,
+              0.12483022386874103
+            ],
+            "finiteP50": 286,
+            "finiteP80": 286
+          }
+        }
+      },
+      "5": {
+        "common": 286,
+        "pointIdentified": 278,
+        "partialIdentified": 8,
+        "semiGatePassed": true,
+        "observed": {
+          "30": [
+            0.5204837490551776,
+            0.5276596749811036
+          ],
+          "60": [
+            0.7322694633408919,
+            0.7571277399848828
+          ],
+          "90": [
+            0.8002267573696146,
+            0.8285572562358278
+          ]
+        },
+        "methods": {
+          "markov204": {
+            "F": {
+              "30": 0.7952285284590506,
+              "60": 0.9198025880071358,
+              "90": 0.9590259514295973
+            },
+            "rpsPoint": 0.15708328865829468,
+            "rpsBounds": [
+              0.15619502064853488,
+              0.16760430410929858
+            ],
+            "finiteP50": 285,
+            "finiteP80": 266
+          },
+          "iidBeta": {
+            "F": {
+              "30": 0.7687577818227465,
+              "60": 0.8959257428547481,
+              "90": 0.9422857428119104
+            },
+            "rpsPoint": 0.14912046537378998,
+            "rpsBounds": [
+              0.1481387777061083,
+              0.16049481011568104
+            ],
+            "finiteP50": 278,
+            "finiteP80": 255
+          },
+          "semiFixed": {
+            "F": {
+              "30": 0.6742148633786847,
+              "60": 0.8346947666288737,
+              "90": 0.8968116906179139
+            },
+            "rpsPoint": 0.11149482499986046,
+            "rpsBounds": [
+              0.11107513342779345,
+              0.12074419290436185
+            ],
+            "finiteP50": 266,
+            "finiteP80": 234
+          },
+          "hmm": {
+            "F": {
+              "30": 0.6354981904463848,
+              "60": 0.9202112965513317,
+              "90": 0.9900506467927376
+            },
+            "rpsPoint": 0.1666245000664917,
+            "rpsBounds": [
+              0.16451324948356016,
+              0.1762361047154891
+            ],
+            "finiteP50": 286,
+            "finiteP80": 286
+          }
+        }
+      },
+      "10": {
+        "common": 286,
+        "pointIdentified": 273,
+        "partialIdentified": 13,
+        "semiGatePassed": true,
+        "observed": {
+          "30": [
+            0.24540627362055933,
+            0.25227985638699923
+          ],
+          "60": [
+            0.5651540060468633,
+            0.5971173469387755
+          ],
+          "90": [
+            0.6791950113378684,
+            0.7248374905517762
+          ]
+        },
+        "methods": {
+          "markov204": {
+            "F": {
+              "30": 0.552113215588744,
+              "60": 0.7950728307722198,
+              "90": 0.8819662751898093
+            },
+            "rpsPoint": 0.1565010183826497,
+            "rpsBounds": [
+              0.1544240949046721,
+              0.17054523995151857
+            ],
+            "finiteP50": 253,
+            "finiteP80": 228
+          },
+          "iidBeta": {
+            "F": {
+              "30": 0.5329869101532632,
+              "60": 0.7629777948388948,
+              "90": 0.8479586137462128
+            },
+            "rpsPoint": 0.15029965183169416,
+            "rpsBounds": [
+              0.14803263986539186,
+              0.16649373052021724
+            ],
+            "finiteP50": 242,
+            "finiteP80": 224
+          },
+          "semiFixed": {
+            "F": {
+              "30": 0.4017169272959184,
+              "60": 0.6670702625661376,
+              "90": 0.7753867629440664
+            },
+            "rpsPoint": 0.09955254974709639,
+            "rpsBounds": [
+              0.09829969639551388,
+              0.11238220239408614
+            ],
+            "finiteP50": 224,
+            "finiteP80": 196
+          },
+          "hmm": {
+            "F": {
+              "30": 0.41210480093188656,
+              "60": 0.6993761752040321,
+              "90": 0.8871133595288535
+            },
+            "rpsPoint": 0.1538983626501329,
+            "rpsBounds": [
+              0.15178826205514825,
+              0.16136365823896523
+            ],
+            "finiteP50": 286,
+            "finiteP80": 286
+          }
+        }
+      },
+      "20": {
+        "common": 286,
+        "pointIdentified": 267,
+        "partialIdentified": 19,
+        "semiGatePassed": true,
+        "observed": {
+          "30": [
+            0.054294217687074826,
+            0.06116780045351475
+          ],
+          "60": [
+            0.27339096749811037,
+            0.3052834467120181
+          ],
+          "90": [
+            0.4583654572940287,
+            0.5247893046107331
+          ]
+        },
+        "methods": {
+          "markov204": {
+            "F": {
+              "30": 0.15886619411010042,
+              "60": 0.5433187456565536,
+              "90": 0.7074316999166218
+            },
+            "rpsPoint": 0.1211307571045922,
+            "rpsBounds": [
+              0.118855459117773,
+              0.1334382686567875
+            ],
+            "finiteP50": 204,
+            "finiteP80": 174
+          },
+          "iidBeta": {
+            "F": {
+              "30": 0.16113150243889884,
+              "60": 0.5244730712410498,
+              "90": 0.6795757749604148
+            },
+            "rpsPoint": 0.12127757892109096,
+            "rpsBounds": [
+              0.118756480540738,
+              0.13394550139221298
+            ],
+            "finiteP50": 196,
+            "finiteP80": 172
+          },
+          "semiFixed": {
+            "F": {
+              "30": 0.09037521787603932,
+              "60": 0.38716894997165535,
+              "90": 0.5632493630007559
+            },
+            "rpsPoint": 0.06917672634186144,
+            "rpsBounds": [
+              0.06738965140147192,
+              0.08177195785775813
+            ],
+            "finiteP50": 163,
+            "finiteP80": 131
+          },
+          "hmm": {
+            "F": {
+              "30": 0.08749439317958473,
+              "60": 0.3958791831916973,
+              "90": 0.6268960811310113
+            },
+            "rpsPoint": 0.10823390347853441,
+            "rpsBounds": [
+              0.10690782148567242,
+              0.11239796647831764
+            ],
+            "finiteP50": 286,
+            "finiteP80": 0
+          }
+        }
+      },
+      "30": {
+        "common": 286,
+        "pointIdentified": 268,
+        "partialIdentified": 18,
+        "semiGatePassed": true,
+        "observed": {
+          "30": [
+            0.0,
+            0.003472222222222222
+          ],
+          "60": [
+            0.13964474678760394,
+            0.15362339380196524
+          ],
+          "90": [
+            0.29773998488284203,
+            0.36083049886621316
+          ]
+        },
+        "methods": {
+          "markov204": {
+            "F": {
+              "30": 0.005619575133178214,
+              "60": 0.31083296592728415,
+              "90": 0.5403055421018849
+            },
+            "rpsPoint": 0.07635345674338863,
+            "rpsBounds": [
+              0.07509308564840143,
+              0.08627591468398556
+            ],
+            "finiteP50": 158,
+            "finiteP80": 124
+          },
+          "iidBeta": {
+            "F": {
+              "30": 0.004584297790537486,
+              "60": 0.3072034056559042,
+              "90": 0.5216313505733392
+            },
+            "rpsPoint": 0.07871341870307345,
+            "rpsBounds": [
+              0.07736797236219467,
+              0.08923467354073249
+            ],
+            "finiteP50": 151,
+            "finiteP80": 126
+          },
+          "semiFixed": {
+            "F": {
+              "30": 0.0027963090041572187,
+              "60": 0.1888276021825397,
+              "90": 0.38208500226757375
+            },
+            "rpsPoint": 0.0405999015269018,
+            "rpsBounds": [
+              0.03954400022065526,
+              0.05199360225622257
+            ],
+            "finiteP50": 112,
+            "finiteP80": 78
+          },
+          "hmm": {
+            "F": {
+              "30": 3.086614379489272e-07,
+              "60": 0.16872097449219606,
+              "90": 0.37986202007014125
+            },
+            "rpsPoint": 0.06557931675757842,
+            "rpsBounds": [
+              0.06340360937351235,
+              0.0708421230756216
+            ],
+            "finiteP50": 69,
+            "finiteP80": 0
+          }
+        }
+      }
+    },
+    "secondSeedVerification": {
+      "status": "PASS",
+      "targetsChecked": 5,
+      "scalarAggregateChecks": 965,
+      "maximumDifference": 2.445960101127298e-16,
+      "same286PeoplePerSeedAndN": true,
+      "sameLegalTNotIndependentImputation": true,
+      "originalSavedInputBytesUnchanged": true,
+      "simulationOrFitExecuted": false,
+      "newPersonOrJ14OrReservedDataRead": false,
+      "strictTrueDistributionRankingGuarantee": false,
+      "codeSHA256": "0877baf873b78e888faf0b068bedca5043ece5c01703f233e43cb9fa0e4dceee"
+    },
+    "notPerformed": [
+      "New model fit in documentation task",
+      "New holdout",
+      "Per-start fit timing",
+      "Production adoption"
+    ]
+  },
+  "initialProxyAndWindows": {
+    "evidence": "Anonymous handoff HANDOFF.md; original report digests in historicalEngineHandoff.sourceIndex",
+    "initial": {
+      "development": 20,
+      "holdout": 60,
+      "origin": 30,
+      "knownPrefixDays": 31,
+      "n": 10,
+      "h": 30,
+      "targetReached": 24,
+      "notReached": 36,
+      "finiteP50": 32,
+      "finiteP80": 26,
+      "coveredP50": 12,
+      "coveredP80": 15,
+      "completerFiniteSubset": 23,
+      "subsetMaeEngine": 4.26,
+      "subsetMaePace": 4.52
+    },
+    "recency": {
+      "development": 40,
+      "holdout": 80,
+      "origin": 60,
+      "windows": [
+        "full",
+        31,
+        14,
+        "iid"
+      ],
+      "developmentCommon": 32,
+      "developmentKnownY": 36,
+      "supportThreshold": 0.9,
+      "selectedBeforeHoldout": "full",
+      "holdoutCommon": 64,
+      "holdoutKnownY": 77,
+      "holdoutLoss": [
+        1.69531,
+        1.53698,
+        1.42734,
+        1.75391
+      ],
+      "windowMissing": [
+        7,
+        14
+      ],
+      "adopted": false
+    },
+    "reevaluation204": {
+      "reusedSelected": 200,
+      "knownY": 195,
+      "commonKnownY": 191,
+      "withdrawal": 5,
+      "sampledLoss": 1.57853,
+      "closedLoss": 1.54529,
+      "pairedDifferenceCI95": [
+        -0.05393,
+        -0.01309
+      ],
+      "closedP50Finite": 101,
+      "closedP80Finite": 69,
+      "closedP50Coverage": 0.307,
+      "closedP80Coverage": 0.435,
+      "closedVsIidLossDifference": 0.03089,
+      "closedVsIidCI95": [
+        -0.01833,
+        0.07959
+      ],
+      "independentNewSample": false
+    },
+    "c1v2": {
+      "newDevelopment": 100,
+      "holdoutActivityLabelsOpened": false,
+      "fullAvailable": 95,
+      "c1Available": 86,
+      "iidAvailable": 100,
+      "c2Available": 100,
+      "requiredRetention": 0.95,
+      "common": 86,
+      "loss": {
+        "c1": 1.73605,
+        "full": 1.8343,
+        "iid": 1.89651
+      },
+      "pairedCI95VsFull": [
+        -0.31517,
+        0.10467
+      ],
+      "pairedCI95VsIid": [
+        -0.4064,
+        0.06051
+      ],
+      "status": "STOP_SUPPORT_AND_PAIRED_SUPERIORITY_GATES",
+      "adopted": false
+    }
+  },
+  "regression6754": {
+    "scope": "Historical local synthetic integration HEAD; not merged-main CI, performance, calibration or documentation-task test execution",
+    "tests": [
+      {
+        "workspace": "@futureroi/prediction",
+        "head": "6754dd90a69e7f2c39afe6c219aa65ca12ab5be4",
+        "command": "npm run test --workspace=@futureroi/prediction",
+        "startedAt": "2026-10-10T17:31:58.201Z",
+        "completedAt": "2026-10-10T17:32:04.121Z",
+        "exitCode": 0,
+        "counts": {
+          "tests": 77,
+          "suites": 0,
+          "pass": 77,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "duration_ms": 1580.0135
+        },
+        "originalLogSha256": "24445b691ac72594b9f4cbbfceb7d9294cf7598be2c202e36f9c7196c219cdd2"
+      },
+      {
+        "workspace": "@futureroi/api",
+        "head": "6754dd90a69e7f2c39afe6c219aa65ca12ab5be4",
+        "command": "npm run test --workspace=@futureroi/api",
+        "startedAt": "2026-10-10T17:31:58.201Z",
+        "completedAt": "2026-10-10T18:04:15.779Z",
+        "exitCode": 0,
+        "counts": {
+          "tests": 213,
+          "suites": 0,
+          "pass": 213,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "duration_ms": 1935952.1426
+        },
+        "originalLogSha256": "1e4e27626107d92898f42d76c3f98d3284d7b8b2e17eed687f68e303d5f93ddc"
+      }
+    ]
+  },
+  "harness184": {
+    "default": {
+      "summary": {
+        "pass": true,
+        "repositoryHead": "5c4a05a0a21b1ca52bd53b1842107bf4338a2774",
+        "nonDefault": false,
+        "scenarios": 8,
+        "phases": 16,
+        "distinctCreates": 6,
+        "successfulObservedWrites": 387,
+        "revisionsByUser": [
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ],
+        "crossUserReadWrite404": 3,
+        "stale409": 0,
+        "allPhaseFailures": 0,
+        "allPhaseMismatches": 0,
+        "allPhaseSettled": true,
+        "note": "Functional smoke only; Windows --import path adapter and fetch observation were active. No performance adoption claim."
+      },
+      "sourceSummarySha256": "e2b4502cfb043e8613b562f31df205e50aea8835aeacd8e30c5334bd91707f90"
+    },
+    "nonDefault": {
+      "summary": {
+        "pass": true,
+        "repositoryHead": "5c4a05a0a21b1ca52bd53b1842107bf4338a2774",
+        "nonDefault": true,
+        "scenarios": 8,
+        "phases": 16,
+        "distinctCreates": 6,
+        "successfulObservedWrites": 383,
+        "revisionsByUser": [
+          [
+            2
+          ],
+          [
+            4
+          ],
+          [
+            6
+          ]
+        ],
+        "crossUserReadWrite404": 3,
+        "stale409": 3,
+        "allPhaseFailures": 0,
+        "allPhaseMismatches": 0,
+        "allPhaseSettled": true,
+        "note": "Functional smoke only; Windows --import path adapter and fetch observation were active. No performance adoption claim."
+      },
+      "sourceSummarySha256": "ea42f007e9eef4450a163f69c969551bd4d1446d43167e62e248cac6f4e39eb5"
+    }
+  }
+}
