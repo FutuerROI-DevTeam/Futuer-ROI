@@ -1,12 +1,13 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
+import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import { router } from '../src/router.tsx';
 import { goalsHttp } from '../src/api/goals-http.ts';
 import { PrivateCacheGuard } from '../src/api/session-cache.ts';
 import { appCopy } from '../src/copy/app.ts';
 import { NotFoundPage, RouteErrorPage } from '../src/routes/RouteStates.tsx';
+import { MainLandmark } from '../src/routes/MainLandmark.tsx';
 
 // ルートの移動と既定の画面（#146 完了条件②）を、実router・実SDKで検査する。
 // ログインの確認（/api/auth/get-session）とGoal一覧の取得だけを合成し、実DB/Cookieの受入とは区別する。
@@ -26,6 +27,8 @@ const text = () => host.textContent ?? '';
 const until = async (done: () => boolean) => { for (let i = 0; i < 600 && !done(); i++) await act(tick); };
 const go = async (to: string) => { await act(async () => { void router.navigate({ to } as never); await tick(); }); await settle(); };
 const results: string[] = [];
+// 本文の目印（<main>）は1画面に1つだけ（#237）。
+const oneMain = (where: string) => ensure(host.querySelectorAll('main').length === 1, where + ': expected exactly one <main>, got ' + host.querySelectorAll('main').length);
 const c = appCopy;
 
 async function run() {
@@ -35,6 +38,7 @@ async function run() {
   await act(async () => { root.render(<QueryClientProvider client={client}><PrivateCacheGuard /><RouterProvider router={router} /></QueryClientProvider>); await tick(); });
   await settle();
   ensure(path() === '/', 'public top did not render without login');
+  oneMain('public top');
   await go('/goals/goal-123/history');
   ensure(path() === '/login', 'signed-out user reached a private route: ' + path());
   ensure((router.state.location.search as { redirect?: string }).redirect === '/goals/goal-123/history', 'login did not keep the original URL as the return target');
@@ -47,6 +51,7 @@ async function run() {
   await act(async () => { void router.navigate({ to: '/login', search: { redirect: '/goals' } } as never); await tick(); }); await settle();
   ensure(path() === '/goals', 'signed-in user stayed on login: ' + path());
   ensure(listCalls > 0, 'goal list did not load after redirect');
+  oneMain('goal list');
   await act(async () => { router.history.back(); await tick(); }); await settle();
   ensure(path() === '/', 'back after the login redirect returned to the login page: ' + path());
   results.push('signed-in: /login redirects to the return target with replace (back skips login)');
@@ -58,6 +63,7 @@ async function run() {
     ensure(path() === '/goals/new', failure + ': unreachable session moved to ' + path());
     ensure(text().includes(c.error.unreachableTitle) && text().includes(c.error.unreachable), failure + ': unreachable message missing');
     ensure(!text().includes(c.error.title), failure + ': generic error shown instead of unreachable');
+    oneMain(failure + ' unreachable');
     // 回復したら「再読み込み」でログインの確認からやり直し、画面が出る
     transport.failure = null;
     const retry = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes(c.error.retry));
@@ -74,6 +80,7 @@ async function run() {
   ensure(text().includes(c.notFound.title) && text().includes(c.notFound.body), '404 page missing');
   ensure(!/Not Found/.test(text()), 'English Not Found was shown');
   ensure(host.querySelector('a[href="/goals"]'), '404 has no way back to the goal list');
+  oneMain('404');
   results.push('unknown URL: Japanese 404 with a link back to the goal list');
 
   // ルーター全体の既定の画面が、この404・エラーの部品になっている
@@ -88,8 +95,23 @@ async function run() {
   await act(async () => { root2.render(<QueryClientProvider client={client}><RouterProvider router={failing} /></QueryClientProvider>); await tick(); }); await settle();
   ensure(text().includes(c.error.title) && text().includes(c.error.body), 'generic error page missing');
   ensure(!text().includes(c.error.unreachable), 'generic error was shown as unreachable');
+  oneMain('generic error');
   results.push('generic route error: RouteErrorPage shows the general error, distinct from unreachable');
-  await act(async () => root2.unmount()); client.clear();
+  results.push('landmark: exactly one <main> on the public top, goal list, unreachable, 404 and generic error (#237)');
+  await act(async () => root2.unmount());
+  // ログイン後の外枠（<main>）の中で画面が失敗しても、<main> は二重にならない
+  const shellRoot = createRootRoute({ component: () => <MainLandmark><Outlet /></MainLandmark> });
+  const nested = createRouter({
+    routeTree: shellRoot.addChildren([createRoute({ getParentRoute: () => shellRoot, path: '/', component: () => { throw new Error('synthetic nested failure'); } })]),
+    defaultErrorComponent: RouteErrorPage,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+  const root3 = createRoot(host);
+  await act(async () => { root3.render(<QueryClientProvider client={client}><RouterProvider router={nested} /></QueryClientProvider>); await tick(); }); await settle();
+  ensure(text().includes(c.error.title), 'nested error page missing');
+  oneMain('error inside the app shell');
+  results.push('landmark: an error inside the app shell keeps a single <main> (#237)');
+  await act(async () => root3.unmount()); client.clear();
   return { results, reads: transport.reads, writes: transport.writes, listCalls };
 }
 run().then((result) => { document.getElementById('result')!.textContent = JSON.stringify({ ok: true, ...result }); }).catch((error) => {

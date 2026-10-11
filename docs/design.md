@@ -93,6 +93,7 @@ flowchart TD
 | 対象 | 390pxを含む960px未満 | 1280pxを含む960px以上 | 根拠 |
 | --- | --- | --- | --- |
 | 共通の外枠 | 原則1列。各画面AppBar。通常ページは最大40rem | AppShellの共通バー。画面専用のAppBarは対象CSSで隠す | [page.css](../apps/web/src/ui/page.css)、[AppShell](../apps/web/src/routes/AppShell.tsx) |
+| 本文の目印（#237） | 各画面の本文は`<main>`1つ。AppShellが付け、404・エラー・読込中は外枠の外で出るときだけ付ける（外枠の中では`<div>`）。見た目は変えない | 同左 | [MainLandmark](../apps/web/src/routes/MainLandmark.tsx)、[routes回帰](../apps/web/tests/routes.browser.tsx) |
 | 公開トップ | 名前・説明・認証入口を空と山並みの背景（全幅）の上に置き、手順・注記は背景の外で縦に読む | 背景は全幅、中身は最大1120pxの列。説明は1列、3つの手順は横並び | [auth.css](../apps/web/src/routes/auth.css) |
 | ログイン・登録 | 1枚のフォームカード | 広い画面でも認証カードに入力を集約 | AuthPage、auth.css |
 | Goal一覧 | カードを縦に並べる | 横幅・余白・見出し/追加ボタンを広げる。現行CSSにカード一覧を2列化する規則はない | [goals.css](../apps/web/src/features/goals/goals.css) |
