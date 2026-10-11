@@ -8,6 +8,7 @@ import { ResponsiveDetails } from '../src/features/today/ResponsiveDetails.tsx';
 import { ProgressSummary } from '../src/features/today/ProgressSummary.tsx';
 import { amountFormat } from '../src/copy/amount.ts';
 import { mountYesterdayCorrection, yesterdayCorrectionState } from './yesterday-correction.native.tsx';
+import { mountOutlook, outlookState } from './outlook-axis.native.tsx';
 
 // 実コンポーネントをStrictModeで描画。viewport・trusted入力は外側の実Chrome/CDPが担当する。
 // API/予測契約はmockせず、ProgressSummaryには実量だけを渡す。
@@ -67,5 +68,6 @@ function view() {
     ])),
   };
 }
-(globalThis as any).__responsiveFixture = { mountDetails, mountProgress, mountDock, mountYesterday, mountCorrection: (status: 'DONE' | 'SKIPPED') => mountYesterdayCorrection(root, status), view };
+(globalThis as any).__responsiveFixture = { mountDetails, mountProgress, mountDock, mountYesterday, mountCorrection: (status: 'DONE' | 'SKIPPED') => mountYesterdayCorrection(root, status),
+  mountOutlook: (today: string, p50: number | null, p80: number | null, targetDays: number, width: number) => mountOutlook(root, today, p50, p80, targetDays, width), outlookState, view };
 mountDetails();

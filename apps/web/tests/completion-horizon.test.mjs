@@ -27,6 +27,7 @@ const { toForecastView } = await import('../src/features/today/forecast-view.ts'
 const { assertForecastPresentation, PriorForecast } = await import('../src/features/prior/PriorForecast.tsx');
 const { todayCopy, completionNoteFor } = await import('../src/copy/today.ts');
 const { amountFormat } = await import('../src/copy/amount.ts');
+const { shortDate, parseLocalDate } = await import('../src/copy/date.ts');
 const { buildR11Today } = await import('../../api/src/prediction/r11.ts');
 const { makeQuestionSnapshot } = await import('../../api/src/questions/snapshot.ts');
 const { TodayR11 } = await import('../../api/src/contracts/r11.ts');
@@ -226,4 +227,17 @@ test('スマホ完了要約は同じAPI週と欠如理由を保ち、設定量�
     assert.ok(renderBrief(completion).includes(todayCopy.completionBriefUnavailable));
     assert.doesNotMatch(renderBrief(completion), /週ごろ/);
   }
+});
+
+test('到達予定日が見通しの3倍より先なら、軸を省いたことを読み上げでも伝える（#187）', () => {
+  const date = '2026-10-05';
+  const view = present({ p50Days: 30, p80Days: 45 }, undefined, false, date).completion;
+  const far = render(view, { today: date, targetDate: '2029-07-01' });
+  assert.ok(far.includes(todayCopy.targetDateAxisCut));
+  // 軸を省くと位置から遠さが読めないため、年まで書く
+  assert.ok(far.includes(todayCopy.targetDateAxis('2029年7月1日')));
+  const near = render(view, { today: date, targetDate: '2026-12-01' });
+  assert.ok(!near.includes(todayCopy.targetDateAxisCut));
+  assert.ok(near.includes('fr-chart__due'));
+  assert.ok(near.includes(todayCopy.targetDateAxis(shortDate(parseLocalDate('2026-12-01')))));
 });
