@@ -45,7 +45,7 @@ docker compose exec app node apps/api/dist/db/seed-demo-cli.js --user-id '<確�
 
 成功時は終了code0で`seedVersion`、`baseDate`、timezone、置換Goal数、作成Goal数2、記録数60のJSONを出す。CLI自身はuserId・Goal ID・接続URLを出力しない。対象アカウントでGoal一覧と各`/today`を確認し、昨日補完→今日記録→再計算を試す。基準日が変わった場合は再実行してからデモを始める。
 
-全量15/60のまま、既定Engineでは交互パターンの中心g50/g80は1/1日、固まるパターンは7/21日。完了p50/p80は88/92日と102/183日。この合成例の違いを精度・校正・実ユーザーへの保証と扱わない。Webの表示・操作の通し確認と、公開DB／恒久Demo Accountの用意は別途必要で、CLI/API検証だけで#82をCloseしない。
+全量15/60のまま、Today APIの`prediction`（既定Engine・既定config、seed直後の今日未記録＝`TODAY_DONE`）では、交互パターンの中心g50/g80は1/1日、固まるパターンは7/21日。完了p50/p80は88/93日と105/193日。値は基準日に依存せず、昨日UNKNOWNの1日空きがある入力でも既存fixtureと同じ。完了の値は[D-31](../architecture.md#d-31-同一モデルの完了cdf統合候補203)（#204）で既定計算がBeta事後積分へ変わった後のもので、それ以前のK=200 sampling既定では88/92日と102/183日だった（[比較記録](../../experiments/completion-cdf-integration/README.md#検証と限界)）。この合成例の違いを精度・校正・実ユーザーへの保証と扱わない。Webの表示・操作の通し確認と、公開DB／恒久Demo Accountの用意は別途必要で、CLI/API検証だけで#82をCloseしない。
 
 ## 再実行・障害
 

@@ -236,41 +236,7 @@
   font-size: var(--fr-fs-body);
 }
 
-/* R-11 の出所（回答・回答＋実績）と、材料が足りないときの計画（デザインキャンバス R2〜R4） */
-.fr-source-row {
-  display: flex;
-  justify-content: flex-end;
-}
-.fr-source {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 var(--fr-space-3);
-  border-radius: 14px;
-  border: 1.5px dashed var(--fr-dot);
-  background: var(--fr-dot-soft);
-  color: var(--fr-dot);
-  font-size: var(--fr-fs-caption);
-  font-weight: 700;
-  white-space: nowrap;
-}
-.fr-sources__list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--fr-space-2);
-  margin: 0;
-}
-.fr-sources__list > div {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  font-size: var(--fr-fs-caption);
-  color: var(--fr-ink-2);
-}
-.fr-sources__list dd {
-  margin: 0;
-}
+/* 材料が足りないときの計画（デザインキャンバス R4）。出所は1文の注記にした（#221） */
 .fr-plan {
   display: flex;
   flex-direction: column;

@@ -117,7 +117,9 @@ test('質問・実記録・両者併用と記録済みでも、P80の意味と�
       const html = render(view.completion);
       assert.ok(html.includes(outsideText));
       assert.ok(html.includes(completionNoteFor(provenance)));
-      if (provenance.a === 'QUESTION' || provenance.a === 'QUESTION_AND_RECORDS') assert.match(html, /初期の回答は仮定です/);
+      // 回答を使う見通しでは、回答（仮定）由来であることを1文で必ず示す。記録だけなら出さない（R-11、#221で2行の表示を1文にした）
+      if (provenance.a !== 'RECORDS' || provenance.b !== 'RECORDS') assert.ok(html.includes(todayCopy.sourcesQuestionNote));
+      else assert.ok(!html.includes(todayCopy.sourcesQuestionNote));
       const bothOutside = render(present(quantiles(0.20), provenance, recorded).completion);
       assert.ok(bothOutside.includes(p50Reason));
       assert.ok(bothOutside.includes(completionNoteFor(provenance)));

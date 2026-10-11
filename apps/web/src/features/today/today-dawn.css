@@ -32,7 +32,9 @@
   --dawn-forest: #3b5e4f;
   --dawn-on-forest: #eef3f5;
   --dawn-forest-muted: #dce8e2;
-  --dawn-sky-top: #f7d9c4;
+  /* 空は青空（案B、2026-10-11依頼者判断、#221）。上端から山並みの手前までCSSのグラデーションで途切れずに変える。下端は共通のページ背景 --fr-bg（tokens.css、Goal編集など）と同じ値。空は山並みで終わるので、Todayのページ背景（#eef3f5）とは接しない */
+  --dawn-sky-top: #c4e4f6;
+  --dawn-sky-bottom: #eef8fb;
   color-scheme: light;
   isolation: isolate;
 }
@@ -49,12 +51,12 @@ body:has(.fr-page--today) { background: #eef3f5; }
   display: flex;
   flex-direction: column;
   gap: 6px;
-  /* 提供されたsky/ridge原画。上56pxのAppBar分を除いた位置から使う。 */
+  /* 空はグラデーション、山並みは下の帯（::after）。どちらも原画から作った dawn-ridge.png（assets/README.md）と同じ色でつなぐ */
   position: relative;
   isolation: isolate;
-  background: url('./assets/dawn-landscape.webp') center top / 100% auto no-repeat;
+  background: linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom));
 }
-.fr-page--today .fr-today__hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24px; z-index: -1; pointer-events: none; background: url('./assets/dawn-landscape.webp') center bottom / 100% 100px no-repeat; }
+.fr-page--today .fr-today__hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24px; z-index: -1; pointer-events: none; background: url('./assets/dawn-ridge.png') center bottom / 100% 100% no-repeat; }
 .fr-page--today .fr-today__question { font-size: 22px; font-weight: 900; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
 .fr-page--today .fr-core { gap: 6px; }
 .fr-page--today .fr-core__label { font-size: 13px; }
@@ -68,7 +70,6 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-today__basis .fr-why { border-color: rgba(238, 243, 245, .35); border-bottom: 0; }
 .fr-page--today .fr-today__basis .fr-why summary { min-height: 32px; font-size: 14px; }
 .fr-page--today .fr-today__basis .fr-link { color: var(--dawn-on-forest); }
-.fr-page--today .fr-today__basis .fr-source { background: transparent; color: var(--dawn-on-forest); border-color: var(--dawn-forest-muted); }
 .fr-page--today .fr-today__basis :focus-visible { outline-color: var(--dawn-on-forest); }
 .fr-page--today .fr-today__records { margin: 0 16px; padding: 18px; background: var(--fr-surface); border-radius: 24px; }
 .fr-page--today .fr-recent { padding: 0 0 8px; gap: 2px; }
@@ -102,7 +103,14 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-progress__balance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; padding: 0; }
 .fr-page--today .fr-progress__balance dt { font-size: 12px; color: var(--fr-ink-2); }
 .fr-page--today .fr-progress__balance dd { margin: 2px 0 0; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
-.fr-page--today .fr-record__amount-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
+/*
+ * 量の一行（◯◯量：1回・−／＋・量を変更）。狭い幅では文字を割らずに−／＋や「量を変更」を次の行へ送る（今日・昨日で同じ、#221）。
+ * 文字だけで1行に入らないとき（文字拡大・大きな数）は、文字の中で折り返す。数と単位の間（値）では折り返さない。
+ */
+.fr-page--today .fr-record__amount-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; width: 100%; }
+.fr-page--today .fr-record__amount-text { flex: 0 1 auto; min-width: 0; font-size: 14px; line-height: 1.4; text-align: left; }
+.fr-page--today .fr-record__amount-value { white-space: nowrap; }
+.fr-page--today .fr-record__amount-controls .fr-btn--text { flex-shrink: 0; padding: 0 var(--fr-space-1); }
 .fr-page--today .fr-record__amount-controls .fr-icon-btn { border: 1px solid var(--fr-line); border-radius: 12px; }
 .fr-page--today .fr-amount__prediction-note { font-size: 12px; line-height: 1.6; color: var(--fr-ink-2); }
 .fr-page--today .fr-outlook__assumption { font-size: 12px; }
@@ -118,7 +126,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-savefail__actions .fr-btn { white-space: normal; overflow-wrap: anywhere; }
 .fr-page--today .fr-choice { border-width: 2px; border-radius: 20px; font-size: 18px; }
 .fr-page--today .fr-choice[aria-pressed='true'] { box-shadow: inset 0 0 0 2px var(--fr-surface); border-color: var(--fr-dot); }
-.fr-page--today .fr-today__top:not(:has(.fr-today__hero)) { min-height: 280px; padding: 24px 22px 80px; gap: 16px; background: url('./assets/dawn-landscape.webp') center bottom / 100% 100% no-repeat; }
+/* 記録済み・選び直し中の上部。内容が短いので空白を詰める（#221） */
+.fr-page--today .fr-today__top:not(:has(.fr-today__hero)) { min-height: 200px; padding: 24px 22px 72px; gap: 16px; background: url('./assets/dawn-ridge.png') center bottom / 100% auto no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom)); }
 .fr-page--today .fr-achieved .fr-today__summary { color: var(--fr-ink); }
 .fr-page--today .fr-chart-box { min-width: 0; }
 .fr-page--today .fr-today__detail { font-size: 13px; color: var(--fr-ink-2); }
@@ -144,7 +153,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
   .fr-page--today .fr-today__scroll { display: contents; }
   .fr-page--today .fr-today__scroll > * { grid-column: 1; }
   .fr-page--today .fr-today__scroll > .fr-today__top { grid-row: 1; border-radius: 24px; overflow: hidden; }
-  .fr-page--today .fr-today__hero { padding: 24px 28px 80px; background-size: 100% 100%; background-position: center bottom; }
+  /* PCの枠では山並みを以前の原画と同じく枠の高さの約1/4に収め、数字に重ねない */
+  .fr-page--today .fr-today__hero { padding: 24px 28px 80px; background: url('./assets/dawn-ridge.png') center bottom / 100% 24% no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom)); }
   .fr-page--today .fr-today__hero::after { display: none; }
   .fr-page--today .fr-today__basis { padding: 12px 28px 20px; }
   .fr-page--today .fr-today__records { grid-row: 2; margin: 0; }
@@ -159,7 +169,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
   .fr-page--today .fr-today__right .fr-progress__percent { font-size: 40px; }
   .fr-page--today .fr-today__right .fr-section-label { font-size: 18px; font-weight: 900; color: var(--fr-ink); }
   .fr-page--today .fr-today__detail > summary { font-size: 14px; padding-block: 6px; border-bottom: 1px solid var(--fr-line); }
-  .fr-page--today .fr-today-layout > .fr-today__dock { max-height: none; grid-row: 3; position: sticky; top: 18px; margin: 0; border-radius: 24px; box-shadow: none; }
+  /* 今日の記録は左の列の下端まで場所を取り、右の列をスクロールしても画面に残す（#221） */
+  .fr-page--today .fr-today-layout > .fr-today__dock { max-height: none; grid-row: 3 / -1; align-self: start; position: sticky; top: 18px; margin: 0; border-radius: 24px; box-shadow: none; }
   .fr-page--today .fr-today__record-day { padding: 12px 18px 0; }
   .fr-page--today .fr-actionbar { overflow: visible; padding: 4px 18px 18px; border-radius: 0 0 24px 24px; }
   .fr-page--today .fr-core__value { font-size: 32px; }
@@ -172,3 +183,6 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-progress__header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
 .fr-page--today .fr-completion-brief { margin: 0; color: var(--fr-ink-2); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 @media (min-width: 960px) { .fr-page--today .fr-completion-brief { display: none; } }
+
+/* 昨日の問いかけ・訂正の中の量の行と2択（今日の記録と同じ部品、#221）。下の欄の余白・影・PCの角丸は付けない */
+.fr-page--today .fr-yesterday .fr-actionbar { position: static; min-height: 0; margin: 0; padding: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }

@@ -136,7 +136,18 @@
 .fr-auth__intro h1 { font-size: 26px; line-height: 1.4; }
 .fr-auth__intro p { font-size: 14px; line-height: 1.8; color: var(--fr-ink-2); }
 .fr-auth__form { gap: 20px; }
-.fr-auth--home { max-width: 1120px; gap: 28px; }
+/* 公開トップは山並みを画面幅いっぱいの背景にする（#221）。背景の帯だけ全幅にし、中身は1120pxの列にそろえる */
+.fr-auth--home { max-width: none; padding: 0 0 max(32px, env(safe-area-inset-bottom)); gap: 28px; }
+.fr-auth--home > :not(.fr-welcome-hero) { width: min(1120px, calc(100% - 2 * var(--fr-gutter))); margin-inline: auto; }
+.fr-welcome-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  /* 下の余白は山並み（幅の約19%の高さ）＋32px。%は幅に対する値なので、山の高さに合わせて伸び縮みする */
+  padding: 32px max(var(--fr-gutter), calc((100% - 1120px) / 2)) calc(19.1% + 32px);
+  /* 空は上端から山並みの手前まで途切れずに変わる青空（Todayの --dawn-sky-top／--dawn-sky-bottom と同じ値、#221） */
+  background: url('../features/today/assets/dawn-ridge.png') center bottom / 100% auto no-repeat, linear-gradient(#c4e4f6, #eef8fb);
+}
 .fr-auth--home .fr-auth__name { font-size: 24px; }
 .fr-welcome { display: grid; gap: 24px; }
 .fr-welcome__body { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
@@ -145,21 +156,21 @@
 .fr-welcome__body .fr-auth__lead { font-size: 16px; max-width: 31em; }
 .fr-auth__returning { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; color: var(--fr-ink-2); font-size: 13px; }
 .fr-auth__returning .fr-btn { font-size: 14px; min-height: 44px; padding: 8px 20px; }
-.fr-welcome__art { min-height: 160px; border-radius: 24px; background: url('../features/today/assets/dawn-landscape.webp') center bottom / 100% 100% no-repeat; }
 .fr-welcome__steps { list-style: none; margin: 0; padding: 24px 0 0; border-top: 1px solid var(--fr-line); display: grid; gap: 16px; }
 .fr-welcome__steps li { display: flex; align-items: baseline; gap: 12px; font-size: 14px; }
 .fr-welcome__steps span { color: var(--fr-ink-2); font-size: 12px; font-weight: 700; }
 .fr-welcome__note { font-size: 13px; color: var(--fr-ink-2); line-height: 1.8; }
 @media (max-width: 359px) {
   .fr-auth { padding-inline: 16px; }
+  .fr-auth--home { padding-inline: 0; }
   .fr-auth__card { padding: 20px 16px; }
   .fr-welcome__title { font-size: 36px; }
 }
 @media (min-width: 960px) {
   .fr-auth { padding-top: 56px; }
-  .fr-auth--home { gap: 40px; }
-  .fr-welcome { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: center; }
-  .fr-welcome__art { align-self: stretch; min-height: 400px; }
+  .fr-auth--home { gap: 40px; padding-top: 0; }
+  .fr-welcome-hero { gap: 40px; padding-top: 56px; }
+  .fr-welcome { max-width: 600px; }
   .fr-welcome__body { padding-block: 16px; }
   .fr-welcome__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 }

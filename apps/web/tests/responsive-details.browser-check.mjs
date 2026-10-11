@@ -158,10 +158,19 @@ test('Today responsive details: real viewport, native keyboard and preserved use
       evidence.push({ scenario: 'actual quantity', unit: expected.unit, done: expected.done, total: expected.total, amount: value.amount, percent: value.percent, balances: value.balances });
     }
   });
-  await t.test('native Tab enters named amount group, reaches input without autoFocus and cancel restores entry', async () => {
+  await t.test('native Enter on dock plus changes amount in place; change amount enters named group, reaches input without autoFocus and cancel restores entry', async () => {
     await resize(390); await evaluate('window.__responsiveFixture.mountDock()');
     const plus = 'document.querySelector(".fr-record__amount-controls button[aria-label^=量を増やす]")';
+    const shown = 'document.querySelector(".fr-record__amount-text")?.textContent';
+    const before = await evaluate(shown);
     await evaluate(plus + '.focus()'); await press('Enter', 'Enter', 13);
+    // −／＋はその場で量を変え、入力欄は開かない。フォーカスも＋に残る（#199）
+    const after = await until(() => evaluate(shown), value => value && value !== before, 'dock plus did not change the amount in place');
+    assert.ok(!(await evaluate('!!document.querySelector(".fr-amount")')), 'dock plus must not open the editor');
+    assert.ok((await view()).focused.name?.startsWith('量を増やす'), 'focus must stay on plus');
+    evidence.push({ scenario: 'native dock plus in place', before, after });
+    await evaluate('[...document.querySelectorAll(".fr-record__amount-controls button")].find(b => b.textContent.trim() === "量を変更").focus()');
+    await press('Enter', 'Enter', 13);
     const group = await until(view, value => value?.focused?.role === 'group', 'amount group did not receive focus');
     assert.equal(group.focused.name, '今日記録する量');
     assert.notEqual(group.focused.tag, 'INPUT', 'mount must not focus the numeric field');
@@ -169,7 +178,7 @@ test('Today responsive details: real viewport, native keyboard and preserved use
     await press('Tab', 'Tab', 9); assert.equal((await view()).focused.tag, 'INPUT');
     await evaluate('[...document.querySelectorAll("button")].find(b => b.textContent.trim() === "戻る").focus()');
     await press('Enter', 'Enter', 13);
-    assert.ok((await view()).focused.name?.startsWith('量を増やす'), 'cancel must restore the original plus trigger');
+    assert.ok((await view()).focused.text?.trim().startsWith('量を変更') || (await view()).focused.name?.startsWith('量を変更'), 'cancel must restore the change amount trigger');
     evidence.push({ scenario: 'native amount group / Tab / cancel', ...(await view()) });
   });
   await t.test('yesterday stays closed initially and preserves open state on same-day render; saving/failure reveal', async () => {
@@ -189,14 +198,14 @@ test('Today responsive details: real viewport, native keyboard and preserved use
       await evaluate('document.querySelector(".fr-yesterday--summary button").focus()');
       await press('Enter', 'Enter', 13);
       await until(view, value => value?.correctionVisible, 'native edit entry did not open');
+      // 今日の「記録を変更」と同じ形（#221）：訂正の見出しへフォーカスを移し、量は−／＋でその場で変える（保存しない）
+      const opened = await until(view, value => value?.focused?.text?.startsWith('昨日（'), 'correction heading did not receive focus');
       if (status === 'DONE') {
-        const value = await until(view, value => value?.focused?.role === 'group', 'correction amount group did not receive focus');
-        assert.equal(value.focused.name, '昨日やった量');
-        await evaluate('document.querySelector(".fr-yesterday input").focus();document.querySelector(".fr-yesterday input").select()');
-        await cdp.send('Input.insertText', { text: '37' });
-        await until(view, value => value?.correctionInput === '37', 'native correction draft did not change');
+        await evaluate('document.querySelector(".fr-yesterday button[aria-label^=\\"量を増やす\\"]").focus()');
+        await press('Enter', 'Enter', 13);
+        await until(view, value => !!value?.correctionAmount && value.correctionAmount !== opened.correctionAmount, 'native correction draft did not change');
       }
-      await evaluate('[...document.querySelectorAll(".fr-yesterday button")].find(b => b.textContent.trim() === "キャンセル").focus()');
+      await evaluate('[...document.querySelectorAll(".fr-yesterday button")].find(b => b.textContent.trim() === "変更をやめる").focus()');
       await press('Enter', 'Enter', 13);
       const value = await until(view, value => value?.correctionSummary, 'cancel did not restore recorded summary');
       assert.equal(value.focused.tag, 'BUTTON', 'cancel lost focus to BODY');

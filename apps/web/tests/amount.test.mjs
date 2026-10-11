@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { amountFormat, hoursMinutes, isRecordAmount, RECORD_AMOUNT_MAX, stepRecordAmount } from '../src/copy/amount.ts';
+import { amountFormat, hoursMinutes, isRecordAmount, RECORD_AMOUNT_MAX, recordStep, stepRecordAmount } from '../src/copy/amount.ts';
 
 test('分のGoalの累計・総量・残量は、整数分を正確な時間＋分で書く（P-18の固定例）', () => {
   const cases = [
@@ -19,14 +19,33 @@ test('分のGoalの累計・総量・残量は、整数分を正確な時間＋�
   assert.equal(hoursMinutes(60_000 * 6 + 5), '6,000時間5分');
 });
 
-test('記録の量はDONE契約の整数範囲で、±はGoalの1回の量を使い境界で止まる', () => {
+test('記録の量はDONE契約の整数範囲で、±は刻みの倍数にそろえ、刻み1つ分より下・上限より上へ行かない', () => {
   for (const value of [null, 0, -1, 1.5, NaN, Infinity, RECORD_AMOUNT_MAX + 1]) assert.equal(isRecordAmount(value), false);
   for (const value of [1, 37, RECORD_AMOUNT_MAX]) assert.equal(isRecordAmount(value), true);
-  assert.equal(stepRecordAmount(37, 20, 1), 57);
-  assert.equal(stepRecordAmount(37, 20, -1), 17);
-  assert.equal(stepRecordAmount(2, 20, -1), 1);
-  assert.equal(stepRecordAmount(RECORD_AMOUNT_MAX - 1, 20, 1), RECORD_AMOUNT_MAX);
-  assert.equal(stepRecordAmount(3, 2, 1), 5); // 回数Goalも整数・Goal固有の刻み
+  assert.equal(stepRecordAmount(20, 5, 1), 25);
+  assert.equal(stepRecordAmount(20, 5, -1), 15);
+  // 刻みの倍数でない値は倍数へそろえる
+  assert.equal(stepRecordAmount(23, 5, 1), 25);
+  assert.equal(stepRecordAmount(23, 5, -1), 20);
+  // 刻み1つ分より下には減らさない（減らせないときは元の値のまま）
+  assert.equal(stepRecordAmount(5, 5, -1), 5);
+  assert.equal(stepRecordAmount(3, 5, -1), 3);
+  assert.equal(stepRecordAmount(3, 5, 1), 5);
+  assert.equal(stepRecordAmount(1, 1, -1), 1);
+  assert.equal(stepRecordAmount(RECORD_AMOUNT_MAX - 1, 30, 1), RECORD_AMOUNT_MAX);
+});
+
+test('刻みは1回の量に合わせたきりのよい幅（分：30分まで5分・90分まで15分・それより大は30分／回：10回まで1回・50回まで5回・それより大は10回）', () => {
+  const cases = [
+    ['minutes', 10, 5], ['minutes', 20, 5], ['minutes', 30, 5], ['minutes', 31, 15], ['minutes', 60, 15], ['minutes', 90, 15], ['minutes', 91, 30], ['minutes', 180, 30],
+    ['sessions', 1, 1], ['sessions', 10, 1], ['sessions', 11, 5], ['sessions', 20, 5], ['sessions', 50, 5], ['sessions', 51, 10],
+  ];
+  for (const [unit, session, step] of cases) assert.equal(recordStep(unit, session), step, `${unit} ${session}`);
+  // 例：1回の量20分は 20→25→30、60分は 60→75→90、20回は 20→25
+  assert.equal(stepRecordAmount(60, recordStep('minutes', 60), 1), 75);
+  assert.equal(stepRecordAmount(20, recordStep('sessions', 20), 1), 25);
+  assert.equal(amountFormat({ unit: 'minutes' }).recordStep(20), 5);
+  assert.equal(amountFormat({ unit: 'sessions' }).recordStep(1), 1);
 });
 
 test('1回の量・日々の記録は分のまま、回のGoalはすべて回で書く', () => {
