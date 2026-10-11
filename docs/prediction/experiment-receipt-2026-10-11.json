@@ -517,10 +517,12 @@
       "selected": 7,
       "supported": 6,
       "stages": 8,
-      "cells": 484128,
       "wallSeconds": 42.762,
       "parentRssBytes": 128520192,
-      "successfulNativePeakKiB": 7196
+      "successfulNativePeakKiB": 7196,
+      "finiteSupportedCells": 484128,
+      "totalSavedCells": 564816,
+      "unsupportedNaNCells": 80688
     },
     "modelOrProductionNativeAdopted": false
   },
@@ -2127,6 +2129,81 @@
         "note": "Functional smoke only; Windows --import path adapter and fetch observation were active. No performance adoption claim."
       },
       "sourceSummarySha256": "ea42f007e9eef4450a163f69c969551bd4d1446d43167e62e248cac6f4e39eb5"
+    }
+  },
+  "numericalSelectionProtocol": {
+    "delta": {
+      "expression": "-4+0.1*j",
+      "indexMin": 0,
+      "indexMax": 40,
+      "range": [
+        -4,
+        0
+      ]
+    },
+    "lambda": {
+      "expression": "0.1*k",
+      "indexMin": 0,
+      "indexMax": 40,
+      "range": [
+        0,
+        4
+      ]
+    },
+    "gridSize": 1681,
+    "identity": [
+      0,
+      0
+    ],
+    "tieObjectiveTolerance": 1e-12,
+    "tieOrder": [
+      "smaller delta^2+lambda^2",
+      "smaller lambda",
+      "delta closer to 0"
+    ],
+    "heldOuterBoundary": {
+      "delta": -4,
+      "lambda": 4
+    },
+    "ridge": 0.01,
+    "ridgeSameRelativeStrengthBetweenNllAndRps": false,
+    "protocolSha256": {
+      "experiments/pause-candidate-synthetic/PREFIT-PLAN.md": "e294388333c00534295bd889983d526b1e14f3753710aa4326161dd369d344d6",
+      "experiments/pause-quadrature-repair/REPAIR-PLAN.md": "fc1988dae284d01dc1bb04c4c0c2469aba59c102d08e3171091f63a42a9a4a97",
+      "experiments/semi-markov-residual-audit/NEXT-RPS-PLAN.md": "cc70d251bbff5dd57028ca76a707971336b440977e9b4bcde1bded69d8b68d4a",
+      "experiments/semi-markov-residual-audit/MEMORY-BOUND-PROTOCOL.md": "d4c77b41fcfab0afc465867163ea85967cc00c6d0b6c05e89ee42b8c16050850",
+      "experiments/semi-markov-residual-audit/PRECISION-8192-16384-PROTOCOL.md": "14df66794c0f8d453eb9098ab02fe45e9d8450446b99e4e083c454b6cda0d613"
+    }
+  },
+  "runtimeEvidence": {
+    "hmm": {
+      "python": "3.12.4",
+      "numpy": "1.26.4",
+      "cpuModel": null,
+      "ram": null,
+      "osBuild": null,
+      "blasThreads": null
+    },
+    "nllV1V2": {
+      "nodeVersion": null,
+      "osBuild": null,
+      "cpuModel": null,
+      "ram": null,
+      "meaning": "Not verified from the cited anonymous receipt; do not infer from another run"
+    },
+    "boundedAndPrecision": {
+      "protocolDeclaredNode": "24.21.0",
+      "protocolDeclaredOS": "Windows",
+      "independentPerRunRuntimeReceiptVerified": false,
+      "cpuModel": null,
+      "ram": null,
+      "osBuild": null,
+      "allocatedCpu": null
+    },
+    "independentCppSynthetic": {
+      "compiler": "GCC 15.1.0",
+      "os": "Windows",
+      "cpuPinnedVerified": false
     }
   }
 }

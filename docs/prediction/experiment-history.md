@@ -27,6 +27,7 @@
 | --- | --- | --- | --- |
 | M0 / M1 / M2比較、prior、中心指標 | iid、2状態、継続長3状態。Beta prior、期待値と再開待ち中央値 | 合成状態依存・短履歴・欠測を比較。M1/Beta(2,2)/中央値を採択。M0を含む構造は有限標本の優越保証ではない | [合成Evidence](evidence.md#m0--m1--m2の比較)、[判断理由](decision-log.md)、[固定履歴22 files](https://github.com/jogi-hack-2026-team/jogi-hack-2026/tree/77c71a5f248a4dce4ce9fb8af6619b41541be9d8/experiments/prediction-model-validation) |
 | DP / future MC / CRN | 固定thetaの初到達DP、事後抽選、独立漸化式・経路列挙 | 日々のMCをDPへ置換。事後samplingは別。微小確率打切りを廃止、到達不能状態だけ刈る | [DP/MC・修正失敗例](evidence.md#dpとmonte-carloの比較)、[D-22](../architecture.md#d-22)、[現test](../../packages/prediction/tests/completion.test.mjs) |
+| PR #119 n=H限定fill省略 | 毎日読む境界セルだけを初期化し、通常fill・抽選順・PMF/quantileを保存 | 限定predict改善と通常case遅化の双方を保持。full-PMFバイト比較16,040件・分位点比較5,248件一致 | [固定検証](../../packages/prediction/verification/deadline-fill.md)・[測定JSON](../../packages/prediction/verification/deadline-fill.json) |
 | 質問priorと公開契約 | a/b別prior、回答版、raw再構築、独立積分/DP、固定fixture | 元18 prior候補・580独立チェックと後続testを合算しない。R-11接続は実装済み、自己申告校正は未証明 | [局所Evidence](evidence.md#質問由来priorの局所検証2026-10-04)、[契約fixture](../../experiments/question-prior-contract/README.md)、[公開Engine入口](../../packages/prediction/README.md#r-11の公開入口133) |
 | 実Engine単体・同期/worker・API混合負荷 | T-14、配線、応答cohort、保存/Today/session待ち | 旧入力誤差とwarmup混入を保存。Windowsの546.83ms FAIL、CRUD p95>5秒を保持。workerはこの測定だけで採択しない | [速度索引](#速度と資源の索引)、[現行API report](../../experiments/api-mixed-load/REPORT-2026-10-09.md) |
 | 同一Markov/Betaの閉形式CDF | Beta-binomial和、閾値近傍の整数比較、有限work/fallback、DTO投影 | main実装。整数oracle・範囲内19集合の7 fallback解消。数式同一性と統計校正を分ける | [D-31](../architecture.md#d-31-同一モデルの完了cdf統合候補203)、[報告](../../experiments/completion-cdf-integration/README.md)、[PR #204](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/204) |
@@ -54,6 +55,7 @@
 | --- | --- | --- | --- |
 | 旧合成DP | Node24.21.0、N120、K200/500、微小確率打切りなし | 84 / 164ms。素朴DP N400≈0.6秒、N1095≈1.5〜1.7秒。配列再利用/到達不能刈り込み後6必要回数で最大≈260ms | [元Evidence](evidence.md#dpとmonte-carloの比較)。限定入力、全域上限ではない |
 | 2026-10-05単体T-14 | M5/macOS、Node24.21.0、K200/H1095、N120/400/1095、3run | 各34.4〜74.1ms | [原報告](../../experiments/architecture-verification/REAL-ENGINE-2026-10-05.md)。混合負荷のN119/399/1094とwarmup混入訂正は単体値と分離 |
+| PR #119 最終predict | Node22.15.1/TS5.8.3、prior2/K200/seed20261012/H1095、各process初回+warm5、48 fresh processを方式交互で逐次 | warm中央値（3組）: n1095 TODAY_DONE32.257→5.992ms、SKIPPED31.625→6.169ms。通常n120 SKIPPED77.496→81.428ms（約5.1%遅化）。T14代表最大178.36ms | [同条件最終測定・保全](../../packages/prediction/verification/deadline-fill.md)。事前n400の約3.4%遅化も保持。CPU固定/信頼区間/startup cold/配備は未検証、保存JSONのOSはWindows 10.0.26200、CPU i7-1360P/16 logical。RAM/PC機種は未記録。全入力の高速化ではない |
 | 2026-10-07単体T-14 | Windows i7-1360P/16logical/15.6GiB、Node24.21、N120/400/1095、各2run | 旧predict最大102.06/153.02・216.01/196.70・84.19/17.86ms、R11最大112.95/126.52・227.02/187.85・119.07/90.31ms | 同日の並行spikeとは別。単体PASSでも保存/Today/session並行待ちは証明しない |
 | 2026-10-07候補spike | Windows x64、Node24.21.0、旧predict/公開R11、2人、CRUD20/s、Today1/4/10/s、各8秒 | 28測定scenario、チェック25PASS/1FAIL、全体exit1。旧predict inline4/s最大546.83ms FAIL。R11 inline10/s CRUD p95 5798.0/5744.8ms、session 9272.9/9019.6ms | [報告・全4run](../../experiments/architecture-verification/REAL-ENGINE-2026-10-07.md)。HTTP失敗0でも性能FAIL。worker2比較は1vCPU/公開性能の証明ではない |
 | 2026-10-08再レビュー | URL/native path・diff bytes保存・FAIL集計・worker死亡回帰 | 候補14/Engine70等PASS。**性能再測定なし** | [記録](../../experiments/architecture-verification/REAL-ENGINE-2026-10-08.md)。前日のFAILは残る |
@@ -75,7 +77,7 @@
 | NLL v2数値修復 | 同入力/全grid、Q256/512追加、モデル/目的維持 | wall319.547秒、polled親RSS80,969,728B、全域gate PASS | receipt `nllV2`。旧版と仕事量が異なり速度倍率不可 |
 | fair-RPS JS局所外挿 | 合成3形状、M512/1024/2048/4096×2 seed×300への外挿 | 47.434〜58.999分、polled親RSS最大82,137,088B | receipt `nativeAndStream`。実300人runの時間ではない |
 | 独立C++合成 | GCC15.1.0/Windows、M2048全grid×4形状×3seed、JSとは別RNG | 実測総wall6.484秒、peak working set6,276KiB。300人/seed外挿median2.56229分、range2.249795〜3.34866分 | 別RNG/入力。JS→native速度倍率にしない、製品native採択なし |
-| 同JS poolの小stream | selected7/support6、8stage、484,128cells | wall42.762秒、親RSS128,520,192B、native7,196KiB、保守合計135,888,896B | 同pool parity確認。合成gateもHELD、係数採択なし |
+| 同JS poolの小stream | selected7/support6、8stage、finiteSupportedCells 484,128 / 全保存total 564,816cells（非支持NaN 80,688） | wall42.762秒、親RSS128,520,192B、native7,196KiB、保守合計135,888,896B | 同pool parity確認。合成gateもHELD、係数採択なし |
 | 旧実RPS J13 | 8stage予定、M512〜4096×2 seed | 5stage+21rowsで **STOP_WORKER_RESERVE** | 固定sourceと旧STOP保全。部分順位を採択しない |
 | Buffer再利用・全合成 | 300rows×8stage、2288native calls | wall1942.297秒、親RSS161,366,016B、native7,220KiB、保守合計168,759,296B | 80,688候補表parity、24,206,400cells/8means bit一致の監査記録。瞬間hard cap保証ではない |
 | 同版実RPS J13 | 同M4段階×2 seed、300rows×8stage | wall1884.483秒、親RSS174,555,136B、native7,212KiB、保守合計181,940,224B。**MC_OBJECTIVE_DIFFERENCE / GAP_RUNNER HELD** | receipt `boundedJ13`。全stage完走と数値gateを分ける |
@@ -85,6 +87,8 @@
 | **最終実precision J13** | 300選択/286支持、同4stage、全1681点 | **wall6091.002秒（101分31秒）**、all-meter親RSS76,275,712B、成功native16,076KiB、保守合計92,737,536B | [固定gate](#最新j13の固定gateと解釈)。資源内完走、GAP_RUNNERのみHELD。条件違いから再利用版のspeedupを主張しない |
 
 2026-10-10の別ローカル合成HEAD6754dd90a69e7f2c39afe6c219aa65ca12ab5be4ではEngine77/API213、失敗・cancel・skip0、exit0の保存回帰記録がある（receipt regression6754の元log SHA）。この文書作成時に実行したテストではなく、実merge mainのCI、速度、校正、公開HTTPS受入へ件数を転用しない。
+
+研究fitのwall/RSS guardは実機CPU上限ではない。HMMはPython3.12.4/NumPy1.26.4のhost記録があるが、機種/CPU/RAM/OS build/BLAS threadsは未確認。NLL v1/v2はこの索引に引用したreceiptで実行Node版・実機条件を未確認として残す。bounded/precisionは固定protocolにWindows Node24.21.0と記載されるが、各runの独立runtime receipt・CPU機種/RAM/OS build/割当CPUは未確認。GCC15.1.0/Windowsの独立C++合成値もCPU固定の証拠ではない。異なるfit時間から機種差を補間した速度比を作らない。
 
 ## 公開proxy評価と校正
 
@@ -150,6 +154,8 @@ planを2026-10-10T18:07:40.264901 UTCに固定し、同J13 selected300、origin6
 
 共有thetaを各pathで一度drawし、D→Dはlogistic(logit(a)+delta)、S→Dはlogistic(logit(b)+delta−lambda·min(run,30)/30)。runは未来の仮想経路で更新する。起点Beta要約を新過程の厳密posteriorと呼ばず、正の再開率のこの族で永久未達率を同定したと主張しない。以下は研究工程で、製品式の追加ではない。
 
+固定semi-Markov gridはdelta=-4+0.1j（[-4,0]）、lambda=0.1k（[0,4]）、j/k=0..40、41×41=1681点。identity(0,0)を含む。目的差<=1e-12のtieはdelta²+lambda²の小さい順→lambda小→deltaが0に近い順。外側delta=-4又はlambda=4は境界最適としてHELD、identity側0は許容する。NLL v1/v2とRPS/precisionで範囲・tieを保持し、結果後の範囲延長・grid細分化・部分候補選択をしない。ridge0.01はNLLと日平均RPSでそれぞれの単位に固定され、同じ相対強度とは主張しない。protocol原文のSHAと公開可能な選択規則はreceipt numericalSelectionProtocolへ記載する。
+
 | 順 | 目的・数値条件 | 判定と保持する失敗 |
 | --- | --- | --- |
 | NLL v1 | 全系列の周辺log尤度→各人prefix長Cで割る→科目等重み→ridge.01。全1681点、Q32/64/128 | 学生候補mean NLL最大差 .23409368/.03475270、全grid目的差 .00348886/.00012642で **HELD**。最小/次点が同じでも全域gateを無視しない |
@@ -178,7 +184,7 @@ HELDは「固定ruleで係数選択に進めない」という判断で、予測
 
 - g50はSKIP後の再開待ち中央値。共通theta・設定量・再開後の共通経路ならT_skip=T_done+Gだが、混合後の周辺T_doneとGは一般に依存する。完了P50同士の差や今日の因果効果ではない。[現契約](../architecture.md#手順)と[合成限定の比較訂正](decision-log.md)へ戻る。
 - Beta-Geometricのlgamma/exp境界で722件中15件の1日ずれを再現し、整数比へ変更。微小確率打切りではP50=3日を5日にした例を保持。[Evidence](evidence.md#分位点の境界pr-86レビュー対応)。丸め誤差・有限sampling・モデルの誤指定は別に残る。
-- ordinary MC RPSの期待biasはp(1−p)/M。fair補正ではordinary−fair=Fhat(1−Fhat)/(M−1)。candidate間CRNを共用しpath内thetaは固定。fairでも候補選択bias・legalT最大化bias・有限MC順位誤差は消えない。
+- fixed outcome・固定CDFに対するiid path、M>1を前提とする。各日のBrier項の期待biasはF_d(1−F_d)/M、ordinary−fair補正はFhat_d(1−Fhat_d)/(M−1)。**H日平均RPS**ではそれぞれ(1/H)Σ_d F_d(1−F_d)/M、(1/H)Σ_d Fhat_d(1−Fhat_d)/(M−1)となる。candidate間CRNを共用しpath内thetaは固定。fairでも候補選択bias・legalT最大化bias・有限MC順位誤差は消えない。
 - 打切りでown下限・モデル差の極値は内部日になり得る。全合法Tの日別直接式とO(H)走査を最大1.7763568394e-15で照合。J13/J14 own下限を両端だけで落とす4/8件、候補−iid差上限を落とす2/4件を保存。旧比較は既に全日走査しており、旧gateを数値修正したものではない。
 - CDF質量/shape補正は一般CDFで目標順序を逆転する反例がある。共通単調写像gは順序を保つが、一般にg(pF1+(1−p)F0)≠p g(F1)+(1−p)g(F0)。生成過程の混合との整合は別。端点を固定する連続gで永久未到達massを新設できない。
 - 閉形式の正整数域、厳密閾値比較、sampling fallback、finite work guard、公開requested configと内部actualの区別は[実装報告](../../experiments/completion-cdf-integration/README.md)に集約する。sourceの数値精度と実データ校正を混同しない。
