@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { targetGap, targetGapText } from '../src/features/today/target-gap.ts';
+import { targetDateState, targetGap, targetGapText } from '../src/features/today/target-gap.ts';
 import { outlookAxis } from '../src/features/today/chart-geometry.ts';
 
 // 今日 2026-10-05（月）。到達予定日 2027-03-31（水）
@@ -113,4 +113,19 @@ test('有限/範囲外P80・短期/長期・狭幅/PC幅で軸の日付順とbou
       ]) assertAxisOrder(date, p50, p80, p50 === p80, width, targetDays);
     }
   }
+});
+
+test('到達予定日が今日以前なら、週の月曜日と比べた「早い」「ごろ」を出さない（#186）', () => {
+  // 今日 2026-10-11（日）、目安は今週（月曜 10/5）。以前は「約1週早い」と出ていた
+  const sunday = '2026-10-11';
+  assert.equal(targetDateState(sunday, '2026-10-10'), 'past');
+  assert.equal(targetDateState(sunday, '2026-10-11'), 'today');
+  assert.equal(targetDateState(sunday, '2026-10-12'), 'ahead');
+  assert.equal(targetGap(sunday, 0, '2026-10-10'), null);
+  assert.equal(targetGap(sunday, 0, '2026-10-11'), null);
+  assert.equal(targetGap(sunday, 3, '2026-10-10'), null);
+  // 過ぎていて目安が後ろでも、量（「約3か月遅い」）は出さない
+  assert.equal(targetGap(sunday, 92, '2026-10-04'), null);
+  // 明日以降はこれまでどおり
+  assert.equal(targetGapText(targetGap(sunday, 92, '2026-10-12')), '約3か月遅い');
 });
