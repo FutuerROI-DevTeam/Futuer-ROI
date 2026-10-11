@@ -49,3 +49,11 @@ node --test apps/web/tests/evaluation.browser-check.mjs
 - 独立敵対的レビューは解除前GETの履歴復活を発見して修正前/後の実QueryClientで検証。保持説明と401/404エラー回復のShouldも修正し専用runnerで再確認する。独立レビュー担当はDB/browserを別実行していない。
 
 最終全suite、build、exact HEAD CI結果はPR本文と検証追記に記録する。未実行結果を成功へ数えない。初回ブラウザrunは固定文言の期待値不一致で失敗し、実UI文言に合わせた再実行で上のflowを完了した。実データや公開環境の品質、別タブの保留応答のpixel描画、代表性、校正・学習効果、g50の因果効果は未検証。別ownerブラウザ検証はfresh navigationのアクセス拒否である。
+
+## 合成画面の記録
+
+最終web buildの実SPA/API/合成DBをChrome 154で操作した画面。架空の利用者名・Goal・実績だけを使用した。
+
+- [390px：P50未到達/P80到達の照合](assets/issue-225/390-assessed.png)
+- [1280px：同じ照合](assets/issue-225/1280-assessed.png)
+- [1280px：既定OFF](assets/issue-225/1280-default-off.png)
