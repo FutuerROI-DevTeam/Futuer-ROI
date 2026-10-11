@@ -56,7 +56,9 @@ try {
   // Synthetic recordStartDate fixture opens yesterday without claiming a real two-day trial.
   await pool.query("update goal set record_start_date=(record_start_date - interval '1 day')::date where id=$1 and user_id=$2",[g.id,f.owner]);
   await f.open(g);
-  const prompt=f.page.locator('.fr-yesterday'); await prompt.getByRole('button',{name:'やった',exact:true}).click();
+  // 未記録の昨日の問いかけは開閉する欄の中にある（#202）。閉じていれば利用者と同じく見出しを押して開く。ボタン名は量を含む（#221）
+  const details=f.page.locator('.fr-today__yesterday'); if(!(await details.evaluate(d=>d.open))) await details.locator(':scope > summary').click();
+  const prompt=f.page.locator('.fr-yesterday'); await prompt.getByRole('button',{name:/^やった/}).click();
   await wait(()=>Promise.resolve(f.requests.length===1)); await f.page.getByRole('heading',{name:'昨日はどうでしたか？',exact:true}).waitFor({state:'hidden'});
   await f.page.getByRole('button',{name:/^やった/}).last().click();
   await f.page.getByText('今日は記録済みです',{exact:true}).waitFor();
