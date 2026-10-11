@@ -6,7 +6,7 @@
 
 - 画面：main `208d481`（PR #229 統合後）と同じ内容のブランチで起動したローカルの画面。API・Engine は同じ main。
 - データ：ローカルの確認専用DB `futureroi_dawnqa` の合成Goal・合成記録（実ユーザーのデータではない）。今日は 2026-10-11（Asia/Tokyo）。
-- 失敗・保留・特定の応答は、実Chrome（headless）の要求の差し替えで作った。**保存を伴う操作はすべて保留後に失敗させるか合成応答にして、記録・Goalを変えていない**（撮影前後で合成Goalの記録数が同じことを確認）。
+- 失敗・保留・特定の応答は、実Chrome（headless）の要求の差し替えで作った。**撮影する画面での保存を伴う操作は、すべて保留後に失敗させるか合成応答にして、記録・Goalを変えていない**（撮影前後で合成Goalの記録数が同じことを確認）。ただし、R2・R4 用の合成Goalは、撮影の前に確認専用DBへAPIで作成した。
 - 予測の状態（D4b・D8 など）は、画面と同じGoalの `GET /api/goals/:id/today?view=r11` の値で確認した。
 - 撮影：スマートフォン幅390px（表示範囲）。Desk-home・Desk-today は1280px。
 
@@ -49,7 +49,7 @@
 | D5-rest | D5 今日は記録済み（休んだ） | [390](sp-D5-rest.jpg) | 今日休んだを記録済みのGoal |
 | D6-achieved | D6 達成済み（筋トレ） | [#81 達成済み](../issue-81-states/sp-81-completed.jpg) | 総量に到達（completed） |
 | D7-calc | D7 見込みを計算できない（500 PREDICTION_FAILED） | [390](sp-D7-calc.jpg) | TodayのAPIに500 PREDICTION_FAILED を合成 |
-| D7-date | D7 記録できない日（422 LOG_DATE_OUT_OF_WINDOW） | [390](sp-D7-date.jpg) | 記録の保存に422 LOG_DATE_OUT_OF_WINDOW を合成（保存しない） |
+| D7-date | D7 記録できない日（422 LOG_DATE_OUT_OF_WINDOW） | [390](sp-D7-date.jpg) | 記録の保存に422 LOG_DATE_OUT_OF_WINDOW を合成（保存しない）。合成応答のため、文中の日付は今日（10月11日）になっている。実際には日付が変わった後の保存で出る |
 | D7-failed | D7 保存失敗（再試行） | [390](sp-D7-failed.jpg) | 記録の保存を通信失敗にする |
 | D7-network | D7 通信エラー（データ不足と区別） | [390](sp-D7-network.jpg) | TodayのAPIを通信失敗にする |
 | D7-saving | D7 保存中 | [390](sp-D7-saving.jpg) | 記録の保存を保留。保留後は失敗させ、保存しない |
@@ -71,7 +71,7 @@
 | R2-answer | R2 回答だけの仮の見通し（片方未回答） | [390](sp-R2-answer.jpg)・[390](sp-R2-answer-outlook.jpg) | 片方だけ回答・記録なしのGoalをAPIで作成 |
 | R3-mixed | R3 回答＋実績の見通し（出所別） | [390](sp-R3-mixed.jpg) | 回答＋実績のGoal（出所の1文） |
 | R4-none | R4 回答も記録もなく材料不足 | [390](sp-R4-none.jpg) | 回答も記録もないGoalをAPIで作成（設定量で行う場合の残り） |
-| R5-review | R5 回答の見直し：保存を確認できない | [390](sp-R5-review.png) | Goal編集の保存を通信失敗にする（案A：保存を確認できません） |
+| R5-review | R5 回答の見直し：保存を確認できない | [390](sp-R5-review.jpg) | Goal編集の保存を通信失敗にする（案A：保存を確認できません）。DBのタイトルが変わらないことを確認 |
 
 ## 原画との違い（意図したもの）
 
