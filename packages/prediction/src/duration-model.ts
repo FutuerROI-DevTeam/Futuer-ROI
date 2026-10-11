@@ -284,18 +284,40 @@ export function durationConditionalCdf(input: DurationConditionalInput): readonl
   if (N === 0 || N > H) return cdf;
   const stride = cap + 1;
   requireInput(BigInt(H) * BigInt(N) * BigInt(stride) <= 20_000_000n, 'Conditional DP work budget');
-  let current = new Float64Array(N * stride), next = new Float64Array(N * stride);
-  current[input.initialState === 'DONE' ? 0 : Math.min(input.initialRestDays!, cap)] = 1;
   const hazards = Array.from({ length: stride }, (_, r) => r === 0 ? p1 : skipProbability(p0, gamma, feature(r, cap)));
+  return conditionalCdf(hazards, input.initialState === 'DONE' ? 0 : Math.min(input.initialRestDays!, cap), N, H);
+}
+
+function conditionalCdf(hazards: readonly number[], initialAge: number, N: number, H: number): readonly number[] {
+  const cap = hazards.length - 1, stride = hazards.length, cdf = Array<number>(H + 1).fill(0);
+  if (N === H) {
+    cdf[H] = hazards[initialAge]! * hazards[0]! ** (H - 1);
+    return cdf;
+  }
+  if (N === 1) {
+    let survival = 1, age = initialAge;
+    for (let day = 1; day <= H; day++) {
+      survival *= 1 - hazards[age]!; cdf[day] = 1 - survival;
+      age = age === 0 ? 1 : Math.min(age + 1, cap);
+    }
+    return cdf;
+  }
+  let current = new Float64Array(N * stride), next = new Float64Array(N * stride);
+  current[initialAge] = 1;
   for (let day = 1; day <= H; day++) {
     next.fill(0); let reached = 0;
-    for (let count = 0; count < N; count++) for (let age = 0; age <= cap; age++) {
-      const probability = current[count * stride + age]!;
-      if (probability === 0) continue;
-      const done = probability * hazards[age]!;
-      if (count + 1 === N) reached += done; else next[(count + 1) * stride] = next[(count + 1) * stride]! + done;
-      const skipIndex = count * stride + (age === 0 ? 1 : Math.min(age + 1, cap));
-      next[skipIndex] = next[skipIndex]! + probability * (1 - hazards[age]!);
+    // A state unable to complete by H cannot contribute to any CDF[t<=H].
+    for (let count = Math.max(0, N - (H - day + 1)); count <= Math.min(N - 1, day - 1); count++) {
+      const firstAge = count === 0 ? Math.min(initialAge + day - 1, cap) : 0;
+      const lastAge = count === 0 ? firstAge : Math.min(cap, day - 1 - count);
+      for (let age = firstAge; age <= lastAge; age++) {
+        const probability = current[count * stride + age]!;
+        if (probability === 0) continue;
+        const done = probability * hazards[age]!;
+        if (count + 1 === N) reached += done; else next[(count + 1) * stride] = next[(count + 1) * stride]! + done;
+        const skipIndex = count * stride + (age === 0 ? 1 : Math.min(age + 1, cap));
+        next[skipIndex] = next[skipIndex]! + probability * (1 - hazards[age]!);
+      }
     }
     cdf[day] = cdf[day - 1]! + reached;
     [current, next] = [next, current];
@@ -313,12 +335,12 @@ function quantile(cdf: readonly number[], q: number): number | null {
   const day = cdf.findIndex(value => value >= q - 1e-12); return day < 0 ? null : day;
 }
 
-/** Actual-horizon SKIP-spell survival refinement. These finite functionals are
- * necessary diagnostics, not a universal completion-CDF error certificate. */
-function survivalRefined(artifact: Extract<DurationArtifact, { kind: 'DURATION_JOINT_V1' }>,
-  input: DurationForecastInput): boolean {
+/** Actual N/H/state completion-CDF refinement, including repeated SKIP spells.
+ * Finite refinement remains a diagnostic, not a continuous-posterior error bound. */
+function completionRefined(artifact: Extract<DurationArtifact, { kind: 'DURATION_JOINT_V1' }>,
+  input: DurationForecastInput, N: number): boolean {
   const { checks, tolerance } = artifact.integration;
-  if (artifact.integration.order !== 64 || !checks || checks.length !== 2 ||
+  if (input.horizonDays > 30 || artifact.integration.order !== 64 || !checks || checks.length !== 2 ||
       !positive(tolerance ?? NaN) || tolerance! > 1e-3) return false;
   const low = checks.find(rule => rule.order === 16), middle = checks.find(rule => rule.order === 32);
   if (!low || !middle) return false;
@@ -331,35 +353,46 @@ function survivalRefined(artifact: Extract<DurationArtifact, { kind: 'DURATION_J
           node.pDoneAfterSkip >= 1 || !atomIndex.has(node.gamma) || !Number.isFinite(node.weight) || node.weight < 0) ||
         Math.abs(sum(nodes.map(node => node.weight)) - 1) > 1e-10) return false;
   }
-  // Later SKIP spells start at age 1; the current spell may start further along.
-  const ages = [...new Set([1, ...(input.initialState === 'SKIPPED' ?
-    [Math.min(input.initialRestDays!, artifact.capDays)] : [])])];
-  const count = rules.reduce((n, nodes) => n + nodes.length, 0);
-  if (BigInt(count) * BigInt(input.horizonDays) * BigInt(ages.length) > 10_000_000n ||
-      BigInt(count) * BigInt(artifact.capDays + 1) > 1_000_000n) return false;
-  const hazards = rules.map(nodes => nodes.map(node => Array.from({ length: artifact.capDays + 1 }, (_, age) =>
-    age === 0 ? 0 : 1 - skipProbability(node.pDoneAfterSkip, node.gamma, feature(age, artifact.capDays)))));
-  for (const age of ages) {
-    const masses = rules.map(nodes => nodes.map(node => node.weight));
-    for (let day = 0; day <= input.horizonDays; day++) {
-      const values = rules.map((nodes, rule) => {
-        const result = Array<number>(atoms.length + 1).fill(0);
-        nodes.forEach((node, i) => {
-          const value = masses[rule]![i]!;
-          result[atomIndex.get(node.gamma)!] = result[atomIndex.get(node.gamma)!]! + value;
-          result[atoms.length] = result[atoms.length]! + value;
-        });
-        return result;
-      });
-      // 16 is retained for audit. As in fit, use the final 32 -> 64 refinement.
-      if (values[2]!.some((value, i) => !Number.isFinite(value) ||
-          Math.abs(value - values[1]![i]!) > tolerance!)) return false;
-      if (day === input.horizonDays) break;
-      const nextAge = Math.min(age + day, artifact.capDays);
-      rules.forEach((nodes, rule) => nodes.forEach((_, i) => {
-        masses[rule]![i] = masses[rule]![i]! * hazards[rule]![i]![nextAge]!;
-      }));
+  const H = input.horizonDays, initialAge = input.initialState === 'DONE' ? 0 :
+    Math.min(input.initialRestDays!, artifact.capDays);
+  // Before the Nth DONE there are <=N DONE-origin transitions (<=N-1 from SKIP).
+  // Each first-passage path is thus a polynomial in p1 of at most this degree.
+  const degree = Math.min(H, N - (input.initialState === 'SKIPPED' ? 1 : 0));
+  const p1Order = Math.ceil((degree + 1) / 2);
+  let work = N === H ? 1 : N === 1 ? H : 0;
+  if (work === 0) for (let day = 1; day <= H; day++) {
+    for (let n = Math.max(0, N - (H - day + 1)); n <= Math.min(N - 1, day - 1); n++) {
+      work += n === 0 ? 1 : Math.min(artifact.capDays, day - 1 - n) + 1;
     }
+  }
+  const count = middle.joint.length + artifact.joint.length;
+  // Also bound typed-array allocation/clearing, which pruning does not remove.
+  const cells = N === 1 || N === H ? H + 1 : (H + 2) * N * (artifact.capDays + 1);
+  if (BigInt(count) * BigInt(p1Order) * BigInt(work) > 100_000_000n ||
+      BigInt(count) * BigInt(p1Order) * BigInt(cells) > 100_000_000n ||
+      BigInt(count) * BigInt(artifact.capDays + 1) > 1_000_000n) return false;
+  let p1Rule: ReturnType<typeof durationBetaQuadrature>;
+  try { p1Rule = durationBetaQuadrature(artifact.donePosterior.alpha, artifact.donePosterior.beta, p1Order); }
+  catch (error) { if (error instanceof NumericalInsufficiency) return false; throw error; }
+  const values = [middle.joint, artifact.joint].map(nodes => {
+    const result = Array.from({ length: atoms.length + 1 }, () => Array<number>(H + 1).fill(0));
+    for (const node of nodes) {
+      const hazards = Array.from({ length: artifact.capDays + 1 }, (_, age) => age === 0 ? 0 :
+        skipProbability(node.pDoneAfterSkip, node.gamma, feature(age, artifact.capDays)));
+      for (let i = 0; i < p1Rule.nodes.length; i++) {
+        hazards[0] = p1Rule.nodes[i]!;
+        const cdf = conditionalCdf(hazards, initialAge, N, H), weight = node.weight * p1Rule.weights[i]!;
+        for (let day = 0; day <= H; day++) {
+          result[atomIndex.get(node.gamma)!]![day] = result[atomIndex.get(node.gamma)!]![day]! + weight * cdf[day]!;
+          result[atoms.length]![day] = result[atoms.length]![day]! + weight * cdf[day]!;
+        }
+      }
+    }
+    return result;
+  });
+  for (let atom = 0; atom <= atoms.length; atom++) for (let day = 0; day <= H; day++) {
+    if (!Number.isFinite(values[1]![atom]![day]!) ||
+        Math.abs(values[1]![atom]![day]! - values[0]![atom]![day]!) > tolerance!) return false;
   }
   return true;
 }
@@ -411,7 +444,7 @@ export function forecastDurationModel(artifact: DurationArtifact, input: Duratio
     BigInt(artifact.joint.length) * BigInt(artifact.capDays + 1) > 1_000_000n) {
     return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
   }
-  if (!survivalRefined(artifact, input)) return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
+  if (!completionRefined(artifact, input, N)) return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
   const cumulative: number[] = []; let accumulated = 0;
   artifact.joint.forEach(node => { accumulated += node.weight; cumulative.push(accumulated); });
   cumulative[cumulative.length - 1] = 1;

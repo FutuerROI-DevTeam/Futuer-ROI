@@ -209,7 +209,7 @@ test('Final refinement may converge after a coarse first rule; the historical di
   assert.deepEqual(result.artifact.integration.checks.map(rule => rule.order), [16, 32]);
 });
 
-test('Actual-horizon survival rejects an endpoint-tail bias and old artifacts, preserving JSON replay', () => {
+test('Long-horizon endpoint bias and old artifacts fall back, preserving checked JSON replay', () => {
   const rows = [transition(0, 'DONE', 'DONE'), transition(1, 'SKIPPED', 'SKIPPED', 1)];
   const fit = fitDurationModel(rows, { a: prior.a, b: { alpha: .1, beta: .1 } }, { capDays: 2, gammaPrior: atoms });
   assert.equal(fit.status, 'available'); const artifact = fit.artifact;
@@ -240,4 +240,79 @@ test('Actual-horizon survival rejects an endpoint-tail bias and old artifacts, p
   assert.deepEqual(forecastDurationModel(JSON.parse(JSON.stringify(safe)), short), result);
   const old = structuredClone(safe); delete old.integration.checks; delete old.integration.tolerance;
   assert.deepEqual(forecastDurationModel(old, short), { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' });
+});
+
+test('First-passage p1 degree bound integrates H=4..8 against independent whole-path Beta ratios', () => {
+  const beta = { alpha: .5, beta: 2 }, p0 = .3, gamma = .6, cap = 3;
+  for (let h = 4; h <= 8; h++) for (const initialState of ['DONE', 'SKIPPED']) for (const n of [1, 2, 3, 4]) {
+    const degree = Math.min(h, n - Number(initialState === 'SKIPPED'));
+    const rule = durationBetaQuadrature(beta.alpha, beta.beta, Math.ceil((degree + 1) / 2));
+    const actual = Array(h + 1).fill(0);
+    rule.nodes.forEach((p1, i) => {
+      const cdf = durationConditionalCdf({ pDoneAfterDone: p1, pDoneAfterSkip: p0, gamma,
+        capDays: cap, initialState, initialRestDays: 2, requiredFutureDone: n, horizonDays: h });
+      cdf.forEach((value, day) => { actual[day] += rule.weights[i] * value; });
+    });
+    const expected = enumerate({ p0, gamma, cap, initialState, age: 2, n, h, b: beta });
+    actual.forEach((value, i) => close(value, expected[i], 2e-12));
+  }
+});
+
+test('Many-spell continuous Beta-binomial oracle exposes long-H completion refinement bias', () => {
+  const fit = fitDurationModel([transition(0, 'DONE', 'SKIPPED'), transition(1, 'SKIPPED', 'DONE', 1),
+    transition(2, 'DONE', 'SKIPPED'), transition(3, 'SKIPPED', 'SKIPPED', 1)],
+  { a: { alpha: 1, beta: 999999997 }, b: { alpha: 4, beta: 4 } },
+  { capDays: 2, gammaPrior: [-1e-12, 0, 1e-12].map(gamma => ({ gamma, mass: 1 / 3 })) });
+  assert.equal(fit.status, 'available');
+  const L = 6801, N = 3200;
+  // Independent continuous Beta-binomial recurrence, with exact integer shapes.
+  let mass = 1; for (let j = 0; j < 5; j++) mass *= (5 + j) / (L + 5 + j);
+  let total = mass, tail = 0;
+  for (let k = 1; k <= L; k++) {
+    mass *= (L - k + 1) / k * (k + 4) / (L - k + 5);
+    total += mass; if (k >= N) tail += mass;
+  }
+  close(total, 1, 1e-11); close(tail, .5723412928, 1e-10);
+  // Independent fixed-p binomial weights scaled at their mode avoid endpoint underflow.
+  const binomialTail = p => {
+    const mode = Math.floor((L + 1) * p); let sum = 1, reached = mode >= N ? 1 : 0, weight = 1;
+    for (let k = mode + 1; k <= L; k++) {
+      weight *= (L - k + 1) / k * p / (1 - p); sum += weight; if (k >= N) reached += weight;
+    }
+    weight = 1;
+    for (let k = mode - 1; k >= 0; k--) {
+      weight *= (k + 1) / (L - k) * (1 - p) / p; sum += weight; if (k >= N) reached += weight;
+    }
+    return reached / sum;
+  };
+  const values = [32, 64].map(order => {
+    const rule = durationBetaQuadrature(5, 5, order);
+    return rule.nodes.reduce((s, p, i) => s + rule.weights[i] * binomialTail(p), 0);
+  });
+  close(values[0], .5955421968, 1e-10); close(values[1], .5679429142, 1e-10);
+  assert.ok(Math.abs(values[1] - values[0]) > .027);
+  const input = { initialState: 'SKIPPED', initialRestDays: 2, remainingAmount: N,
+    sessionAmount: 1, horizonDays: 10000, samples: 10000, seed: 20261011 };
+  assert.deepEqual(forecastDurationModel(fit.artifact, input), { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' });
+});
+
+test('Completion checks bound H/work while keeping completed, unknown-age, impossible and exact-baseline boundaries', () => {
+  const artifact = oracleFit().artifact;
+  const input = { initialState: 'SKIPPED', initialRestDays: 2, remainingAmount: 3,
+    sessionAmount: 1, horizonDays: 31, samples: 8192, seed: 20261011 };
+  assert.deepEqual(forecastDurationModel(artifact, input), { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' });
+  assert.deepEqual(forecastDurationModel(artifact, { ...input, initialRestDays: null }),
+    { status: 'insufficient', reason: 'UNKNOWN_CURRENT_DURATION' });
+  const completed = forecastDurationModel(artifact, { ...input, remainingAmount: 0, initialRestDays: null });
+  assert.equal(completed.status, 'available'); assert.equal(completed.p50Days, 0);
+  const impossible = forecastDurationModel(artifact, { ...input, remainingAmount: 32 });
+  assert.equal(impossible.status, 'available'); assert.ok(impossible.cdf.every(p => p === 0));
+  const baseline = fitDurationModel([transition(0, 'DONE', 'DONE'), transition(1, 'SKIPPED', 'DONE', 2)], prior,
+    { capDays: 2, gammaPrior: [{ gamma: 0, mass: 1 }] }).artifact;
+  assert.equal(forecastDurationModel(baseline, input).status, 'available');
+  const broad = fitDurationModel([transition(0, 'DONE', 'DONE'), transition(1, 'SKIPPED', 'DONE', 2)], prior,
+    { capDays: 30, gammaPrior: Array.from({ length: 65 }, (_, i) => ({ gamma: (i - 32) * 1e-10, mass: 1 })) });
+  assert.equal(broad.status, 'available');
+  assert.deepEqual(forecastDurationModel(broad.artifact, { ...input, initialState: 'DONE', remainingAmount: 15, horizonDays: 30 }),
+    { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' });
 });
