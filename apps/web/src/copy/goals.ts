@@ -84,6 +84,8 @@ export const goalsCopy = {
       conflictTitle: '作成操作の入力が一致しません',
       checkList: 'Goal一覧で確認する',
       checkBody: '作成済みか確認できないため、保存を止めています。元の回復情報は保持しています。Goal一覧で作成結果を確認してください。',
+      resumeCorrection: '入力の訂正を再開',
+      rejectedCleanupBody: '入力が受け付けられませんでした。前の作成操作を終了できないため、保存を止めています。入力と項目エラーは保持しています。「入力の訂正を再開」で操作の終了を試してください。',
       ownerRetry: '作成時のアカウントで再確認',
       ownerBody: '作成時のアカウントと現在のアカウントが違います。元の入力と作成キーは保持しています。作成時のアカウントでログインし直してから、同じ操作を確認してください。',
       deletedTitle: '作成したGoalは削除されています',
@@ -91,6 +93,7 @@ export const goalsCopy = {
       deletedBody: 'この作成操作のGoalは復元できません。入力は保持しています。新しいGoalとして始める場合は、上の操作を選んでから保存してください。',
     },
     noChanges: '変更はありません。',
+    failedInputRetained: '入力と保存失敗の案内は保持しています。再読み込みが成功すると、元の入力を確認できます。',
     summary: (count: number) => `${count}つの項目を確認してください`,
     saveFailed: {
       title: '保存できませんでした',

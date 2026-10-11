@@ -2,15 +2,17 @@
 
 **Supporting Doc / Not a Source of Truth.** 正式な仕様は[Product Spec](product-spec.md)、実現方式は[Architecture](architecture.md)。本書は画面・操作・状態・設計理由を調べる入口であり、R-xx、P-xx、保存条件、API契約の追加正本にはしない。共通規則は参照先で変更する。
 
-対象は[Issue #171](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/171)と[#146](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/146)。コード読取の基準は main `86b396d5ae15e1b3e735a4df310e9e4216a086e4`（2026-10-10）。[PR #147](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/147)のB案全画面・ルート構成に、merge済みの[PR #202](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/202)の朝焼け・森の表示と情報階層が重なった状態を記述する。旧B案と現行画面を同じ見た目と扱わない。
+対象は[Issue #171](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/171)と[#146](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/146)。現行コード読取の基準は main `2b4757873d441360337d7c2c1019770356bfde79`（2026-10-11）。初稿の基準は main `86b396d5ae15e1b3e735a4df310e9e4216a086e4`（2026-10-10）。[PR #147](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/147)のB案全画面・ルート構成に、merge済みの[PR #202](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/202)の朝焼け・森の表示と情報階層が重なった状態を記述する。旧B案と現行画面を同じ見た目と扱わない。
 
-[PR #210](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/210)はこの基準時点では未merge。Goal保存失敗の同owner再確認後の復元は変更候補であり、本書の現行保証に含めない。[Issue #215 / PR #216](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/215)のログアウト失効確認も未統合で、現行の失敗表示とsession削除の保証を区別する。PRのmergeと、Product Decisionの採択範囲・本人UX受入・本番確認は別に読む。[P-21](product-spec.md#p-21-todayの朝焼け山並み案)の残条件を本書で解消した扱いにしない。
+**2026-10-10初稿時点の記録**：[PR #210](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/210)は初稿の基準時点では未merge。Goal保存失敗の同owner再確認後の復元は変更候補であり、当時のmain保証に含めない。[Issue #215 / PR #216](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/215)のログアウト失効確認も未統合で、当時の失敗表示とsession削除の保証を区別する。PRのmergeと、Product Decisionの採択範囲・本人UX受入・本番確認は別に読む。[P-21](product-spec.md#p-21-todayの朝焼け山並み案)の残条件を本書で解消した扱いにしない。
+
+2026-10-11 / **main統合後の明確化**：基準main `2b4757873d441360337d7c2c1019770356bfde79` はPR214・210・216・212を含む。Goal保存失敗の同owner・同訪問での表示復元は[D-29](architecture.md#d-29-量と作成操作の保全148)、ログアウトの503/Cookie保持と明示再試行は[認証の失敗契約](architecture.md#ログアウトの失敗と明示再試行215)、遠い到達予定日の軸省略は[P-19](product-spec.md#p-19-到達予定日b案)へ追跡する。以下の現行記述をマージ済みコードへ照合した。新mainでの実ブラウザ受入や再撮影は未実施で、初稿・合成f106496の証拠を新mainの実操作証拠へ転用しない。P-21の未確認条件・正式Decisionの採択範囲は変更しない。
 
 ## 読み方と確認の範囲
 
-- **コード確認**：以下のルート、条件分岐、CSS、操作先を基準commitで確認した。
+- **コード確認**：初稿のルート、条件分岐、CSS、操作先は86b396dで確認。2026-10-11に新基準mainの変更を再照合し、保存失敗・ログアウト・日付軸の現行記述を同期した。
 - **既存の検証記録**：[変更対応表](change-map.md#アプリの仕様と実装)と[PR202のQA履歴](changes/issue-199-design-qa.md)へリンクする。本書作成時の再実行ではない。
-- **合成環境の部分受入**：[C担当の画像・操作記録](changes/issue-171-composite-acceptance/README.md)はmain＋未merge PR210/214の合成HEAD `f106496`。28枚のSHA・幅・状態を照合し、Cの実API/DB操作記録と対応付けた。撮影対象にPR216/217は含まれず、main単独の確認へ読み替えない。
+- **合成環境の部分受入**：[C担当の画像・操作記録](changes/issue-171-composite-acceptance/README.md)は撮影当時のmain86b396d＋未merge PR210/214の合成HEAD `f106496`。28枚のSHA・幅・状態を照合し、Cの実API/DB操作記録と対応付けた。撮影対象にPR216/217は含まれず、main単独の確認へ読み替えない。
 - **未確認**：基準main単独での実ブラウザ・390px/1280px全画面/全状態、原画一致、スクリーンリーダー、iOS/Safari、公開環境。コード・合成環境の部分観測を包括的な視覚/UX受入と言い換えない。
 - **設計資料**：[旧B案キャンバス](https://claude.ai/artifact/Hxs7396eZNtYn8iLYmyMi8)、[朝焼け参照](https://claude.ai/artifact/KQDeWMput5bt77NEj4J4Kb#artboard-eb122470b18c)。2026-10-10のWeb取得では両URLとも内容を再取得できなかった。朝焼け案は、引継ぎ調査で[資産README](../apps/web/src/features/today/assets/README.md)のSHA-256と提供HTMLの一致が報告された。本PRにはそのHTMLを含めず、再照合は未実施。旧B案の全アートボードは未取得で、番号と状態を推定で埋めない。
 - 本書の比較説明のうち正式Decisionに書かれていない代替案は、**現実装を説明するための比較整理**であり、過去にチームが実際に検討・却下したという記録ではない。
@@ -116,7 +118,7 @@ TodayのDOMは問い→直近/昨日→進捗・見通し・詳細→操作帯�
 | 保存成功後の再取得失敗 | 保存失敗と区別して再読込を促す | TodayのSavedButStale |
 | 未定義URL／route例外 | 共通404またはerror。戻る／再読込 | RouteStates |
 
-同ownerの正常再確認でTodayの入力を保持する範囲は[D-30](architecture.md#d-30-todayの同一owner再確認で入力を保つ190)。Goalフォームの通常draftと保存失敗は同じ保証ではない。PR210の失敗復元をmainへ先取りしない。
+同ownerの正常再確認でTodayの入力を保持する範囲は[D-30](architecture.md#d-30-todayの同一owner再確認で入力を保つ190)。Goalフォームは確認中に私的な表示を停止し、同ownerの連続性・同訪問・同URLが確定した後だけ、親メモリの失敗入力・旧baseline・項目エラー・案内を復元する（PR210統合済み）。確認失敗・owner変更・認証通知・画面離脱では破棄し、mutation・成功callback・自動再送は復元しない。通常draftとは別の失敗snapshotであり、詳細は[D-29](architecture.md#d-29-量と作成操作の保全148)へ。
 
 ## 画面ごとの構成と操作
 
@@ -162,7 +164,7 @@ TodayのDOMは問い→直近/昨日→進捗・見通し・詳細→操作帯�
 | 未ログイン | 再ログイン案内 |
 | accountを開く | メール・ログアウト・閉じるのdialog |
 | accountを閉じる | Esc/閉じる/外側クリック。元の入口へfocus |
-| ログアウト中／失敗 | busy中は閉じる操作を止める。clientが返すerror/通信例外はalert、errorのない応答では/loginへreplace。DBのsession削除失敗をSDKが成功として返す既知制約は[#215](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/215)で追跡し、失効確認済みとは扱わない |
+| ログアウト中／失敗 | busy中は閉じる操作を止める。clientのerror/通信例外はalert、遷移しない。署名tokenのDB削除失敗・結果不明は503 `SIGN_OUT_UNCONFIRMED`とCookie保持、busy解除後に明示再試行できる。503時の失効は保証しない。errorのない成功応答で/loginへreplace。詳細は[認証の失敗契約](architecture.md#ログアウトの失敗と明示再試行215) |
 
 根拠：[GoalListPage](../apps/web/src/features/goals/GoalListPage.tsx)、[AccountMenu](../apps/web/src/features/account/AccountMenu.tsx)。要件は[R-01/R-02](product-spec.md#requirementsmvp)。数値・時間量は[P-18](product-spec.md#p-18-整数分を保った時間分表示)。
 
@@ -176,6 +178,7 @@ TodayのDOMは問い→直近/昨日→進捗・見通し・詳細→操作帯�
 | 編集取得中／失敗／404 | loading、再読込、またはGoalなし |
 | 通常編集 | 保存済み値を初期表示。変更した項目を保存。成功は一覧へ |
 | 入力不正／422 | まとめ・項目エラー。先頭の該当欄へfocus。未保存値を修正 |
+| 作成操作のstorage準備／終了失敗 | 入力と項目エラー・回復案内を保持し保存を止める。同訪問の既知422操作はowner/key/保存原文一致を確認する「入力の訂正を再開」で該当操作だけを終了。壊れた初回rawや別owner/訪問/K2へ例外を広げない（D-29） |
 | 保存中 | 二重送信防止・入力停止・保存中表示 |
 | 編集409 | 入力を保持し最新設定/回答の明示読込。GET成功後に利用者が再保存 |
 | 作成結果不明 | 保持した同owner/同key/元bodyで結果確認。新規成功や確定失敗と決めつけない |
@@ -189,7 +192,7 @@ TodayのDOMは問い→直近/昨日→進捗・見通し・詳細→操作帯�
 
 mobileの「×」は編集でも一覧へ戻る。desktopの編集パンくず/取消はそのGoalのTodayへ、新規の取消は一覧へ戻る。この差を統一したと記述しない。全離脱を防ぐ未保存確認dialogは本実装にない。
 
-根拠：[GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)、[GoalFormFields](../apps/web/src/features/goals/form/GoalFormFields.tsx)、[goal-form](../apps/web/src/features/goals/goal-form.ts)、[create-attempt](../apps/web/src/features/goals/create-attempt.ts)。共通規則：[R-02](product-spec.md#requirementsmvp)、[R-11](product-spec.md#質問から始める見通しr-11)、[P-19](product-spec.md#p-19-到達予定日b案)、[P-20](product-spec.md#p-20-量の意味と保存操作の保全148)、[D-29](architecture.md#d-29-量と作成操作の保全148)。
+根拠：[GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)、[失敗表示の保全](../apps/web/src/features/goals/navigation/useGoalFormFailure.ts)、[GoalFormFields](../apps/web/src/features/goals/form/GoalFormFields.tsx)、[goal-form](../apps/web/src/features/goals/goal-form.ts)、[create-attempt](../apps/web/src/features/goals/create-attempt.ts)。共通規則：[R-02](product-spec.md#requirementsmvp)、[R-11](product-spec.md#質問から始める見通しr-11)、[P-19](product-spec.md#p-19-到達予定日b案)、[P-20](product-spec.md#p-20-量の意味と保存操作の保全148)、[D-29](architecture.md#d-29-量と作成操作の保全148)。
 
 ### Today
 
@@ -210,6 +213,8 @@ mobileの「×」は編集でも一覧へ戻る。desktopの編集パンくず/�
 | 保存中／失敗／日付変更 | 共通の保存回復に従う。旧日の入力を新しい日に黙って保存しない |
 
 「やった」は表示中の既定/選択量で1回押すと保存、「今日は休む」は休んだ記録を保存する。±は入力を開くだけで保存しない。進捗の目標/累計/残り/超過は実績表示。未保存の量から「+20分で41%→42%」という未来プレビューを計算・表示しない。予測の数値意味・不足条件は[Today表示仕様](product-spec.md#today-decision画面の表示仕様)と[P-21](product-spec.md#p-21-todayの朝焼け山並み案)を参照し、本書で新定義しない。
+
+到達予定日が10回中8回の日数（なければ目安）の3倍より先なら、見通しまでの軸を途中で省く（//）。到達予定日は右端に年付き日付で示し、省いた先は日付に比例しないことを読み上げでも伝える。cut時の月目盛りは到達予定日未満で止め、右端より未来の月を左へ置かない。予測値・API・非cut軸は変更しない（PR212統合済み）。表示契約は[P-19](product-spec.md#p-19-到達予定日b案)、実装は[chart-geometry](../apps/web/src/features/today/chart-geometry.ts)・[OutlookPanel](../apps/web/src/features/today/OutlookPanel.tsx)、回帰は[target-gap](../apps/web/tests/target-gap.test.mjs)・[実SVG](../apps/web/tests/outlook-axis.native.tsx)。合成f106496の撮影はこの変更を含まない。
 
 昨日の状態はToday内で扱う。
 
@@ -302,8 +307,8 @@ GitHub名は根拠がある役割だけに付す。[チームreview](https://git
 | E2補足・D7保存中文言 | 現行copyは補足「1回の量…が初期値です。実際の量に変えられます。」、保存中は「保存中…」。原画との差は未確認 | 現行維持／原画確認後に最小訂正 | FE文言確認：241205008（本reviewで担当表明）。固定コピー改訂の採択者：未定（#171で確認） | 10/12前に原画照合できた範囲だけ記録。差を捏造しない |
 | desktopバー2段 | 作成/編集/履歴はfr-page--deskでAppBarを隠すコードがある。合成f106496の[編集1280](changes/issue-171-composite-acceptance/screenshots/real-edit-1280.png)・[履歴1280](changes/issue-171-composite-acceptance/screenshots/real-history-1280.png)は1段を部分確認。main単独・作成を含む全状態の確認は未完 | 基準commitで1段を検証／残れば最小修正 | 1280px確認：241205008（本reviewで担当表明）。#146/#171 | 提出前の1280px確認 |
 | Core32px・注釈・light-only | PR202は統合済み。P-21は個別了承/最終UXの未確認を記録 | 現行の受入確認／正式判断に基づく変更 | 表示判断：Kaito-Iwase（P-21）。最終UX受入の判断者：未定（#171で確認） | 提出前の受入確認。mergeを代替証拠にしない |
-| ログアウト失効確認 | mainはSDKの成功応答とDBのsession削除完了が一致しない故障条件あり。#215/PR216は修正候補 | 現行制約を明記／修正レビュー後に統合 | 修正担当：Kaito-Iwase（PR216）。採択/受入確認者：未定（#171で確認）。[Architecture認証実装](architecture.md#2026-10-06の認証実装75) | 10/12前の既存修正候補。公開環境・失効受入は別確認 |
-| Goal保存失敗と同owner再確認 | PR210で復元改善を提案中。mainでは未保証 | mainの制約を明記／レビュー後に210を統合 | 修正担当：Kaito-Iwase（PR210）。採択/受入確認者：未定（#171で確認）。D-29 | 提出前の既存修正候補。文書で先に完了扱いにしない |
+| ログアウト失効確認 | PR216統合済み。削除失敗/結果不明は503・Cookie保持・明示再試行。503時の失効保証、公開HTTPS/本番DB障害の受入は別 | 現行失敗契約を維持／公開環境で確認し正本へ記録 | 修正担当：Kaito-Iwase（PR216）。受入確認者：未定（#171で確認）。[Architectureの失敗契約](architecture.md#ログアウトの失敗と明示再試行215) | 提出前の残確認。mergeを公開環境・失効受入の証拠にしない |
+| Goal保存失敗と同owner再確認 | PR210統合済み。同owner連続性・同訪問/URLが確定後に失敗表示を復元。確認中は私的DOMを除去し、自動再送しない | 現行の境界を維持／main基準の状態別受入を確認 | 修正担当：Kaito-Iwase（PR210）。受入確認者：未定（#171で確認）。D-29、[検証履歴](changes/issue-185-failure-preservation.md) | 提出前の残確認。全owner/回復条件の受入をmergeだけで完了扱いにしない |
 | 視覚・実機の確認 | [合成f106496の部分受入](changes/issue-171-composite-acceptance/README.md)は390×21枚・1280×6枚・追加1440×1枚。基準main単独の全画面/全状態は未確認 | 合成で観測済みの状態を追跡／main統合後の確認と残件整理 | 全体の確認担当：未定（#171で確認）。desktopバー1280pxのみ241205008（本review）。#171 PR | 提出前の証拠を部分反映。原画・R5・P-21を完了へ変えない |
 
 ### 議論と決定の置き場所
@@ -314,7 +319,7 @@ GitHub名は根拠がある役割だけに付す。[チームreview](https://git
 
 [#146の対応表](ui/artboard-map.md)で、旧B案の番号、現在のroute/状態、表示させる条件、未確認・対象外を区別する。朝焼け案とB案の全状態を混同しない。
 
-追加の[C担当合成証拠](changes/issue-171-composite-acceptance/README.md)に、画面/状態・画像実寸・操作・通信条件と元SHAを収録した。実APIの通常操作と503注入後の復帰を分ける。画像28枚すべてが390/1280の全画面受入という意味ではなく、未merge PR210/214の差分も含む。
+追加の[C担当合成証拠](changes/issue-171-composite-acceptance/README.md)に、画面/状態・画像実寸・操作・通信条件と元SHAを収録した。実APIの通常操作と503注入後の復帰を分ける。画像28枚すべてが390/1280の全画面受入という意味ではなく、撮影当時は未mergeだったPR210/214の差分も含む。後の統合で画像の対象SHAは変わらず、PR216/212を含む新mainの証拠にはしない。
 
 既存画像は以下にあるが、**基準commitでの今回の再撮影ではなく、1280pxを1440px画像で代用しない**。
 
@@ -328,7 +333,7 @@ GitHub名は根拠がある役割だけに付す。[チームreview](https://git
 
 1. [変更対応表](change-map.md)から対象の仕様→コード→既存回帰へ進む。文言はcopy、見た目はtokens/各CSS、操作と状態はPage/featureを起点にする。
 2. 状態・操作を変えた場合は本書と対応表を同期し、正式仕様を変更した場合だけProduct/Architectureの該当節を改訂する。
-3. 既存回帰の入口は[auth-pages](../apps/web/tests/auth-pages.test.mjs)、[history](../apps/web/tests/history.test.mjs)、[today-presentation](../apps/web/tests/today-presentation.test.mjs)、[record-log](../apps/web/tests/record-log.test.mjs)、[goal-form](../apps/web/tests/goal-form.test.mjs)、[responsive-details browser](../apps/web/tests/responsive-details.browser-check.mjs)、[session-draft browser](../apps/web/tests/session-draft.browser.tsx)。
+3. 既存回帰の入口は[auth-pages](../apps/web/tests/auth-pages.test.mjs)、[history](../apps/web/tests/history.test.mjs)、[today-presentation](../apps/web/tests/today-presentation.test.mjs)、[record-log](../apps/web/tests/record-log.test.mjs)、[goal-form](../apps/web/tests/goal-form.test.mjs)、[responsive-details browser](../apps/web/tests/responsive-details.browser-check.mjs)、[session-draft browser](../apps/web/tests/session-draft.browser.tsx)、[Goal失敗復元](../apps/web/tests/issue185-failure.browser.tsx)、[logout失敗](../apps/web/tests/sign-out.browser.tsx)、[cut軸の実SVG](../apps/web/tests/outlook-axis.native.tsx)。
 4. 文書のFoundationと実ブラウザ確認は別々に報告する。手順は[README](../README.md)、[CONTRIBUTINGの文書更新](../CONTRIBUTING.md#文書更新を完了する前)。実行した文書検証の基準SHA・結果と、未実施のアプリ検証は#171のPR/Issueへ記録する。
 
 ## Issue171の条件との対応

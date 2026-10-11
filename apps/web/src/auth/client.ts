@@ -12,6 +12,8 @@ export function retryAfterSeconds(response: Response | undefined): number | null
 
 export function describeAuthError(code: string | undefined, fallback: string | undefined): string {
   switch (code) {
+    case 'SIGN_OUT_UNCONFIRMED':
+      return 'ログアウトを確認できませんでした。時間をおいて、もう一度ログアウトしてください。';
     case 'INVALID_EMAIL_OR_PASSWORD':
       return 'メールアドレスまたはパスワードが正しくありません。';
     case 'USER_ALREADY_EXISTS':

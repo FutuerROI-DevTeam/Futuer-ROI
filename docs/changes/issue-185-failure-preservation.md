@@ -1,0 +1,67 @@
+# Issue #185：Goalフォームの保存失敗を正常なsession再確認で保全する
+
+Supporting Artifact / Not a Source of Truth
+
+対象：[Issue #185](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/185)。2026-10-10、基準main `eb1837f6039b7a451b6ca5617b9f7e99ffa48c95`で再現し、main `22aa0dab79135b0913d4056129ab28624bed38a4`を取り込んで修正した。現行契約は[Product](../product-spec.md)・[Architecture D-29](../architecture.md#d-29-量と作成操作の保全148)。Human Review・merge・公開環境の受入は未実施。
+
+## 原因と修正
+
+正常な同owner確認でも、Goalフォームは私的DOMを隠すため一時unmountする。従来のメモリdraftは送信時に消され、mutation失敗をdraftとして記憶しない。新しいフォームのmutation observerにも失敗は引き継がれない。このため編集409・503・通信例外・422と作成422の入力や案内が消え、作成503ではstorageの操作だけが残って案内が消えた。DB損失や本番owner漏洩を確認した結果ではない。
+
+親に表示用の失敗snapshotを置き、既存の確定成功と同じowner連続性・訪問token・URLの条件を満たすときだけ採用する。正常確認中はDOMを隠し、確定後に入力・旧baseline・項目エラー・失敗案内を復元する。確認失敗・owner変更・認証signal／別タブ通知・実離脱では捨てる。保存operation・mutation・成功callbackは再実行しない。作成の未知結果は既存の同key／元bodyの明示回復を使う。
+
+確認中に届いた同訪問の作成422は、ready後にowner・key・原文が一致する操作だけを終了する。K2への置換ならK1表示も終了処理も採用しない。Storage例外では原文を保全し回復エラーを表示する。422の訂正では未訂正の項目エラーを残し、全項目を訂正した入力を通常draftへ戻す。
+
+最新Goalは引き続き取得する。GET失敗時は入力の保全を案内して取得を待ち、古いcacheでフォームを再開しない。409の旧baselineは明示reloadの成功まで保持する。新しい単位固定等で項目エラーが増えても、409の明示reload操作を隠さない。
+
+フォーム全体のDOMを保つ案は既存の確認中表示境界を変えるため採用しない。mutationの復元は副作用・古いownerへの採用・再送の責務を混ぜるため採用しない。小さな表示snapshotは失敗内容をメモリに保持するが、owner／訪問判定と作成storageのraw照合が必要になる。API・認証設定・DB・Engineの変更はない。
+
+## 検証条件と履歴
+
+ENGINEERING：固定版Better Auth 1.7.7、実React／QueryClient／PrivateCacheGuard／Router／Goalフォームhook、合成HTTP、専用Chrome profileでDOMと送信を観測した。native入力を使う視覚受入や実API／DBの保存結果の検証とは区別する。
+
+基準mainの7ケースは全件失敗を再現した。初回fixtureではGET503後にフォームの即時表示を要求していたが、私的DOMの境界に沿って「非表示を維持し、GET回復後に入力と409を復元する」へ訂正した。基準mainで訂正後も7件とも再現する。最初の修正後は7件とも成功した。
+
+境界を拡張した検証で、fresh unitLockedによる項目エラーが409の明示reloadを隠す問題を発見し、表示条件を修正した。未編集unitを明示rebaseで最新へ合わせる既存契約に対し、fixtureが旧値の保持を誤って要求したため、未編集unitと編集済みunitの固定違反を別ケースへ訂正した。
+
+[実hook回帰](../../apps/web/tests/issue185-failure.browser.tsx)の先行ローカル実行は34/34成功（wrapper 1 pass、0 fail、0 skip、27.365秒）。製品4ファイルとfixtureのfingerprintは実行前後とも`241d854d220c1895dad87e3c879b7ef47ba3dd1221e9b68139a22b9b07e18e11`。確認失敗503／429／通信例外、A→B→A・短いowner／logout／認証signal／storage通知、Goal／public／未commit navigation離脱、422の複数項目訂正、409の旧版保持と明示rebase、正常確認中の遅延拒否6種、K1の遅延422とK2／別owner原文の保全を含む。確認中の私的DOMは587観測で検出せず、auth writeは0、捕捉Goal送信39回は全て合成だった。
+
+全ブラウザ回帰では18テスト中17成功、既存session-draftの未確定作成入力テストが1失敗した。disabled欄への合成変更が失敗snapshotへ入り、確認後に元bodyより表示を優先した製品回帰である。送信はoperation.bodyのまま不変だったが、表示も元bodyを優先するよう修正した。既存assertは変更していない。
+
+この1行修正後は追加34/34（wrapper 1 pass、0 fail、0 skip、45.825秒）と全ブラウザスイート18/18（0 fail、0 skip、89.435秒）が成功した。修正後fingerprintは実行前後とも`64f93251d1955fd399d4870ac27f3584bd7c714635edb884459d00b25811ad07`。既存の#155通常draft・確定成功・owner境界、#175作成attempt、D-30 Today保持・預かり保存の回帰も含む。
+
+正確なcommit HEADでの全体確認とCIはPRの検証欄へ記録する。先行コード・文書の独立レビューでは確認済みBlocking／Should Fix指摘なし。独立レビュー担当はブラウザを実行していない。
+
+公開環境、人による別タブ操作・視覚受入、実DBへの保存結果は未確認。合成通知の境界テストは本番での到達性やpixel描画の証明ではない。
+
+## 追加レビュー：復元した失敗を通常draftへ混入させない
+
+main `86b396d5ae15e1b3e735a4df310e9e4216a086e4`（#202/#209/#206を含む）を通常mergeで取り込んだ。先行HEAD `fc766f8`の34ケース・全18browser・初回CI成功は先行証拠として保全する。
+
+親の独立レビューの仮説を既存ハーネスから実Chromeで追加確認した。409/503/network/422の失敗を正常同owner確認で復元してから、未commit Goal1→Goal2→Goal1を行うと4/4で古い入力だけが戻り、409禁止・失敗案内・項目エラーは消えた。同じ確認を挟まない対照4件では復活しない。自動送信0、auth write0で、DB損失や別owner漏洩を確認したものではない。
+
+復元後は新mutation observerのsave.isErrorがfalseでもretainedErrorが失敗を表す。通常draftの除外条件がsave.isErrorだけだったため失敗入力を通常draftにも退避し、failureの訪問token失効後に入力だけを戻せた。除外条件とeffect依存をfailedSaveへ合わせる最小修正を行う。全field訂正・明示latest読込成功・新明示保存による失敗終了は維持する。新しい送信中はsaving/isPendingで通常draft退避を止める。
+
+恒久回帰は4件の復元後往復と対照4件を追加して42ケースへ拡張した。旧入力だけが戻らず、失敗文脈のない旧入力を保存できないこと、param commit前のGoal往復、送信数不変を検査する。修正後は42/42成功（wrapper 1 pass、0 fail、0 skip、26.085秒）、fingerprintは実行前後とも`eedc6ed2aeeea3481a09d083dc1d07183847a70980d2d34eee6cbc9ac6a586a4`。727観測で確認中private DOMは不検出、auth write0、合成Goal送信47回だった。既存の全項目訂正・明示latest読込成功後の通常draft復帰と、新明示保存の送信中保全も維持する。
+
+修正後の全browser18/18（0 fail、0 skip、82.793秒）、全workspace型/build、Web通常112 pass（0 fail、1 skipは別実行済みbrowserのラッパー）も成功した。独立レビュー・Foundation・新HEAD CIの最終結果はPRへ記録する。実API/DB・公開環境・人のUX受入は上記と同じく未確認。
+
+## 追加レビュー：保存準備と操作終了のstorage失敗
+
+GitHubのP2レビューで、mutation開始前のsessionStorage.setItem例外ではprepareErrorだけが子に残り、親の失敗snapshotへ入らない経路を確認した。先行HEAD `484cf7559659dcbfeddfdd93c02229ee81072aef`の実ブラウザ47ケースで、正常確認後・同batch確認後の準備失敗と422のremoveItem失敗の3件を再現し、既存42件とowner／訪問破棄対照2件は成功した。実行前後fingerprintは`bf38261add19e4100a51d2f50453041018c39ebbbd070fe836bf8ce526c33a7a`で一致した。
+
+prepareErrorをmutationエラーと別に同訪問snapshotへ保持し、案内・CreateRecoveryErrorによる保存禁止状態を復元する。準備catchと422／410終了失敗は同batchのunmount前にも親へ失敗receiptを渡す。全prepareErrorを通常draftから除外し、新明示保存で旧observerをresetする。準備失敗は現在attemptだけを採用し、復元422の全訂正後に旧K1を借りて新しい準備失敗を捨てる経路を防ぐ。成功completionやraw／ownerの照合契約は変えない。
+
+恒久回帰は49ケース（既存42件＋7件）へ拡張し、49/49成功、wrapper 1 pass／0 fail／0 skip、35.002秒。準備正常確認・同batch確認・owner／訪問失効・復元422訂正後の次準備失敗・422終了失敗・410明示再開の同batch終了失敗を検査する。storage回復後は明示操作でのみ再送し、凍結済みkey/body/rawの保全または確定422後の新keyを区別する。fingerprintは実行前後とも`864d4e5d33d12adec4107693b4ff41b55772a836b33d7e71c6e21c507eb539d0`。確認中private DOMは882観測で不検出、auth write0、捕捉Goal送信55回は全て合成だった。
+
+途中の48ケースは全scenario成功でも、410修正を実行中に加えたためfingerprint不一致でwrapperが失敗した。ログを保全し最終成功には数えず、ソースを固定した49ケースで再検証した。型／全workspace build、Web通常112 pass（0 fail、1 skipは別実行済みbrowser wrapper）、全browser18/18（0 fail、0 skip、83.164秒）が成功した。独立レビューで422終了失敗時の項目エラー併存assertを明示追加することとし、追加後の49件および新exactHEAD CIの最終結果はPRへ記録する。Foundation・独立レビューの最終確認もPRに記録する。実API/DB・公開環境・人のUX受入は未実施。
+
+422終了失敗のbefore／after項目エラーとstorage回復禁止の併存assertを追加し、最終49件を再実行した。49/49成功、wrapper 1 pass／0 fail／0 skip、53.133秒。fingerprintは実行前後とも`dc1848c24ffe7620f6bf873efe7a13692e3ef586de15843a3ee3258f0eb64782`。追加assert以外は上記固定版と同じで、auth write0・自動再送0・実API/DB書込0。全18の先行ローカル成功はassert追加前であり、新exactHEAD CIでこのassertを含む全体実行を確認する。
+
+## 追加レビュー：既知422のNUL入力と操作終了失敗
+
+先行HEAD `1f085c034cdb0c72f8c20f8014059c426c6d2204`で、DOMに実際のNULを含むtitleを入力し、合成APIが422で拒否した後のremoveItemを失敗させた。正常な同owner確認後、厳密な初回loaderがそのrawを拒否するため入力・項目エラーが空になり、storage回復後も訂正入口がなかった。rawは保全され、保存禁止・自動送信0は維持された。架空の壊れたrawを信用する問題や本番での漏洩の証拠ではない。
+
+厳密な初回loaderを維持し、同owner・同訪問のメモリにある確定422操作と保存rawが完全一致する場合だけ、その操作の入力と項目エラーを表示する。storage終了失敗中は入力・保存を止める。「入力の訂正を再開」の明示操作で、現在のready／owner／訪問とrawを再確認し、該当操作だけを終了する。成功時は入力・422項目エラーを保ち、親receiptも同期してstorage禁止の再発を防ぐ。送信は行わず、全項目訂正後の次の明示保存で新しいkeyを作る。別owner／別訪問・同keyの変更raw・別K2・一般の壊れた初回rawはこの例外へ採用しない。
+
+恒久回帰は既存49件を保ち56件へ拡張した。56/56成功（wrapper 1 pass／0 fail／0 skip、47.022秒）、fingerprintは実行前後とも`772b150ff82fa668ef1150ed2db59464bc67360999d51c5b27fcc95485f1dc15`。NUL＋終了失敗＋正常確認、確認中の遅延422、明示再開失敗と復旧後の同batch確認、訂正後の新key保存、owner／訪問／raw／K2対照、壊れた初回rawを検査する。確認中private DOMは1050観測で不検出、auth write0・自動再送0・実API/DB書込0、Goal送信65回は合成HTTPの明示操作だった。独立静的レビューで追加Blocking／Should Fixは未発見。全体テストと新exactHEAD CIの最終結果はPRへ記録する。

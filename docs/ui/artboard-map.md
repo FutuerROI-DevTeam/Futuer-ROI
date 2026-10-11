@@ -2,7 +2,7 @@
 
 **Supporting Doc / Not a Source of Truth.** 要件・表示・採択は[Product Spec](../product-spec.md)、技術契約は[Architecture](../architecture.md)。本表は[Issue #146](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/146)の対応表で、[画面設計](../design.md)から参照する。
 
-基準は main `86b396d5ae15e1b3e735a4df310e9e4216a086e4`。PR147のB案構造にPR202の表示変更が入った状態。PR210は未merge。ログアウト失効確認の#215/PR216も修正候補であり、現行のB-accountに先取りしない。
+現行コードの基準は main `2b4757873d441360337d7c2c1019770356bfde79`（2026-10-11）。PR147のB案構造にPR202の表示変更が入り、PR214・210・216・212も統合済み。初稿の基準main `86b396d5ae15e1b3e735a4df310e9e4216a086e4` ではPR210/216は未統合候補だった。初稿の制約と現行コードを区別し、撮影対象f106496・原画未照合・最終受入の残件は保全する。
 
 ## 証拠の区別
 
@@ -10,7 +10,7 @@
 - **部分対応**：関連する実装はあるが、元の番号と状態の1対1対応や画面差分が未確認。
 - **未実装**：対象の操作/画面がコードにない。
 - **対象外**：P-17/Issue146の明示対象外。未実装と受入失敗を混同しない。
-- **合成実表示・操作の部分確認**：[C担当証拠](../changes/issue-171-composite-acceptance/README.md)はmain＋未merge PR210/214の合成HEAD `f106496`。下表のコード読取とは基準を分け、観測された状態だけを部分受入とする。
+- **合成実表示・操作の部分確認**：[C担当証拠](../changes/issue-171-composite-acceptance/README.md)は撮影当時のmain86b396d＋未merge PR210/214の合成HEAD `f106496`。下表のコード読取とは基準を分け、観測された状態だけを部分受入とする。
 - **原画/基準main単独の実表示未確認**：全行の原画一致・番号割当・両幅の全状態受入は未完。合成の画像を原画IDへ推定割当しない。
 
 [旧B案](https://claude.ai/artifact/Hxs7396eZNtYn8iLYmyMi8)はWeb取得で内容を再取得できなかった。Issue本文・PR147本文・コードコメントで確かめられる対応のみを書く。表にない原画の派生IDが存在しないとは断定しない。元キャンバスのエクスポート/全アートボード一覧を確認するまで「全アートボード対応完了」は保留する。
@@ -29,7 +29,7 @@
 | B-loading | route確認が遅い、または一覧取得中 | [RouteStates](../../apps/web/src/routes/RouteStates.tsx)、GoalListPage.ListLoading | 対応コードあり。route pendingと一覧skeletonを分ける |
 | B-error・通信失敗 | sessionまたはデータ取得を失敗させる | RouteStates、[GoalStates](../../apps/web/src/features/goals/GoalStates.tsx) | 対応コードあり。未ログインへ誤送しない入口、再読込 |
 | B-notfound | 未定義URL | RouteStates.NotFoundPage | 対応コードあり。Goal固有404とは別 |
-| B-account | 一覧のアカウント、desktop共通バーから開く | [AccountMenu](../../apps/web/src/features/account/AccountMenu.tsx) | 対応コードあり。メール、logout、閉じる/失敗 |
+| B-account | 一覧のアカウント、desktop共通バーから開く | [AccountMenu](../../apps/web/src/features/account/AccountMenu.tsx) | 対応コードあり。メール、logout、閉じる/失敗。PR216の削除失敗/結果不明は503・Cookie保持・明示再試行（[正本](../architecture.md#ログアウトの失敗と明示再試行215)）。元f106496画像はこの変更を含まない |
 | C1 | /goals/new、任意質問を折り畳んだフォーム | [GoalFormFields](../../apps/web/src/features/goals/form/GoalFormFields.tsx) | 部分対応。C1/R1コメントあり。C1全構成は原画未照合 |
 | C2 | /goals/new または /goals/:id/edit | [GoalFormPage](../../apps/web/src/features/goals/GoalFormPage.tsx) | 個別番号の意味未確認。下記フォーム状態一覧と照合が必要 |
 | C3 | 同上 | GoalFormPage | 同上。番号からエラー/編集等を推定しない |
@@ -71,7 +71,7 @@
 | Dist 0〜5 | 分布表現比較 | — | #146で対象外 |
 | トークンと部品ページ | デザイン比較用ページ | [ui/README](../../apps/web/src/ui/README.md) | ページ再現は#146対象外。実装済み部品/トークンを使う |
 
-C2〜C7の番号との対応が未確定でも、現行フォームの次の状態は[画面設計](../design.md#goal作成編集削除)から追える：新規、編集、入力不正、保存中、初回読込失敗、再取得失敗、単位/初期量/timezone固定、回答撤回/409、作成結果不明/410、削除確認/失敗、401、404。原画を取得したらこれらを照合し、存在しない機能を番号埋めのために追加しない。
+C2〜C7の番号との対応が未確定でも、現行フォームの次の状態は[画面設計](../design.md#goal作成編集削除)から追える：新規、編集、入力不正、保存中、初回読込失敗、再取得失敗、単位/初期量/timezone固定、回答撤回/409、作成結果不明/410、削除確認/失敗、401、404。原画を取得したらこれらを照合し、存在しない機能を番号埋めのために追加しない。PR210統合後は正常な同owner・同訪問の再確認後に失敗入力/案内を復元し、確認失敗・owner変更・画面離脱では破棄する。詳細は[D-29](../architecture.md#d-29-量と作成操作の保全148)へ。
 
 ## 合成環境での部分受入
 
@@ -88,7 +88,9 @@ C2〜C7の番号との対応が未確定でも、現行フォームの次の状�
 | 昨日補完・訂正（E/P群） | 専用DB開始日fixtureでDONE11補完、昨日行の未送信訂正cancel（PUT0/focus）、DONE12保存。今日SKIPPED維持 | 未記録昨日の量cancel、P1/P2/P3全入口、原画番号/文言 |
 | 履歴・desktop（F/Desk群） | 履歴390/1280と開始月境界、一覧/Today/編集1280。画像上の編集/履歴の共通バー1段 | 全画面/全状態の両幅、Tab順/拡大/iOS/読み上げ、Desk原画配置 |
 
-503はブラウザ`route.fulfill`、回復側は実API。main単独・PR216のlogout故障・公開環境の証拠へ読み替えない。未mergeのPR210の改善を、コード読取の基準mainの保証へ先取りしない。
+503はブラウザ`route.fulfill`、回復側は実API。元f106496の撮影はPR216/212を含まず、PR210/214も当時は未mergeだった。これらのPRが統合された後も、画像を新基準main単独・logout故障・cut軸・公開環境の実操作証拠へ読み替えない。コード読取と固定SHAの部分受入は別に扱う。
+
+PR212統合後の遠い到達予定日のcut軸は、[P-19](../product-spec.md#p-19-到達予定日b案)・[chart-geometry](../../apps/web/src/features/today/chart-geometry.ts)・[実SVG回帰](../../apps/web/tests/outlook-axis.native.tsx)へ追跡する。原画のD番号へ新しい割当を推定せず、元f106496の予測画像や実操作結果へ加算しない。
 
 ## 朝焼け参照との関係
 

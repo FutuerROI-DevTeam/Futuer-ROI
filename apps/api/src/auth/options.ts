@@ -1,5 +1,6 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import type { Pool } from 'pg';
+import { confirmSignOut } from './sign-out.ts';
 
 // 認証テーブルの形を決めるBetter Authの設定。migration（db:migrate:auth）と実行時の認証設定が
 // 同じ関数を使うことで、作成されるテーブルと実際に使う機能のずれを防ぐ。
@@ -44,6 +45,7 @@ export function createAuth(s: AuthSettings) {
       },
     },
     advanced: { ipAddress: { ipAddressHeaders: [TRUSTED_IP_HEADER] } },
+    hooks: { before: confirmSignOut },
   });
 }
 
