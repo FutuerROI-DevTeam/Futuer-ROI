@@ -48,7 +48,9 @@ const view = () => ({ title: input()?.value, total: host.querySelector<HTMLInput
   amount: host.querySelector<HTMLInputElement>('#goal-sessionAmount')?.value,
   invalid: input()?.getAttribute('aria-invalid'), disabled: input()?.disabled, submitDisabled: submit()?.disabled,
   submitText: submit()?.textContent, conflict: host.textContent?.includes('ほかの画面で内容が変わりました') ?? false,
-  failed: host.textContent?.includes('保存できませんでした') ?? false,
+  // 保存失敗の案内。編集の結果が分からないとき（通信・5xx）は「保存を確認できません」（R5、#146）
+  failed: (host.textContent?.includes('保存できませんでした') || host.textContent?.includes('保存を確認できません')) ?? false,
+  saveUnknown: host.textContent?.includes('保存を確認できません') ?? false,
   unknown: host.textContent?.includes('作成結果を確認できませんでした') ?? false,
   recoveryBlockedNotice: host.textContent?.includes('作成の回復情報を確認できません') ?? false,
   totalInvalid: host.querySelector('#goal-totalRequired')?.getAttribute('aria-invalid'),
@@ -92,6 +94,9 @@ async function run() {
     saveError = scenario.error; await clickSave(); const before = view(), count = writes.length;
     ensure(before.title === 'A-PRIVATE-185-DRAFT', scenario.label + ': input was lost before session check');
     ensure(before.invalid === 'true' || before.failed || before.conflict, scenario.label + ': initial failure absent');
+    // 結果が分からない編集の失敗は言い切らない。はっきり断られた失敗（409・422）は従来どおり
+    if (scenario.label === 'edit503' || scenario.label === 'editNetwork') ensure(before.saveUnknown && !host.textContent?.includes('まだ保存されていません'), scenario.label + ': unknown result was stated as not saved');
+    else ensure(!before.saveUnknown, scenario.label + ': definite failure was shown as unknown');
     const raw = sessionStorage.getItem('future-roi:create-attempt:A');
     transport.hold = true; const reads = transport.reads; await visible(); await settle();
     ensure(transport.reads > reads && current.checking && !input() && !host.textContent?.includes('-PRIVATE'), scenario.label + ': checking did not remove private DOM');

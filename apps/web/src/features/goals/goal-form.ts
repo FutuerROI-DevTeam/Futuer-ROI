@@ -255,3 +255,12 @@ export function fieldErrorsFromApi(error: unknown): FieldErrors | null {
   }
   return errors;
 }
+
+/**
+ * 編集の保存（PATCH）の結果が分からないか（R5「回答の見直し：保存を確認できない」、#146）。
+ * 応答が届かなかった（通信の失敗）・サーバーの不調（5xx）・成功応答の形が契約と違う場合は、保存されたかどうか分からない。
+ * サーバーがはっきり断った（4xx）場合だけ「まだ保存されていません」と言い切れる。
+ */
+export function isEditSaveResultUnknown(error: unknown): boolean {
+  return !(error instanceof ApiError) || error.status >= 500;
+}

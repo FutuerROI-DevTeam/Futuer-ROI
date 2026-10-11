@@ -104,7 +104,7 @@
 | R2 | Today、回答由来または条件付き計画の表示条件 | [CoreMetric](../../apps/web/src/features/today/CoreMetric.tsx)、[OutlookPanel](../../apps/web/src/features/today/OutlookPanel.tsx) | 部分対応。コメントでR2を参照。原画の見出し/回答見直し導線は未照合 |
 | R3 | Today、回答＋実績等の出所 | CoreMetric | 部分対応。R2/R3コメントあり。具体fixtureの原画対応未確認 |
 | R4 | Today、completionがplan | OutlookPanel.PlanView | 部分対応。設定量で行う場合の残り、日数予測と区別。原画未照合 |
-| R5「回答の見直し：保存を確認できない」 | 回答の保存結果が不明（通信の失敗等） | GoalFormPage（編集の保存失敗）、[presentation-types](../../apps/web/src/features/prior/presentation-types.ts) の `save-unknown` | 部分対応。編集の保存失敗は入力を残して明示再試行する。回答専用の「保存を確認できない」表示（`save-unknown`）は型にあるが画面へ未接続 |
+| R5「回答の見直し：保存を確認できない」 | Goal編集（回答を含む）の保存結果が分からない（通信の失敗・5xx・応答の形の違い） | GoalFormPage.SaveFailure、[goal-form](../../apps/web/src/features/goals/goal-form.ts) の `isEditSaveResultUnknown` | 対応（2026-10-11、依頼者判断の案A）。入口は原画のTodayのシートではなくGoal編集のまま（入口はD-26で未決）。結果不明のときは「保存を確認できません」と「最新の内容を読み込む」を出し、はっきり断られた（4xx）ときだけ「まだ保存されていません」 |
 | D1 | /goals/:id、未記録/材料あり | [TodayPage](../../apps/web/src/features/today/TodayPage.tsx)、CoreMetric、[GoalMenu](../../apps/web/src/features/today/GoalMenu.tsx) | 対応コードあり。問い・指標・メニュー・記録。PR202の外観/階層へ更新 |
 | D1-why「計算の根拠を開いた状態」 | Today、中心指標の開閉を開く | CoreMetric.WhyDetails | 対応コードあり。見出しは現行「遅れの目安の根拠」 |
 | D1-slow「再開が遅い例（筋トレ）」 | Today、再開が遅い記録のGoal | CoreMetric | 対応コードあり（同じ部品で数字が大きい例）。原画の例示値は製品へ持ち込まない |
@@ -177,6 +177,6 @@ PR212統合後の遠い到達予定日のcut軸は、[P-19](../product-spec.md#p
 ## #146の残る受入
 
 - [合成環境の部分受入](../changes/issue-171-composite-acceptance/README.md)を記録した。全アートボード/原画一致・基準main単独の全行実表示とは別で、全体の受入は未完。
-- 原画の全一覧は2026-10-11に取得し、題名による1対1の対応をコード読取りで確定した。各アートボードとの画素一致・全状態の両幅撮影は未完。R5は回答専用の表示が未接続（部分対応）。
+- 原画の全一覧は2026-10-11に取得し、題名による1対1の対応をコード読取りで確定した。各アートボードとの画素一致・全状態の両幅撮影は未完。R5は2026-10-11にGoal編集の結果不明の表示として対応した（入口はD-26で未決のためGoal編集のまま）。
 - 390px・1280px、未ログイン/ログイン済み/通信失敗/404/一般エラー、Tab/Enter/Escape、取消・戻る・再入場を同じ基準commitで確認する。 ルートの移動と既定の画面（未ログイン・ログイン済み・通信失敗/503・404・一般エラー）は[routes回帰](../../apps/web/tests/routes.browser.tsx)で実router上の回帰テストにした（2026-10-11）。
 - 表示させるためのエラー注入は専用fixtureで行う。認証情報/実利用者のデータをPRへ添付しない。基準commit・fixture・画面幅・結果・証拠リンクを揃えてから、Issueの該当完了条件を更新する。

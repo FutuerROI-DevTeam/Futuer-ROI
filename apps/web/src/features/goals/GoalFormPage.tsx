@@ -34,6 +34,7 @@ import {
   fieldErrorsFromApi,
   rebaseValues,
   reloadLatestGoal,
+  isEditSaveResultUnknown,
   toCreateBody,
   toPatchBody,
   validateGoalForm,
@@ -599,7 +600,10 @@ function RefreshFailed({ error, onRetry, editConflict }: { error: unknown; onRet
   );
 }
 
-/** 保存の失敗。失敗したのに保存済みに見せない（入力は残し、まだ保存されていないことを書く）。 */
+/**
+ * 保存の失敗。失敗したのに保存済みに見せない（入力は残す）。
+ * はっきり断られたときは「まだ保存されていません」、結果が分からないとき（通信の失敗・5xx）は「保存を確認できません」とし、言い切らない（R5、#146）。
+ */
 function SaveFailure({ error, mode, onReloadLatest, reloadingLatest, onRestartCreate, onResumeCorrection }: { error: unknown; mode: 'create' | 'edit'; onReloadLatest: () => Promise<void>; reloadingLatest: boolean; onRestartCreate?: (() => void) | undefined; onResumeCorrection?: (() => void) | undefined }) {
   if (isUnauthenticated(error)) return <SignedOutPanel body={c.signedOut.formBody} newTab />;
   if (mode === 'create' && (createFailureKind(error) === 'recovery' || createFailureKind(error) === 'conflict')) return (
@@ -630,6 +634,21 @@ function SaveFailure({ error, mode, onReloadLatest, reloadingLatest, onRestartCr
         }
       >
         {f.answerConflict.body}
+      </ErrorPanel>
+    );
+  }
+  if (mode === 'edit' && isEditSaveResultUnknown(error)) {
+    // 結果が分からないのに「まだ保存されていません」と言い切らない。最新を読み込めば、保存されたかを確かめられる（R5）
+    return (
+      <ErrorPanel
+        title={f.saveUnknown.title}
+        action={
+          <Button icon="retry" busy={reloadingLatest} onClick={() => void onReloadLatest()}>
+            {f.answerConflict.reload}
+          </Button>
+        }
+      >
+        {f.saveUnknown.body}
       </ErrorPanel>
     );
   }
