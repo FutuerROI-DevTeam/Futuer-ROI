@@ -137,6 +137,17 @@ FE結合は[#137](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/1
 | 再利用資産 | [再利用資産](operations/reuse-handoff.md) | 実装Issueで採否を記録 |
 | 技術選定の最小検証・選定理由（[Issue #84](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/84)） | Supporting Artifact。第一候補を採択前に実測した記録で、採択・Productの実装ではない。[検証報告](../experiments/architecture-verification/REPORT.md)、[比較記録と技術ごとの理由・弱点・残条件](../experiments/architecture-verification/SELECTION-v3.1.md#9-技術を選ぶ理由と残る判断2026-10-02)。正式な状態と要約は[Technology Stack](architecture.md#technology-stack)、実装時の対策は[検証状況](architecture.md#第一候補の検証状況84--85) | [検証コードと再実行手順](../experiments/architecture-verification/README.md)。専用のpackageで `npm run verify:*`。#85ではT-14未実施。その後の[予測試作の単体計測](prediction/evidence.md#dpとmonte-carloの比較)と、上表の純粋Engine検証を区別する。候補の追加検証は[2026-10-02追加報告](../experiments/architecture-verification/FOLLOWUP-2026-10-02.md)・[候補の再実行手順](../experiments/architecture-verification/candidate-1.7.7/README.md)・[Linux試験記録](../experiments/architecture-verification/LINUX-2026-10-02.md)。保存済みLinux記録ではbuild/認証成功、修正前SIGTERM失敗・承認済み最小hook後v6/v7正常終了。実EngineのT-14と混合負荷は[2026-10-05にmacOS・Node 24.21.0で実測](../experiments/architecture-verification/REAL-ENGINE-2026-10-05.md)。採用環境のT-14・1 vCPUや候補コンテナ内の実Engine混合負荷・実クラウド・費用は未実測 |
 
+## 本人向け評価（#225）
+
+[Product R-12/P-22](product-spec.md#本人向けの予測保存実績照合r-12既定off)・[Architecture D-32](architecture.md#d-32-本人向け評価の保存境界225)が仕様と設計判断の正本。既定OFFで本人1Goalの明示操作だけを保存する追加Shouldで、MVP Mustや実利用の採択を変更しない。
+
+| 対象 | 実装と確認 |
+|---|---|
+| 契約・既定OFF | [共有TypeBox契約](../apps/api/src/contracts/evaluation.ts)、[設定境界](../apps/api/src/evaluation/policy.ts)、[policy回帰](../apps/api/tests/evaluation-policy.test.ts) |
+| 保存・照合・削除 | [0006 migration](../apps/api/migrations/0006_prediction_evaluation.sql)、[owner付きstore](../apps/api/src/evaluation/store.ts)、[凍結入力と照合](../apps/api/src/evaluation/assessment.ts)、[保護route](../apps/api/src/evaluation/routes.ts)、[明示purge入口](../apps/api/src/evaluation/purge-cli.ts)、[実HTTP/合成DB回帰](../apps/api/tests/evaluation.test.ts) |
+| 本人の明示画面 | [評価Page](../apps/web/src/features/evaluation/EvaluationPage.tsx)、[境界hook](../apps/web/src/features/evaluation/useEvaluation.ts)、[契約client](../apps/web/src/api/evaluation-http.ts)、[実hook/QueryClient回帰](../apps/web/tests/evaluation-boundary.test.mjs) |
+| 実ブラウザと限界 | [実SPA/API/専用合成DBのChrome入口](../apps/web/tests/evaluation.browser-check.mjs)、[検証範囲・設定・運用待ち](changes/issue-225-evaluation-verification.md)。精度改善、正式校正、個人横断の人数・学習利用・本番削除運用の成功を意味しない |
+
 ## 未採択の追加提案
 
 PR #131の実Engine混合負荷は[2026-10-07の訂正・追加報告](../experiments/architecture-verification/REAL-ENGINE-2026-10-07.md)から、独立oracle、[測定cohort](../experiments/architecture-verification/candidate-1.7.7/verify/load-cohort.ts)、[入力/worker/HTTP回帰](../experiments/architecture-verification/candidate-1.7.7/verify/v9-real-engine-regression.test.ts)、[再実行runner](../experiments/architecture-verification/candidate-1.7.7/verify-real-engine.ps1)へたどれる。旧JSONは保持し、採用環境の性能やworker/prior採択の証拠にはしない。

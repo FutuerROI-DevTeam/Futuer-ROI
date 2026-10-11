@@ -55,6 +55,8 @@ Prediction単体は[Docker検証手順](packages/prediction/DOCKER.md)で、host
 
 `check`は文書・設定の検証です。Secret・DB・アプリRuntimeは不要です。
 
+本人向けの予測保存・実績照合（#225）は**既定OFF**の追加機能です。[仕様と状態](docs/product-spec.md#本人向けの予測保存実績照合r-12既定off)、[設定・再検証・削除運用の残条件](docs/changes/issue-225-evaluation-verification.md)を参照してください。実データでの有効化や既存DBへのmigration適用はこのPRの承認に含みません。
+
 ## 最初に読む順番
 
 1. このREADME：前提、現在の状態、情報の置き場所。
