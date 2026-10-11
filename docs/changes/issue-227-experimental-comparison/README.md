@@ -41,3 +41,5 @@
 固定母集団の旧qualification検証は、最適化後の主要48例でINSUFFICIENT40／REJECTED8／ADOPTABLE0、遠方48例も全不足。約190日の証拠成熟と90日派生保持の不整合、回答priorのas-of履歴不足は残る。数値が計算できる範囲の拡大は採用資格の証明ではない。
 
 H<=30、有限32→64 completion CDF refinement、work／欠測guardを維持した。有限診断は連続posterior全CDFの厳密誤差保証ではない。100m guardはDP配列の初期化・clearの見積範囲で、全JS allocation／CPU保証ではない。別の論文ベース合成ストレスは、このPRの採用条件に追加していない。
+
+2026-10-11の追加承認に基づき、[論文を参考にした合成ストレス32履歴](synthetic-stress-v1/README.md)をSupporting資料として追記した。基準モデルは上記PRの初回HEAD。全32平均RPSは方針.128919／legacy.124642で悪化、finite P80の達成率は71.85%。元宣言・補足・全32CSV・小集計・出典を残し、製品コード・採用条件・旧qualification HOLDは変更していない。

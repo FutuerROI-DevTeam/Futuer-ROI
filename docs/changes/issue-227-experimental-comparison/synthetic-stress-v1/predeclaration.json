@@ -1,0 +1,356 @@
+{
+  "protocolVersion": "synthetic-stress-20261011-v1",
+  "status": "FROZEN_PENDING_PARENT_EXECUTION_APPROVAL",
+  "evaluatedStudyContexts": 0,
+  "design": {
+    "families": 8,
+    "seedsPerFamily": 4,
+    "seeds": [
+      4401001,
+      4401002,
+      4401003,
+      4401004
+    ],
+    "calendarStart": "2026-01-05",
+    "historyDays": 60,
+    "futureDays": 30,
+    "originsPerTrajectory": 1,
+    "origin": "end of day60",
+    "remainingAmount": 5,
+    "sessionAmount": 1,
+    "fits": 32,
+    "forecastContexts": 32,
+    "conditionalFutureReplicatesPerHistory": 256,
+    "plannedConditionalFuturePaths": 8192,
+    "plannedFutureCalendarDays": 245760
+  },
+  "encoding": {
+    "quantityScale": 2,
+    "runtimeRemainingAmount": 10,
+    "runtimeSessionAmount": 2,
+    "runtimeActualAmounts": "all amounts multiplied exactly by2; .5/1/1.5 => 1/2/3; every model uses the same units",
+    "why": "Current product input requires safe integer quantities. Linear exact unit rescaling preserves every completion date and N=5; variable true amounts are never replaced by DONE counts."
+  },
+  "random": {
+    "algorithm": "xorshift32 unsigned, u=(x>>>0)/2**32; x^=x<<13;x^=x>>>17;x^=x<<5",
+    "streamDerivation": "first uint32 little-endian of SHA256(UTF8 JSON.stringify([protocolVersion,familyId,rootSeed,stage,replicate,channel])); if0 use0x9e3779b9",
+    "historyStage": "history, replicate=-1",
+    "futureStage": "future, replicate=0..255",
+    "channels": [
+      "status",
+      "amount",
+      "missing",
+      "renewal"
+    ],
+    "schedule": "each day consume one uniform from every channel, regardless of status; renewal channel selects a newly entered spell or origin conditional residual total length; future streams reinitialized independently",
+    "noSelection": "all four seeds in each family; no tuning or replacement after generation, including failure or timeout"
+  },
+  "families": [
+    {
+      "id": "iid",
+      "mechanism": "independent daily Bernoulli",
+      "pDone": 0.45
+    },
+    {
+      "id": "markov",
+      "mechanism": "stationary first-order Markov",
+      "pDoneAfterDone": 0.7,
+      "pDoneAfterSkipped": 0.3,
+      "initialDoneProbability": 0.5
+    },
+    {
+      "id": "weekday",
+      "mechanism": "independent daily Bernoulli by UTC weekday",
+      "seedSlotParameters": [
+        {
+          "weekday": 0.6,
+          "weekend": 0.25
+        },
+        {
+          "weekday": 0.6,
+          "weekend": 0.25
+        },
+        {
+          "weekday": 0.25,
+          "weekend": 0.6
+        },
+        {
+          "weekday": 0.25,
+          "weekend": 0.6
+        }
+      ],
+      "weekendDaysUTC": [
+        0,
+        6
+      ]
+    },
+    {
+      "id": "regime",
+      "mechanism": "independent daily Bernoulli with external probability change",
+      "seedSlotParameters": [
+        {
+          "before": 0.65,
+          "after": 0.2,
+          "changeDay": 45
+        },
+        {
+          "before": 0.2,
+          "after": 0.65,
+          "changeDay": 45
+        },
+        {
+          "before": 0.65,
+          "after": 0.2,
+          "changeDay": 61
+        },
+        {
+          "before": 0.2,
+          "after": 0.65,
+          "changeDay": 61
+        }
+      ],
+      "boundary": "after probability starts on changeDay; changes at61 are unforeseen future shocks"
+    },
+    {
+      "id": "renewal",
+      "mechanism": "alternating renewal, not geometric hazard",
+      "doneLengths": [
+        1,
+        2,
+        3
+      ],
+      "doneMass": [
+        0.3333333333333333,
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "skippedLengths": [
+        1,
+        4,
+        14
+      ],
+      "skippedMass": [
+        0.5,
+        0.35,
+        0.15
+      ],
+      "burnInDays": 60,
+      "initialStateBeforeBurnIn": "DONE",
+      "futureConditioning": "At origin retain actual current state and its elapsed age only for scorer/generator; each future independently samples total spell L from mass conditioned on L>=age. Do not retain the pre-sampled latent total L from history generation. Models receive only observed logs, no latent total or uncapped true age."
+    },
+    {
+      "id": "deadline",
+      "mechanism": "independent daily Bernoulli with periodic external deadline",
+      "periodDays": 14,
+      "highProbabilityLastDays": 3,
+      "highProbability": 0.8,
+      "otherProbability": 0.15,
+      "phasesBySeedSlot": [
+        0,
+        3,
+        7,
+        10
+      ],
+      "phaseRule": "position=(day-1+phase)%14; high ifposition>=11",
+      "deadlinePassedToModel": false
+    },
+    {
+      "id": "quantity",
+      "mechanism": "iid status with independent positive actual quantity",
+      "pDone": 0.45,
+      "amountsOriginalUnits": [
+        0.5,
+        1,
+        1.5
+      ],
+      "amountMass": [
+        0.25,
+        0.5,
+        0.25
+      ],
+      "meanActualAmount": 1,
+      "completionTruth": "sum actual future amounts reaches5, not five DONE events"
+    },
+    {
+      "id": "missing",
+      "mechanism": "latent iid status with observed-record omission",
+      "pDone": 0.45,
+      "seedSlotParameters": [
+        {
+          "mechanism": "MCAR",
+          "probabilityUnrecorded": 0.184
+        },
+        {
+          "mechanism": "MCAR",
+          "probabilityUnrecorded": 0.184
+        },
+        {
+          "mechanism": "MNAR",
+          "pUnrecordedGivenDone": 0.05,
+          "pUnrecordedGivenSkipped": 0.3,
+          "forcedMissingHistoryDays": [
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "mechanism": "MNAR",
+          "pUnrecordedGivenDone": 0.05,
+          "pUnrecordedGivenSkipped": 0.3,
+          "forcedMissingHistoryDays": [
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60
+          ]
+        }
+      ],
+      "boundary": "forced intervals apply to history only; future omissions use the same MCAR/MNAR probabilities. Missing statuses remain hidden from model and are never converted to SKIPPED."
+    }
+  ],
+  "literature": [
+    {
+      "family": "weekday",
+      "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0169649",
+      "evidence": "Doherty2017 day-of-week physical activity differences; measured weekday/weekend effect is small, not synthetic .60/.25"
+    },
+    {
+      "family": "regime",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7384265/",
+      "evidence": "Tison2020 external changes in physical activity; step-count changes are not converted to daily DONE probabilities"
+    },
+    {
+      "family": "renewal",
+      "url": "https://www.nature.com/articles/s41539-019-0054-0",
+      "evidence": "Peach2019 temporal heterogeneity of learner activity; chosen alternating run lengths and probabilities are stress assumptions"
+    },
+    {
+      "family": "deadline",
+      "url": "https://journals.sagepub.com/doi/10.1177/1475725718769488",
+      "evidence": "Barenberg2018 temporal concentration of learning near examinations; period14 and .80/.15 are stress assumptions"
+    },
+    {
+      "family": "quantity",
+      "url": "https://link.springer.com/article/10.1186/s12889-023-16734-0",
+      "evidence": "HABITAT2023 day-to-day variability; chosen three-point quantity distribution is a stress assumption"
+    },
+    {
+      "family": "missing",
+      "url": "https://mhealth.jmir.org/2025/1/e65350",
+      "evidence": "Cho2025 PA aggregate missing18.4% is the sole borrowed numeric rate; independent MCAR, conditional MNAR rates and interval placement are assumptions"
+    }
+  ],
+  "sourceReadHashes": {
+    "apps/api/src/learning/service.ts": "8c273137eb97ac709198b2fdd44a6c16f44061158e7839b0e526b4573b3e6853",
+    "apps/api/src/learning/gates.ts": "0f88a980c7785a129e37d091342c30df7dc3d5fff1ca3958d42e287ff69472da",
+    "apps/api/src/learning/policy.ts": "c5b931a8ef1e8fe424ce86d823e64ddd5d6b47e90d713c7921c8287399bdeee8",
+    "apps/api/src/questions/snapshot.ts": "ac698d91c60e437ae10304e4530b40607d43cf373fc7e6f1275f7c7659f91482",
+    "packages/prediction/src/duration-model.ts": "05a21a9b16877512774e0eaf445e0f5dd3492c282a1b82f8f3e388812e2dd4db",
+    "packages/prediction/src/duration-types.ts": "ee4151a4071ffc61d2499f7391079301cc920712cbbf615fa836f5c348aa9a3b",
+    "packages/prediction/src/duration-observations.ts": "a6465e093d5c67b38538be1c7b2e85614f185b4a06f3728768dcbc9c22e2eeb8",
+    "packages/prediction/src/baseline-completion-cdf.ts": "1fedf5d788c506229f4ce03e3108c131825d53e4558968e4747543a865bd61f5",
+    "packages/prediction/src/completion-integrated.ts": "a1f3666f370f1e9fa78f541eee192fd039fc12fc96309a2077c480c10697e949",
+    "packages/prediction/src/observations.ts": "6d6dea1c5c2786a2e059310cc1cf67dd62e1b3e5331e576b3938e9e15cc82e03"
+  },
+  "sourceFreeze": {
+    "snapshot": "snapshot",
+    "manifestFile": "source-manifest.json",
+    "sourceTreeDigest": "633a786e48bcf4b74aec969a11714b1fccf00835e38299e20f57ed03c49b667a",
+    "fileCount": 79,
+    "rule": "Use only these byte-exact sources for this run. A different source requires a separate pre-results protocol/run identity; no mixed-source results."
+  },
+  "candidate": {
+    "entryPoint": "C computeLearningExperiment on recorded history only",
+    "questionAnswers": {
+      "a": null,
+      "b": null
+    },
+    "prior": "MID Beta(2,2) for a,b",
+    "capDays": 14,
+    "gammaAtoms": 17,
+    "tolerance": 1e-07,
+    "horizonDays": 30,
+    "samplesInput": 8192,
+    "seedInput": 20261011,
+    "minQualityGateTrainRequirementApplied": false
+  },
+  "legacy": {
+    "prior": "fixed MID Beta(2,2) a,b",
+    "observations": "all real observed adjacent pairs through origin; no unknown-day interpolation or synthetic Today posterior update",
+    "cdf": "existing baselineCompletionCdf on the observed posterior and common current-state scenario",
+    "horizonDays": 30
+  },
+  "simple": {
+    "prior": "single shared p~Beta(1,1)",
+    "posterior": "Beta(1+observed DONE count,1+observed SKIPPED count)",
+    "cdf": "beta-binomial predictive Pr(number future DONE>=5) for t0..30; fixed quantity assumption remains explicit"
+  },
+  "currentContext": {
+    "ifOriginRecorded": "use observed day60 status and canonical observed restDays",
+    "ifOriginUnrecorded": "retain U in training and source log; use existing R11 TODAY_DONE hypothetical initial DONE for forecast only, without inserting into fit or transition counts; known residual5 is defined after this hypothetical action. Tag hypothetical=true. Synthetic hidden day60 state is not passed to models.",
+    "why": "The confirmed missing54..60 case has no observed current state. This uses the existing R11 scenario rather than inventing a true state or modifying the omission protocol.",
+    "newGoal": "known residual5 is a fresh forecast query at the fixed origin, not one longitudinal Goal and not adoption-gate evidence"
+  },
+  "truth": {
+    "futureModelLeakage": "no future states, amounts, missing masks, latent generator parameters or latent spell length enter fitting/forecasting",
+    "pathCount": 256,
+    "labels": "cumulative actual scaled quantity>=10, day1..30; preserve after30 tail",
+    "illustrativeFuture": "replicate0 only, predetermined; primary scoring uses all256"
+  },
+  "metrics": {
+    "primary": "mean RPS across256 future continuations, t1..30 unrenormalized",
+    "secondary": [
+      "Brier7",
+      "Brier14",
+      "Brier30",
+      "raw CDF0..30 and tail",
+      "finite P50/P80 output rates over32 forecast contexts",
+      "conditional P50/P80 coverage counts/256 when quantile finite",
+      "empirical conditional process CDF0..30",
+      "max observed CDF discrepancy to MC empirical process, diagnostic",
+      "fit/applied/fallback and typed failure reasons",
+      "fit/forecast wall time",
+      "future labels observable from omitted records, separate from oracle truth"
+    ],
+    "mcUncertainty": "per context Wilson95 pointwise intervals for coverage success/256; not simultaneous certification and not confidence in real-user calibration"
+  },
+  "comparisons": {
+    "primaryAllPlannedContexts": 32,
+    "candidateOnly": "raw insufficiency has null CDF/quantiles; paired model score comparisons use the identical candidate-available contexts and list the missing count",
+    "operationalFallback": "candidate when numerically available, otherwise fixed-MID existing legacy; expose selected source/reason. Scores reported over all32 if legacy is available; if not, preserve unscorable context and shared eligible denominator.",
+    "adoption": "old singleGoal gate remains HOLD/not assessed; availability or stress score does not grant eligibility",
+    "statistics": "four observed histories per family; 256 conditional futures per history are MC repetitions, not8192 independent people; no significance or calibration proof",
+    "outcomes": "all32 contexts recorded, including failures. Worse precision or calibration is retained, not an implementation acceptance failure"
+  },
+  "budget": {
+    "concurrency": 1,
+    "fitLimit": 32,
+    "forecastLimit": 32,
+    "sourceBuildHarnessBudgetMinutes": 10,
+    "heavyRunBudgetMinutes": 35,
+    "workerPerContextTimeoutSeconds": 60,
+    "expectedExtraSimulationWork": "245760 future days, no extra fits/forecasts; wall time unmeasured",
+    "internalLimits": "preserve existing H<=30/100m DP estimate/1m hazard/32→64/tolerance",
+    "stop": "persist every context as complete, failed, timeout or unrun-budget; no losing-seed replacement or result-driven tuning"
+  },
+  "implementationAcceptance": [
+    "no future leakage",
+    "all32 cases present",
+    "valid monotone CDF and retained tail",
+    "no U→SKIPPED conversion",
+    "no finite P80 forced to H",
+    "exact unit scaling preserves labels",
+    "single fit once per history and frozen forecast across256 futures",
+    "future continuation respects true terminal state/age, never pre-sampled latent length"
+  ],
+  "scope": "local synthetic scripts/artifacts only; no product source edits, private real-data fit, DB/HTTP, GitHub push or PR; preserve old96 evidence and source freeze",
+  "declaredAtUtc": "2026-10-11T11:35:57.902902+00:00"
+}

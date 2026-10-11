@@ -1,0 +1,425 @@
+{
+  "protocolVersion": "synthetic-stress-20261011-v1",
+  "supportingOnly": true,
+  "modelCommit": "aa024ee4595e341e8a84442e5063ec1f9a5e7e68",
+  "planned": 32,
+  "completed": 32,
+  "fitAvailable": 32,
+  "candidateApplied": 30,
+  "fallback": 2,
+  "failTimeoutUnrun": [],
+  "conditionalFutures": 8192,
+  "allContexts": {
+    "policy": {
+      "contexts": 32,
+      "meanRps": 0.1289192454750271,
+      "finite50Contexts": 32,
+      "finite80Contexts": 30,
+      "coverage80": {
+        "successes": 5518,
+        "conditionalFutureReplicates": 7680,
+        "fraction": 0.7184895833333333
+      }
+    },
+    "legacy": {
+      "contexts": 32,
+      "meanRps": 0.12464234675930055,
+      "finite50Contexts": 32,
+      "finite80Contexts": 30,
+      "coverage80": {
+        "successes": 5407,
+        "conditionalFutureReplicates": 7680,
+        "fraction": 0.7040364583333333
+      }
+    },
+    "simple": {
+      "contexts": 32,
+      "meanRps": 0.12911610371393836,
+      "finite50Contexts": 32,
+      "finite80Contexts": 31,
+      "coverage80": {
+        "successes": 5709,
+        "conditionalFutureReplicates": 7936,
+        "fraction": 0.7193800403225806
+      }
+    }
+  },
+  "candidateStandaloneAllPlanned": {
+    "contexts": 30,
+    "meanRps": 0.13040254897416026,
+    "finite50Contexts": 30,
+    "finite80Contexts": 28,
+    "coverage80": {
+      "successes": 5170,
+      "conditionalFutureReplicates": 7168,
+      "fraction": 0.7212611607142857
+    }
+  },
+  "candidateAvailablePaired": {
+    "candidate": {
+      "contexts": 30,
+      "meanRps": 0.13040254897416026,
+      "finite50Contexts": 30,
+      "finite80Contexts": 28,
+      "coverage80": {
+        "successes": 5170,
+        "conditionalFutureReplicates": 7168,
+        "fraction": 0.7212611607142857
+      }
+    },
+    "legacy": {
+      "contexts": 30,
+      "meanRps": 0.1258405236773853,
+      "finite50Contexts": 30,
+      "finite80Contexts": 28,
+      "coverage80": {
+        "successes": 5059,
+        "conditionalFutureReplicates": 7168,
+        "fraction": 0.7057756696428571
+      }
+    },
+    "simple": {
+      "contexts": 30,
+      "meanRps": 0.13159379192017678,
+      "finite50Contexts": 30,
+      "finite80Contexts": 29,
+      "coverage80": {
+        "successes": 5334,
+        "conditionalFutureReplicates": 7424,
+        "fraction": 0.7184806034482759
+      }
+    }
+  },
+  "families": [
+    {
+      "family": "iid",
+      "planned": 4,
+      "candidateApplied": 4,
+      "fallback": 0,
+      "allContexts": {
+        "policy": {
+          "contexts": 4,
+          "meanRps": 0.07423875965942925,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 883,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.8623046875
+          }
+        },
+        "legacy": {
+          "contexts": 4,
+          "meanRps": 0.0722059710794459,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 916,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.89453125
+          }
+        },
+        "simple": {
+          "contexts": 4,
+          "meanRps": 0.07640396585905446,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 926,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.904296875
+          }
+        }
+      }
+    },
+    {
+      "family": "markov",
+      "planned": 4,
+      "candidateApplied": 4,
+      "fallback": 0,
+      "allContexts": {
+        "policy": {
+          "contexts": 4,
+          "meanRps": 0.0982020236692525,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 857,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.8369140625
+          }
+        },
+        "legacy": {
+          "contexts": 4,
+          "meanRps": 0.0931085127184984,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 815,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.7958984375
+          }
+        },
+        "simple": {
+          "contexts": 4,
+          "meanRps": 0.09845481229459552,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 674,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.658203125
+          }
+        }
+      }
+    },
+    {
+      "family": "weekday",
+      "planned": 4,
+      "candidateApplied": 4,
+      "fallback": 0,
+      "allContexts": {
+        "policy": {
+          "contexts": 4,
+          "meanRps": 0.078407898693446,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 790,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.771484375
+          }
+        },
+        "legacy": {
+          "contexts": 4,
+          "meanRps": 0.07948739174355586,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 768,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.75
+          }
+        },
+        "simple": {
+          "contexts": 4,
+          "meanRps": 0.07698483378934344,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 799,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.7802734375
+          }
+        }
+      }
+    },
+    {
+      "family": "regime",
+      "planned": 4,
+      "candidateApplied": 4,
+      "fallback": 0,
+      "allContexts": {
+        "policy": {
+          "contexts": 4,
+          "meanRps": 0.3164179577262842,
+          "finite50Contexts": 4,
+          "finite80Contexts": 3,
+          "coverage80": {
+            "successes": 297,
+            "conditionalFutureReplicates": 768,
+            "fraction": 0.38671875
+          }
+        },
+        "legacy": {
+          "contexts": 4,
+          "meanRps": 0.31573178251875583,
+          "finite50Contexts": 4,
+          "finite80Contexts": 3,
+          "coverage80": {
+            "successes": 290,
+            "conditionalFutureReplicates": 768,
+            "fraction": 0.3776041666666667
+          }
+        },
+        "simple": {
+          "contexts": 4,
+          "meanRps": 0.3549146888324583,
+          "finite50Contexts": 4,
+          "finite80Contexts": 3,
+          "coverage80": {
+            "successes": 279,
+            "conditionalFutureReplicates": 768,
+            "fraction": 0.36328125
+          }
+        }
+      }
+    },
+    {
+      "family": "renewal",
+      "planned": 4,
+      "candidateApplied": 4,
+      "fallback": 0,
+      "allContexts": {
+        "policy": {
+          "contexts": 4,
+          "meanRps": 0.17256889501103917,
+          "finite50Contexts": 4,
+          "finite80Contexts": 3,
+          "coverage80": {
+            "successes": 538,
+            "conditionalFutureReplicates": 768,
+            "fraction": 0.7005208333333334
+          }
+        },
+        "legacy": {
+          "contexts": 4,
+          "meanRps": 0.14810002774692158,
+          "finite50Contexts": 4,
+          "finite80Contexts": 3,
+          "coverage80": {
+            "successes": 527,
+            "conditionalFutureReplicates": 768,
+            "fraction": 0.6861979166666666
+          }
+        },
+        "simple": {
+          "contexts": 4,
+          "meanRps": 0.14952433162244275,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 826,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.806640625
+          }
+        }
+      }
+    },
+    {
+      "family": "deadline",
+      "planned": 4,
+      "candidateApplied": 4,
+      "fallback": 0,
+      "allContexts": {
+        "policy": {
+          "contexts": 4,
+          "meanRps": 0.11698386692216198,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 712,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.6953125
+          }
+        },
+        "legacy": {
+          "contexts": 4,
+          "meanRps": 0.1137888640676713,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 700,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.68359375
+          }
+        },
+        "simple": {
+          "contexts": 4,
+          "meanRps": 0.11190885005924822,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 736,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.71875
+          }
+        }
+      }
+    },
+    {
+      "family": "quantity",
+      "planned": 4,
+      "candidateApplied": 4,
+      "fallback": 0,
+      "allContexts": {
+        "policy": {
+          "contexts": 4,
+          "meanRps": 0.08011440769135578,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 833,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.8134765625
+          }
+        },
+        "legacy": {
+          "contexts": 4,
+          "meanRps": 0.08101549788663953,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 753,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.7353515625
+          }
+        },
+        "simple": {
+          "contexts": 4,
+          "meanRps": 0.08123614540864667,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 776,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.7578125
+          }
+        }
+      }
+    },
+    {
+      "family": "missing",
+      "planned": 4,
+      "candidateApplied": 2,
+      "fallback": 2,
+      "allContexts": {
+        "policy": {
+          "contexts": 4,
+          "meanRps": 0.09442015442724778,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 608,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.59375
+          }
+        },
+        "legacy": {
+          "contexts": 4,
+          "meanRps": 0.09370072631291604,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 638,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.623046875
+          }
+        },
+        "simple": {
+          "contexts": 4,
+          "meanRps": 0.08350120184571758,
+          "finite50Contexts": 4,
+          "finite80Contexts": 4,
+          "coverage80": {
+            "successes": 693,
+            "conditionalFutureReplicates": 1024,
+            "fraction": 0.6767578125
+          }
+        }
+      }
+    }
+  ],
+  "qualification": "EXPERIMENTAL_NOT_QUALIFIED/HOLD",
+  "interpretation": "32 fixed synthetic histories with256 conditional futures each; not independent people, real-user calibration or adoption proof. Evaluation fallback wrapper is not product auto-adoption."
+}

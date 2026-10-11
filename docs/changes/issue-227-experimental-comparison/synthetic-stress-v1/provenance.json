@@ -1,0 +1,51 @@
+{
+  "supportingOnly": true,
+  "modelCommit": "aa024ee4595e341e8a84442e5063ec1f9a5e7e68",
+  "originalDeclarationSha256": "e9878d223979bd32ec17b9c0e28358d49d9ce78d9119f3d8702a5ce28520aa93",
+  "executionSourceTreeDigest": "47b420b6cc7f714e871a423dea5f575459d01824f7d43e4fd4f11d8d892288a1",
+  "gitBlobSourceFiles": 79,
+  "sourceMeaningChanges": 0,
+  "priorSnapshotLineEndingDifferences": 68,
+  "outputFiles": [
+    {
+      "path": "predeclaration.json",
+      "originalSha256": "e9878d223979bd32ec17b9c0e28358d49d9ce78d9119f3d8702a5ce28520aa93",
+      "publishedLfSha256": "d0fafa67273e06c8126a1423e3641d44dc2b6a03787c9f2a95301c5a33fa7969"
+    },
+    {
+      "path": "execution-clarifications.json",
+      "originalSha256": "73e2594d31b84f604168f3ded034e952661fc11c54255d72a3d814e6b99a822d",
+      "publishedLfSha256": "73e2594d31b84f604168f3ded034e952661fc11c54255d72a3d814e6b99a822d"
+    },
+    {
+      "path": "all32.csv",
+      "originalSha256": "7d2f4c163e5d9a8749ebc4ff7184770ada651368c72d8be5873081a0c3ac0124",
+      "publishedLfSha256": "0537b584938744ab955085594329524412946c8a912fa737478d0fc397b37e1f"
+    }
+  ],
+  "sourceArtifactSha256": {
+    "predeclaration.json": "e9878d223979bd32ec17b9c0e28358d49d9ce78d9119f3d8702a5ce28520aa93",
+    "execution-clarifications.json": "73e2594d31b84f604168f3ded034e952661fc11c54255d72a3d814e6b99a822d",
+    "all32.csv": "7d2f4c163e5d9a8749ebc4ff7184770ada651368c72d8be5873081a0c3ac0124",
+    "summary.json": "16cb4b312b9308217cd1015133a3d74e1121cf5aef1644c781932faee493bbc8",
+    "comparison.md": "3f217a216f5e1abb60039be8b49505e28c981249bdaeaefaa52d7ca32a2c4fa2",
+    "report.md": "8845b2b37841776245080d71aca74536fe1f0707490ed8c583ce3590c5bf1ae5",
+    "sources.md": "46efd9054140cbcfcc125f9e26af7b4abe50a9817b7b98ced283730453267c6b",
+    "approved-run-manifest.json": "46a7ccd640e42902c40ee2f1065d9c7b44b521c6b33037137bf65730153c035f"
+  },
+  "independentAuditReported": {
+    "histories": 32,
+    "conditionalFutures": 8192,
+    "modelPolicyScores": 127,
+    "aggregateValues": 810,
+    "csvNumericValues": 2240,
+    "manifestHashesChecked": 151,
+    "hashMismatches": 0
+  },
+  "publicationChecks": {
+    "csvRows": 32,
+    "csvColumns": 83,
+    "all32PolicyLegacySimpleRpsAndFiniteP80CountsMatch": true
+  },
+  "fullReproductionBundle": "Separate handoff; raw futures, source snapshot and runner are not included in this small repository supporting subset."
+}

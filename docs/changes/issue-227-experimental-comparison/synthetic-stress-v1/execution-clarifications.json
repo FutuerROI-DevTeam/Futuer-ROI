@@ -1,0 +1,9 @@
+{
+  "declaredBeforeStudyGeneration": true,
+  "parentApproval": "Parent approved declaration e9878d22, PR238 byte exact model, original budgets and preservation, and required assumptions not be counted as measured candidate success.",
+  "originUnobserved": "Keep original U history. Call genuine kernel once with hypothetical DONE only as conditional candidate diagnostic, explicitly labelled. Observed-context candidate remains STUDY_ORIGIN_UNOBSERVED with null CDF and is not counted as applied. Operational policy uses the explicit fixed-MID legacy TODAY_DONE fallback. No hypothetical D enters fit or truth.",
+  "missingTruth": "Missing family latent generator is iid .45, so actual day60 state does not alter its conditional future distribution; no hidden state is passed to models. Every non-iid family future preserves actual terminal state/age/phase.",
+  "source": "snapshot-pr238 is Git-blob-byte-exact for aa024ee4595e341e8a84442e5063ec1f9a5e7e68. The 68 differences from prior read snapshot were line endings only; model/service/extractor hashes matched already.",
+  "candidatePolicyMetrics": "Model numerical availability, strict observed-context applied rate, and conditional-only diagnostic availability are separate. No legacy fallback value is attributed to candidate.",
+  "noPostOutcomeChanges": true
+}
