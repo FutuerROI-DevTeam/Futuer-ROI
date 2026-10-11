@@ -14,6 +14,8 @@ import { registerApiGuards } from './http/guards.ts';
 import { registerLogRoutes } from './logs/routes.ts';
 import { PredictionFailed } from './prediction/engine.ts';
 import { registerTodayRoute } from './prediction/routes.ts';
+import { registerEvaluationRoutes } from './evaluation/routes.ts';
+import type { EvaluationOptions } from './evaluation/policy.ts';
 
 export type AppOptions = {
   pool: Pool;
@@ -34,6 +36,8 @@ export type AppOptions = {
   };
   /** 現在時刻。Goalのtimezoneでの「今日」の判定に使う。テストでは固定した時刻を渡す。 */
   now?: () => Date;
+  /** 本人の明示操作による評価保存。省略時OFF、本番有効化は別途判断。 */
+  evaluation?: EvaluationOptions;
 };
 
 type PgError = FastifyError & { code?: string };
@@ -120,6 +124,7 @@ export async function buildApp(o: AppOptions): Promise<FastifyInstance> {
     await registerGoalRoutes(app, deps);
     await registerLogRoutes(app, deps);
     await registerTodayRoute(app, deps);
+    await registerEvaluationRoutes(app, { ...deps, options: o.evaluation });
   }
 
   // Type Providerはpluginごとに適用する（Fastifyのカプセル化により外側の指定は継承されない）。

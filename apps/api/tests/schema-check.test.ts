@@ -204,14 +204,14 @@ test('旧schema・未適用・同番号の異名を全文名で区別し、新�
   const dir = pathToFileURL(`${checkout}/`);
   const partial = await checkUnchanged(db, { connectionString: db.connectionString, migrationsDir: dir });
   assert.equal(partial.status, 'drift');
-  assert.deepEqual(partial.app?.applied, [...APP_MIGRATIONS, '0005_schema_check_a.sql']);
+  assert.deepEqual(partial.app?.applied, [...APP_MIGRATIONS, '0005_schema_check_a.sql'].sort());
   assert.deepEqual(partial.app?.pending, ['0005_schema_check_b.sql']);
   assert.deepEqual(codes(partial), ['pending_migration:0005_schema_check_b.sql']);
 
   writeFileSync(join(checkout, '9999_schema_check_new.sql'), 'create table schema_check_new (id integer);');
   const added = await checkUnchanged(db, { connectionString: db.connectionString, migrationsDir: dir });
   assert.deepEqual(added.app?.pending, ['0005_schema_check_b.sql', '9999_schema_check_new.sql']);
-  assert.deepEqual(added.checkout.files.map((f) => f.name), [...APP_MIGRATIONS, '0005_schema_check_a.sql', '0005_schema_check_b.sql', '9999_schema_check_new.sql']);
+  assert.deepEqual(added.checkout.files.map((f) => f.name), [...APP_MIGRATIONS, '0005_schema_check_a.sql', '0005_schema_check_b.sql', '9999_schema_check_new.sql'].sort());
   assert.equal((await db.pool.query("select to_regclass('schema_check_new') as t")).rows[0]?.t, null);
   await checkCliPairUnchanged(db, added, {}, [checkout]);
 

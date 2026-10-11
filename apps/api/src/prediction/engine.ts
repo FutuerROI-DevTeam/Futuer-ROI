@@ -49,12 +49,16 @@ export function runPrediction(input: PredictionInput): PredictionResult {
   }
 }
 
-export function runQuestionPrediction(input: QuestionPriorPredictionInput): QuestionPriorEvaluation {
+/** 保存側だけが実際の計算方式も受け取る。公開TodayのDTOは従来どおり除去する。 */
+export function runQuestionPredictionWithDiagnostics(input: QuestionPriorPredictionInput): QuestionPriorEvaluation {
   try {
-    const result = predictWithQuestionPrior(input);
-    return { ...result, prediction: { ...result.prediction, completion: toPublicCompletion(result.prediction.completion) } };
+    return predictWithQuestionPrior(input);
   } catch (error) {
     if (error instanceof PredictionInputError || error instanceof PredictionConfigError || error instanceof QuestionPriorError) throw new PredictionFailed(error);
     throw error;
   }
+}
+export function runQuestionPrediction(input: QuestionPriorPredictionInput): QuestionPriorEvaluation {
+  const result = runQuestionPredictionWithDiagnostics(input);
+  return { ...result, prediction: { ...result.prediction, completion: toPublicCompletion(result.prediction.completion) } };
 }

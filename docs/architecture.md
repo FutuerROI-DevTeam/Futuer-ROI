@@ -1,5 +1,7 @@
 # ArchitectureとTechnology Stack
 
+本人向け予測保存・照合の既定OFF追加機能（#225）は[Product R-12](product-spec.md#本人向けの予測保存実績照合r-12既定off)と[D-32](#d-32-本人向け評価の保存境界225)を参照する。実データ有効化・保持/削除運用は未採択。
+
 ## 現行状態（2026-09-30）
 
 Future ROI（[Product P-11](product-spec.md#p-11-future-roiの採用とcoreの境界)）の実現方式を記録する。予測モデル（[D-19](#d-19)〜[D-22](#d-22)）、Data Modelと記載済みの業務API・Prediction Engineの規則は確定。成功応答のデータ項目（DTO）・HTTP status等の未定義部分と文書間の解釈差は[契約の判断事項](contract-review-proposal.md)へ分ける。**2026-10-03、依頼者によるチーム合意報告を受け[D-23](#d-23)の基本構成を採用。[D-24](#d-24)／[D-25](#d-25)は検証・運用条件付きの第一候補。** [合意範囲](#2026-10-03の技術構成合意)を超えて認証・公開先・API細則を確定しない。2026-10-08時点のGoal・記録・Today APIと実APIを使う画面、既存ローカル検証記録、製品受入・公開配置等の残条件は[対応表](change-map.md#現在地の読み方)から確認する。純粋Prediction Engineと関連テストは[#103](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/103)でmain統合済みで、#77で`/today`から呼ぶ形でアプリへ結合した。構成の採用や下記の契約をアプリ動作確認済みとは扱わない。
@@ -839,3 +841,27 @@ Evidence: [Today回帰](../apps/web/tests/session-today.browser.tsx)は固定版
 追加Evidence（PR #191 review）: [Today境界回帰](../apps/web/tests/session-today-boundary.browser.tsx)は実Router・実hook・固定版Better Authと合成HTTP/通知で、同日Today先着、明示取消後の旧45非送信と新46送信、描画間のA→B→A/error→A/未ログイン→A/認証signal/storage通知、失敗状態・保留保存の破棄、正常確認の保持、既知翌日の拒否、同日Today503 fallback入力のpending/503/回復を通じた保持、確認中の未採用異日付cacheで入力を破棄しないことを検査する。異日付cache注入は境界の合成対照であり、本番到達性の証明ではない。専用Chrome profileのDOM/送信観測であり、実アカウント・公開環境・pixel描画は未検証。
 
 再検討する条件: 確認中の「保存中」が利用者に分かりにくい、Better Authの再取得の仕様が変わる、Goal一覧・作成・編集・履歴でも同じ問題が受入上の障害になる、またはresponse ownerを照合できるDTOを導入する場合。
+
+### D-32 本人向け評価の保存境界（#225）
+
+2026-10-11 / **CONDITIONAL：依頼者は既定OFF・独立作業ツリーでの最小実装と合成検証を許可。実データでの有効化、利用説明・保持/削除/バックアップ運用の採択はOPEN。** [Product R-12/P-22](product-spec.md#本人向けの予測保存実績照合r-12既定off)、[Issue #225](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/225)。
+
+Context: Todayは現在の記録から再計算するため、後日見た値だけでは発行時の予測と実績を照合できない。本人が明示発行した値を、評価対象の変更や未記録と区別して残す必要がある。現在のEngine数式・Must画面は維持する。
+
+Decision: 新しい[評価table 2個](../apps/api/migrations/0006_prediction_evaluation.sql)だけに参加と発行snapshotを保存する。既存の認証・owner付きGoal、TypeBox、PostgreSQL、QueryClientを使い、新しい依存・queue・学習基盤は追加しない。
+
+- `EVALUATION_ENABLED`は未設定/`0`ならOFF。保護された`GET /api/evaluation`だけが能力を返し、OFFでは評価tableを読まない。他の評価routeは登録しない。有効時のbuild識別は明示設定またはVercel commit SHAを必須にする。
+- 保護された`GET /api/goals/:goalId/evaluation`、`PUT/DELETE /evaluation/participation`、`POST /evaluation/forecasts`を追加する（後3つのpathにも同じGoal prefixが付く）。参加のbodyはpolicy版、発行のbodyは期待Goal設定版だけで、利用者から予測値・owner・モデル設定を受けない。既存Origin/auth/no-store境界を使う。
+- 1ownerにつき1Goal、1Goal/現地日につき最初の発行1件。参加のUUID世代は解除→再参加でも替わる。Goal・owner削除と解除は評価行をcascadeし、解除は業務Goal/日々の記録を消さない。
+- [store](../apps/api/src/evaluation/store.ts)はuser→Goalの順にlockし短い準備を行う。読み取りsnapshotを取得して接続を返してからEngineを1回計算し、最終transactionで参加UUID・設定版・回答版・現地日・発行日以前の記録hashを再確認する。競合は副作用なしの409。Engine計算中にDB接続を保持しない。同値ログPUTはhashを変えず、訂正は照合から分ける。
+- 凍結値は単位・残量・1回量（sessionAmount）・発行時DONE/SKIPPED起点（issuedTodayStatus）・anchor/timezone・設定/回答版・観測集計・使用prior/posterior・設定・出所・モデル/build/schema/state/feature/evaluation/presentation-policy版・実completion mode・P50/P80/null理由。1回量や当日起点が後日変わっても、凍結残量・起点・posterior/configだけで発行時のcompletionを再現する。タイトル、email、自由記述、token、全生ログは評価payloadへ複製しない。[Engine adapter](../apps/api/src/prediction/engine.ts)の内部診断入口を利用し、既存公開DTOと純粋Engine数式は変えない。
+- [照合](../apps/api/src/evaluation/assessment.ts)は発行時の残量に対する後日DONEの実量で判断する。q日後の昨日訂正期間が終わる現地q+2日までPENDING。未記録はUNKNOWN、null/30日超は別状態。設定/回答版が変わった場合はCONTEXT_CHANGED、過去入力hash変更はINPUT_CORRECTEDで、後から予測を上書きしない。設定を元へ戻した場合も版履歴から保守的に除外する。
+- 到達割合はREACHED/NOT_REACHED/UNKNOWNを分母に、UNKNOWNをすべて未到達/到達とした下限/上限だけを表示する。他の状態は別件数。本人の保存中sampleだけで、重複する日次記録は独立した人ではない。正式な離散CDF校正やg50因果効果・精度改善を主張しない。
+- 既定上限は参加開始から90日、発行最大90日・最新90件、照合30日。設定は保持3〜90日、件数1〜90、照合1〜30日、保持≥照合+2日を検証する。発行の期限は参加期限を超えない。GETのexpiry/age filterは物理TTLではない。新規発行時に期限切れ/上限超過を削除し、[手動purge](../apps/api/src/evaluation/purge-cli.ts)は評価tableだけをtransactionで掃除する。定期実行責任・頻度・バックアップは未採択。
+- FEは既存PrivateEpoch/draft世代に従い、開始/送信/採用時のownerを確認する。書き込み前に同じqueryを中断してローカル読取世代を更新するため、解除前の遅延GETで削除済み履歴を戻さない。401/404は旧記録を隠し、500は前回結果と取得失敗を分ける。書き込みの自動再送、画面を開くだけの発行はしない。
+
+Alternatives / Reason: 既存Todayを再取得するだけでは発行値が残らない。全利用者・全入力の無期限自動収集は同意/運用/データ量を広げる。event-sourcingや分析基盤は履歴の完全性を高めるが期限前の追加Shouldとして費用が大きい。明示発行＋有界snapshotは再現に必要な値とowner境界を残し、評価と学習/全体精度判定を分けられる。
+
+Consequences / Invariants: 読み取り期限は物理削除の実施日を保証しない。mutableな業務記録で途中の訂正履歴すべてを復元できず、設定変更は保守的にcensorする。複数人の代表性・accuracy改善は得られない。migrationの既存checksum、既存Engine式・認証設定は維持する。実DB適用、有効化、公開やmergeは別承認とする。
+
+Evidence / 再検討条件: [対応表](change-map.md#本人向け評価225)、[検証・手順・限界](changes/issue-225-evaluation-verification.md)。人数横断の校正、学習利用、長期保存、全編集履歴、運用負荷が必要になった時に新しい判断を行う。現在の合成テストの成功で実利用のOPENを採択へ昇格しない。

@@ -14,6 +14,8 @@ import { StatusBadge } from '../../ui/components/StatusBadge.tsx';
 import { Band } from '../../ui/components/Section.tsx';
 import { AccountMenu } from '../account/AccountMenu.tsx';
 import { fetchPolicy } from '../today/fetch-policy.ts';
+import { useEvaluationCapability } from '../evaluation/useEvaluation.ts';
+import '../evaluation/evaluation.css';
 import { LoadErrorPanel, SignedOutPanel } from './GoalStates.tsx';
 import '../../ui/tokens.css';
 import '../../ui/page.css';
@@ -32,6 +34,7 @@ function browserToday(): string {
 /** Goal 一覧（R-02、#78）。/goals */
 export function GoalListPage() {
   const current = usePrivateEpoch();
+  const capability = useEvaluationCapability();
   const ready = privateDataReady(current);
   const query = useQuery({ queryKey: goalKeys.list(), queryFn: ({ signal }) => goalsHttp.listGoals(signal), enabled: ready, ...fetchPolicy });
   const fresh = ready && query.dataUpdatedAt > current.clearedAt;
@@ -69,7 +72,7 @@ export function GoalListPage() {
       ) : (
         <ul className="fr-goals__list">
           {query.data.map((goal) => (
-            <GoalRow key={goal.id} goal={goal} />
+            <GoalRow key={goal.id} goal={goal} evaluationEnabled={capability.data?.enabled === true} />
           ))}
         </ul>
       )}
@@ -82,7 +85,7 @@ export function GoalListPage() {
  * 累計は API の progressDone（Today の予測の累計と同じ数え方）をそのまま出し、FE で計算しない。
  * 進捗バーは総量を超えたら満杯で止める（数字は超えた値のまま出す、R-08）。
  */
-function GoalRow({ goal }: { goal: Goal }) {
+function GoalRow({ goal, evaluationEnabled }: { goal: Goal; evaluationEnabled: boolean }) {
   // 累計と総量（分のGoalは時間＋分、P-18）
   const fmt = amountFormat(goal);
   const percent = Math.min(100, Math.floor((goal.progressDone / goal.totalRequired) * 100));
@@ -121,6 +124,7 @@ function GoalRow({ goal }: { goal: Goal }) {
           </span>
         </span>
       </Link>
+      {evaluationEnabled ? <Link to="/goals/$goalId/evaluation" params={{ goalId: goal.id }} className="fr-evaluation__nav">予測と実績の記録</Link> : null}
     </li>
   );
 }
