@@ -158,13 +158,25 @@ Evidenceは[Compose検証](../scripts/smoke-compose.sh)と[Application CI](../.g
 | ライブラリと版 | Better Auth 1.7.7（#74で固定）。メール＋パスワード、DBセッション、同一originのCookie、`/api/auth/*` | #84・#96で登録〜ログアウト・回数制限・Cookie属性・Linuxコンテナを実測した版。自作よりパスワード・セッションの保守責任が小さい |
 | Fastifyとの接続 | [bridge.ts](../apps/api/src/auth/bridge.ts)。URLは`BETTER_AUTH_URL`から組み立て、client IPはFastifyの`trustProxy`判定の結果だけを専用headerで渡し、複数のSet-Cookieをそのまま転送する | 公式ガイドの形では、Host偽装・X-Forwarded-For偽装による回数制限の回避と、sign-outのCookie消去漏れが起きうる（#84 F-5〜F-7） |
 | 保護の既定 | [guards.ts](../apps/api/src/http/guards.ts)はrouterの確定routeで判定する。登録済み`/api/health`・`/api/auth/*`以外の業務APIはセッション必須（route未定義のAPI pathも401）。業務APIの状態変更（GET／HEAD／OPTIONS以外）は許可originのOriginヘッダーが必須（違反は403 `ORIGIN_REJECTED`） | 追加し忘れで公開されるAPIを作らない。`SameSite=Lax`だけでは同一siteの別originを防げない（#84 F-8）。認証endpointは固定版Better Authの`trustedOrigins`・Referer／Fetch Metadata検査に委ね、業務APIの「Originなしは403」とは異なる。#76・#77はこのhookの内側に置く |
-| session更新とlogout故障 | 保護APIでgetSessionが返す複数のSet-Cookieを転送し、DB expiry延長とCookie更新を揃える。画面は通信例外・API errorを表示しbusyをfinallyで解除、logout error時は遷移しない | 通常時のlogoutではDB session削除とCookie消去を確認する。Better Auth 1.7.7はDB削除例外を内部でlogして成功を返すため、その故障時の保存済み旧Cookie失効は保証しない。fail-closed処理・復旧／再試行の方式はD-24/#75/#84の人の判断待ち |
+| session更新とlogout故障 | 保護APIでgetSessionが返す複数のSet-Cookieを転送し、DB expiry延長とCookie更新を揃える。画面は通信例外・API errorを表示しbusyをfinallyで解除、logout error時は遷移しない。#215で[削除確認hook](../apps/api/src/auth/sign-out.ts)を追加する（[失敗契約](#ログアウトの失敗と明示再試行215)） | Cookie消去前に署名tokenのDB削除完了を待つ。失敗・結果不明は503 `SIGN_OUT_UNCONFIRMED`、Cookie保持、明示再試行。503時の旧Cookie失効は保証しない。公開HTTPS・復旧担当等のD-24残条件は維持 |
 | Cookie | HttpOnly・SameSite=Lax・Path=/。`BETTER_AUTH_URL`がhttpsなら`Secure`と`__Secure-`接頭辞。本番（`NODE_ENV=production`）はhttpsのURLを必須にし、ローカルのコンテナ確認だけ`BETTER_AUTH_ALLOW_HTTP=1`で許可 | staging／本番で`Secure`が付かない設定ミスを起動時に止める |
 | 回数制限 | DB保存（`rateLimit`表）。1 IPあたり60秒にsign-in／sign-up各5回（`AUTH_SIGN_IN_MAX`／`AUTH_SIGN_UP_MAX`で上書き）、その他の認証endpointは100回。429の`X-Retry-After`は整数秒で、画面は残り秒数を数えて表示し、経過後に再試行できる | 再起動・複数instance・並列要求をまたいで効く（#84で実測）。現行アプリの[並列受入回帰](../apps/api/tests/auth-concurrency.test.ts)（#142）で、2instance・IP/endpoint隔離・拒否時のDB不変・再起動・期限切れ窓からの並列再開を確認する。共有回線のデモ会場向けの上限は未合意のため環境変数で変えられる |
 | Secret・URL | `BETTER_AUTH_SECRET`（本番必須、32文字以上。開発では`apps/api/.local/auth-secret`に自動生成）、`BETTER_AUTH_URL`（本番必須）、`AUTH_TRUSTED_ORIGINS`（任意）、`TRUST_PROXY_HOPS`（既定0） | 実値をGitへ入れず、開発者ごとの生成を手順から外す。proxyのhop数は公開先の実形式で確認する（#83） |
 | 画面 | `/`は公開トップ（P-16）。`/login`・`/register`は[AuthPage](../apps/web/src/routes/AuthPage.tsx)。[router](../apps/web/src/router.tsx)はURLに現れない2つのまとまり（pathless layout route）で分ける：認証画面はログイン済みなら戻り先へ移り、Goal4画面はログインの確認を1か所で行う（未ログインは元のURLを戻り先にログインへ、確認できない通信失敗はログインへ送らず「接続できませんでした」）。ログイン後・ログアウト後は履歴を置き換える。戻り先はアプリ内pathだけ。ログアウトはGoal一覧のアカウントメニュー。セッション切れ（401）は理由付き（`reason=expired`）で再ログインへ誘導。404・エラー・読込中はルーター全体の既定の画面。Goalの記録の履歴は`/goals/$goalId/history`（カレンダー）。デスクトップ幅ではログイン必須の画面の外側（AppShell）に画面全体の上のバーを出。上のバーは1段にし、Goalの作成・編集と記録の履歴では画面ごとの上のバーの代わりに戻り先と見出し（[DeskHeader](../apps/web/src/ui/components/DeskHeader.tsx)）を出す（#146） | R-01の画面要件。Goal・記録の画面は#78〜#81、デザインに合わせた画面とルート構成は#146 |
 
-FEの私的な表示・入力（R-01／#155）は次の境界を持つ。
+#### ログアウトの失敗と明示再試行（#215）
+
+目的はログアウト失敗を成功として表示せず、DB復帰後に本人が再試行できること。固定SDK 1.7.7のsign-outはDELETE例外を捕捉してCookieを消去し200を返す。内部の`deleteSession`は削除前lookup例外でもDELETEを飛ばすため、内部関数の正常終了だけでは削除確認にならない。[confirmSignOut](../apps/api/src/auth/sign-out.ts)を`createAuth`のbefore hookへ限定登録し、HTTP routerの既存Origin/Referer/Fetch Metadata・callbackURL検査後、SDKの`getSignedCookie`で確かめたtokenだけをDB adapterで削除する。既存SDK endpointがCookie消去と200応答を担当し、正常経路では追加のDELETEを行わない。未ログイン・不正署名はSDKの従来処理に委ね、他sessionは削除しない。
+
+削除完了が確認できないときは503 `SIGN_OUT_UNCONFIRMED`を返し、Cookieを消去しない。画面は「ログアウトを確認できませんでした」と再試行の案内を表示し、busyを解除してその場に留まる。自動再試行は行わない。DB復帰後に再びログアウトを押し、削除完了→Cookie消去→ログイン画面へ進む。DELETE応答が失われた場合は削除済みでも503とし、次の0行DELETEを成功として収束できる。HTTP応答は共通のno-storeを維持する。
+
+この契約はDB故障中の失効保証ではない。DELETEだけ失敗した場合、コピー済みの有効Cookieは再試行成功まで使用できる。session読取も失敗する場合、保護APIは500で拒否する。削除前に認証済みの実行中要求を取り消す仕組みは追加しない。現設定はDB sessionのみでsecondary storage・session delete hooksを使わないため、SDK adapterの単一token削除を選ぶ。これらの追加、SDK更新、DB/認証方式の変更時はこの境界を再検討する。SDK内部関数への先行削除はlookup故障を見落とし、成功応答を後から500へ変える方式はCookieを失って再試行できないため採用しない。SDK全面置換・新認証方式・設定権限変更は行わず、D-24の条件付き採択・公開HTTPS/DB復旧の残条件は変えない。
+
+Evidence: [合成DB回帰](../apps/api/tests/sign-out-failure.test.ts)は実createAuth/bridge/guard・固定SDKとDB I/Oだけの合成で、故障/復帰、署名、CSRF、lookup故障、削除応答喪失、同時要求、別session隔離を検査する。[PostgreSQL回帰](../apps/api/tests/auth.test.ts)は専用DBと実appで503/no-store・Cookie保持・復旧後の旧Cookie401を確認し、[実Chrome回帰](../apps/web/tests/sign-out.browser.tsx)は実SDK/AccountMenu/routerと合成HTTPでbusy・503表示・セッション保持・明示再試行後だけの遷移を検査する。実User・公開HTTPS・本番DB障害の受入とは区別する。
+
+#### FEの私的な表示・入力（R-01／#155）
+
+次の境界を持つ。
 
 - 表示とquery: [session-cache.ts](../apps/web/src/api/session-cache.ts)で描画時のsession ownerとcache消去の状態を照合する（R-01／#155）。別ownerを認識した最初の描画から一覧・編集・Today・履歴と作成draftを停止し、旧取得のcancelとcache resetが済んでから新取得を使う。連続切替では、その切替に対応するcancel完了だけが境界を開く。履歴もGoal・logs双方の取得時刻を照合し、ownerごとに表示月を作り直す。sessionの初回確認中・再取得中（isRefetching）・取得失敗も私的な表示・フォームを停止する。再取得中に到着した業務応答の所有者は旧session dataから確定できないため、同じownerで回復してもcacheを消して新取得から開く。Todayだけは、表示していたownerと同じsession dataが残る正常な再確認（初回確認・失敗・別owner・未ログインを除く）の間、画面をunmountせず入力中の状態を保つ。その間と確認後のcache消去が済むまでに届いた応答は採用せず、保存は預かって同じowner・連続性の確定後に1回だけ送る（[D-30](#d-30-todayの同一owner再確認で入力を保つ190)）。
 - session確認: ルートの[ログイン確認](../apps/web/src/auth/session.ts)も独立したgetSessionの成功だけを使わず、useSessionと同じstoreの確認完了を待つ。並行するルート確認をまとめ、focus等が確認を置き換えた場合も最新の完了を待つ。[AccountMenu](../apps/web/src/features/account/AccountMenu.tsx)の空session回復は同じ欠落につき1回とし、null→取得中→nullの再取得ループを防ぐ。

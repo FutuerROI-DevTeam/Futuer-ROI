@@ -27,9 +27,16 @@ async function browserPath() {
 
 // Better Auth は client 作成時に fetch を保持するため、bundle 評価前に transport を用意する。
 function setupSessionTransport() {
-  const state = globalThis.__sessionTransport = { owner: 'A', failure: null, reads: 0, writes: 0, hold: false, held: [] };
+  const state = globalThis.__sessionTransport = { owner: 'A', failure: null, reads: 0, writes: 0, hold: false, held: [], allowSignOut: false, signOutCalls: 0, signOutFailure: false, signOutHold: false, signOutHeld: [] };
   globalThis.fetch = async (request, init) => {
     const url = typeof request === 'string' ? request : request instanceof URL ? request.href : request.url;
+    if (state.allowSignOut && new URL(url, location.href).pathname === '/api/auth/sign-out' && init?.method === 'POST') {
+      state.signOutCalls++;
+      if (state.signOutHold) await new Promise((resolve) => state.signOutHeld.push(resolve));
+      if (state.signOutFailure) return Response.json({ code: 'SIGN_OUT_UNCONFIRMED', message: 'Sign-out could not be confirmed. Please retry.' }, { status: 503 });
+      state.owner = null;
+      return Response.json({ success: true });
+    }
     if (new URL(url, location.href).pathname !== '/api/auth/get-session' || (init?.method && init.method !== 'GET')) {
       state.writes++; throw new Error('unexpected request: ' + url);
     }
@@ -38,6 +45,7 @@ function setupSessionTransport() {
     if (state.failure === 'network') throw new TypeError('synthetic offline');
     if (state.failure === '503') return Response.json({ code: 'SYNTHETIC_UNAVAILABLE', message: 'synthetic 503' }, { status: 503 });
     if (state.failure === '429') return Response.json({ code: 'RATE_LIMITED', message: 'synthetic 429' }, { status: 429 });
+    if (state.allowSignOut && state.owner === null) return Response.json(null);
     return Response.json({
       user: { id: state.owner, name: 'Synthetic ' + state.owner, email: state.owner + '@example.invalid', emailVerified: true, createdAt: '2026-10-09T00:00:00Z', updatedAt: '2026-10-09T00:00:00Z' },
       session: { id: 'synthetic-' + state.owner, userId: state.owner, token: 'synthetic-test-token', expiresAt: '2099-01-01T00:00:00Z', createdAt: '2026-10-09T00:00:00Z', updatedAt: '2026-10-09T00:00:00Z' },
@@ -123,6 +131,13 @@ test('same-owner draft: actual router/hooks preserve idle input only across succ
 test('#191 Today boundaries: response ordering, cancelled retry, and batched draft invalidation', { timeout: 180000 }, async (t) => {
   const result = await runBrowser(t, './session-today-boundary.browser.tsx', false, true);
   assert.equal(result.results.length, 13);
+  assert.equal(result.writes, 0);
+  t.diagnostic(JSON.stringify(result));
+});
+
+test('#215 logout: real SDK/AccountMenu/router show 503, release busy, and navigate only after explicit success', { timeout: 180000 }, async (t) => {
+  const result = await runBrowser(t, './sign-out.browser.tsx', false, true);
+  assert.equal(result.signOutCalls, 2);
   assert.equal(result.writes, 0);
   t.diagnostic(JSON.stringify(result));
 });
