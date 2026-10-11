@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '../../ui/components/Button.tsx';
 import { ErrorPanel } from '../../ui/components/Notice.tsx';
 import { longDate } from '../../copy/date.ts';
 import { amountFormat, type AmountFormat } from '../../copy/amount.ts';
 import { todayCopy } from '../../copy/today.ts';
 import { AmountEditor } from './AmountEditor.tsx';
+import { RecordChoices, useRecordAmount } from './RecordChoices.tsx';
 import { classifySaveError, type RecordChoice } from './record-log.ts';
 import { SaveFailure } from './SaveFailure.tsx';
 import type { useSaveLog } from './useSaveLog.ts';
@@ -21,7 +22,7 @@ type YesterdayPromptProps = {
 
 /**
  * 「昨日はどうでしたか？」（R-04、#80）。出す条件は /today の yesterdayMissing だけを見る（開始日の条件は API 側で含める）。
- * 1回押すだけで昨日を記録する（やった量は1回の量。「量を変更」で変えられる）。
+ * 1回押すだけで昨日を記録する。今日の記録と同じく、量は−／＋でその場で変え、数を打つときは「量を変更」から（#221）。
  * 保存に成功すると /today を取り直し、yesterdayMissing が false になって消える（成功したときだけ消える）。
  * 失敗したら「まだ入っていない」と出し、もう一度選べる。「後で答える」はデータを作らない。
  */
@@ -39,14 +40,16 @@ function YesterdayPromptForDate({
   onRefresh,
 }: YesterdayPromptProps) {
   const [editingAmount, setEditingAmount] = useState(false);
-  const amountEntry = useRef<HTMLButtonElement>(null);
-  const returnFocus = useRef(false);
-  useEffect(() => {
-    if (!editingAmount && returnFocus.current) {
-      returnFocus.current = false;
-      amountEntry.current?.focus();
-    }
-  }, [editingAmount]);
+  // 今日の記録と同じ量の行（−／＋・量を変更）を使う（#221）
+  const amount = useRecordAmount({
+    date: yesterday,
+    sessionAmount,
+    fmt,
+    current: null,
+    blocked: saver.isSaving,
+    editingAmount,
+    onEditingAmountChange: setEditingAmount,
+  });
   const save = (choice: RecordChoice) => saver.save({ localDate: yesterday, choice });
   const saving = saver.saving?.choice;
   const failureKind = saver.failure ? classifySaveError(saver.failure.error) : null;
@@ -72,35 +75,32 @@ function YesterdayPromptForDate({
     body = (
       <AmountEditor
         label={todayCopy.amountYesterdayLabel}
-        initial={sessionAmount}
+        initial={amount.steppedInitial ?? sessionAmount}
         sessionAmount={sessionAmount}
         fmt={fmt}
         busy={saver.isSaving}
-        onSubmit={(amount) => save({ status: 'DONE', amount })}
-        onCancel={() => {
-          returnFocus.current = true;
-          setEditingAmount(false);
-        }}
+        onSubmit={(value) => save({ status: 'DONE', amount: value })}
+        onCancel={amount.closeAmount}
       />
     );
   } else {
     body = (
       <>
-        {/* 押すとすぐ保存されるため、記録する量を先に見せてから2択を置く（今日の操作帯と同じ読む順、#199） */}
-        <p className="fr-yesterday__amount">
-          {todayCopy.doneAmount(fmt.record(sessionAmount))}
-          <Button ref={amountEntry} variant="text" disabled={saver.isSaving} onClick={() => setEditingAmount(true)}>
-            {todayCopy.changeAmount}
-          </Button>
-        </p>
-        <div className="fr-yesterday__pair">
-          <Button icon="check" busy={saving?.status === 'DONE'} disabled={saver.isSaving} onClick={() => save({ status: 'DONE', amount: sessionAmount })}>
-            {saving?.status === 'DONE' ? todayCopy.saving : todayCopy.yesterdayDone}
-          </Button>
-          <Button icon="moon" busy={saving?.status === 'SKIPPED'} disabled={saver.isSaving} onClick={() => save({ status: 'SKIPPED', amount: null })}>
-            {saving?.status === 'SKIPPED' ? todayCopy.saving : todayCopy.yesterdayRest}
-          </Button>
-        </div>
+        {/* 今日の記録と同じ形：量を先に見せてから大きい2択。押すとすぐ保存する（#199、#221） */}
+        <RecordChoices
+          amount={amount}
+          fmt={fmt}
+          sessionAmount={sessionAmount}
+          amountLabel={todayCopy.amountYesterdayLabel}
+          doneLabel={todayCopy.yesterdayDone}
+          restLabel={todayCopy.yesterdayRest}
+          changeNote={todayCopy.yesterdayChangeNote}
+          current={null}
+          saving={saving?.status}
+          isSaving={saver.isSaving}
+          locked={false}
+          onSave={save}
+        />
         <Button variant="text" disabled={saver.isSaving} onClick={onLater}>
           {todayCopy.yesterdayLater}
         </Button>

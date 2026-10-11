@@ -61,7 +61,8 @@ try {
   await f.page.getByRole('button',{name:/^やった/}).last().click();
   await f.page.getByText('今日は記録済みです',{exact:true}).waitFor();
   await f.page.getByRole('button',{name:/昨日.*の記録を変更/}).click();
-  await f.page.getByRole('button',{name:'変更を保存',exact:true}).click();
+  // 昨日の訂正は今日の選び直しと同じく、押した2択でそのまま上書き保存する（#221）
+  await f.page.locator('.fr-yesterday').getByRole('button',{name:/^やった/}).click();
   await wait(()=>Promise.resolve(f.requests.length===3));
   for(const req of f.requests) assert.deepEqual(req.body,{status:'DONE',amount:10,expectedGoalSettingsRevision:0});
   assert.notEqual(f.requests[0].path,f.requests[1].path); assert.equal(f.requests[0].path,f.requests[2].path);

@@ -48,7 +48,9 @@ export const goalsCopy = {
   form: {
     createTitle: 'Goalを作成',
     /** 初期質問の見出し（開閉の見出し。PR #120 の部品と同じ文言）。 */
-    priorTitle: '最初の見通しを調整する（任意）',
+    // 見出しは文節の切れ目（「最初の見通しを／調整する（任意）」）でだけ折り返すよう、2つに分けて持つ（#221）
+    priorTitleLead: '最初の見通しを',
+    priorTitleTail: '調整する（任意）',
     editTitle: 'Goalを編集',
     close: '閉じる',
     /** デスクトップ幅で、保存の横に置く取りやめ（スマートフォン幅の「×」の代わり。デザイン Desk-create・Desk-edit）。 */

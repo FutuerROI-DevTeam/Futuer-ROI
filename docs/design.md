@@ -8,6 +8,8 @@
 
 2026-10-11 / **main統合後の明確化**：基準main `2b4757873d441360337d7c2c1019770356bfde79` はPR214・210・216・212を含む。Goal保存失敗の同owner・同訪問での表示復元は[D-29](architecture.md#d-29-量と作成操作の保全148)、ログアウトの503/Cookie保持と明示再試行は[認証の失敗契約](architecture.md#ログアウトの失敗と明示再試行215)、遠い到達予定日の軸省略は[P-19](product-spec.md#p-19-到達予定日b案)へ追跡する。以下の現行記述をマージ済みコードへ照合した。新mainでの実ブラウザ受入や再撮影は未実施で、初稿・合成f106496の証拠を新mainの実操作証拠へ転用しない。P-21の未確認条件・正式Decisionの採択範囲は変更しない。
 
+2026-10-11 / **PR218・223の反映**：[PR #218](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/218)（`abaef05`）と[PR #223](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/223)（`ddc4d16`）のToday・記録・昨日・公開トップ・Goalフォームの操作と表示を、両PRのコードに照合して同期した。判断と比較案は[P-21](product-spec.md#p-21-todayの朝焼け山並み案)の2026-10-10〜11の追記を正本とする。本書での実ブラウザ受入・再撮影は未実施で、既存画像・合成f106496はこの変更を含まない。
+
 ## 読み方と確認の範囲
 
 - **コード確認**：初稿のルート、条件分岐、CSS、操作先は86b396dで確認。2026-10-11に新基準mainの変更を再照合し、保存失敗・ログアウト・日付軸の現行記述を同期した。
@@ -91,11 +93,11 @@ flowchart TD
 | 対象 | 390pxを含む960px未満 | 1280pxを含む960px以上 | 根拠 |
 | --- | --- | --- | --- |
 | 共通の外枠 | 原則1列。各画面AppBar。通常ページは最大40rem | AppShellの共通バー。画面専用のAppBarは対象CSSで隠す | [page.css](../apps/web/src/ui/page.css)、[AppShell](../apps/web/src/routes/AppShell.tsx) |
-| 公開トップ | 説明・認証入口・装飾・手順を縦に読む | 説明と山の装飾は2列、3つの手順は横並び | [auth.css](../apps/web/src/routes/auth.css) |
+| 公開トップ | 名前・説明・認証入口を空と山並みの背景（全幅）の上に置き、手順・注記は背景の外で縦に読む | 背景は全幅、中身は最大1120pxの列。説明は1列、3つの手順は横並び | [auth.css](../apps/web/src/routes/auth.css) |
 | ログイン・登録 | 1枚のフォームカード | 広い画面でも認証カードに入力を集約 | AuthPage、auth.css |
 | Goal一覧 | カードを縦に並べる | 横幅・余白・見出し/追加ボタンを広げる。現行CSSにカード一覧を2列化する規則はない | [goals.css](../apps/web/src/features/goals/goals.css) |
-| 作成・編集 | 基本→量→日付→任意質問。保存欄は通常の文書配置 | セクション見出し＋入力、量/日付の組を2列。取消・削除を保存付近へ | GoalFormFields、goals.css |
-| Today | 100dvh内で本文と下部操作帯を分ける。本文は縦スクロール、操作帯は実高さを確保。短い画面では操作帯内部もスクロール可能 | 最大1200px。左に問い・直近/昨日・操作、右に進捗・見通し・詳細。操作帯だけ左列内sticky | [today-dawn.css](../apps/web/src/features/today/today-dawn.css) |
+| 作成・編集 | 基本→量→日付→任意質問。保存欄は通常の文書配置。ページ見出しはAppBarと重なるため視覚上は隠し、読み上げに残す | セクション見出し＋入力、量/日付の組を2列。取消・削除を保存付近へ | GoalFormFields、goals.css |
+| Today | 100dvh内で本文と下部操作帯を分ける。本文は縦スクロール、操作帯は実高さを確保。短い画面では操作帯内部もスクロール可能 | 最大1200px。左に問い・直近/昨日・操作、右に進捗・見通し・詳細。操作帯は左列の下端まで場所を取り、左列内でsticky | [today-dawn.css](../apps/web/src/features/today/today-dawn.css) |
 | 履歴 | 月送り＋7列カレンダー | 最大720pxの枠。共通バー＋DeskHeader | HistoryPage、[history.css](../apps/web/src/features/history/history.css) |
 | 詳細の開閉 | 完了予測/記録の詳細は初期折畳み | 同詳細は初期展開。利用者の明示開閉は幅変更でも保持 | [ResponsiveDetails](../apps/web/src/features/today/ResponsiveDetails.tsx) |
 | 昨日未記録の案内 | 初期折畳み。保存開始・失敗時は展開 | 幅にかかわらず同じ | [YesterdayDetails](../apps/web/src/features/today/YesterdayDetails.tsx) |
@@ -124,7 +126,7 @@ TodayのDOMは問い→直近/昨日→進捗・見通し・詳細→操作帯�
 
 ### 公開トップ
 
-用途を短く伝え、登録済み/初回の人が次へ進める入口。構成はブランド、見出し、説明、認証状態別CTA、装飾の山、3手順と注記。山はaria-hidden。Goal/記録の取得やサンプル予測の表示はしない。
+用途を短く伝え、登録済み/初回の人が次へ進める入口。構成はブランド、見出し、説明、認証状態別CTA、3手順と注記。ブランドからCTAまでを空と山並みの背景（CSS、読み上げ対象外）の上に置く。Goal/記録の取得やサンプル予測の表示はしない。
 
 | 状態 | 表示・操作・遷移 |
 | --- | --- |
@@ -202,17 +204,17 @@ mobileの「×」は編集でも一覧へ戻る。desktopの編集パンくず/�
 | --- | --- |
 | 未記録・材料あり | 現行の問いと中心指標。出所・注釈、進捗、設定量で続ける完了見込み。「やった／今日は休む」 |
 | 未記録・材料不足 | 不足理由。完了欄もAPI由来の不足または条件付き計画。中心不足かつ未回答なら任意の質問入力として編集へ |
-| 回答/回答＋実績由来 | 数字に対応する出所と説明。回答を実績件数と表現しない |
+| 回答/回答＋実績由来 | 中心の数字の下は出所に合わせた要約の文（「回答」等のラベルは出さない）。見通しは回答を使うときだけ「最初の質問の回答（仮定）を含めて計算した見通しです。」の1文。回答を実績件数と表現しない |
 | P50/P80の範囲外 | 欠けた日付を作らず該当する範囲外の説明。材料不足とは別 |
 | 今日記録済み | 中心の問い比較を出さず記録内容と変更入口。完了見込みはCURRENT_STATEの表示 |
-| 今日の選び直し | 保存済み選択を初期表示、変更をやめる入口。保存中は取消も止める |
+| 今日の選び直し | 保存済み選択を初期表示。「変更をやめる」は上部ではなく下の記録の欄（「量を変更」の下）に置き、量の入力中・保存失敗後・昨日の訂正中も出す。保存中は出さない（保存失敗の表示からの再試行中は押せない） |
 | 達成済み | 予測を出さず達成・累計/総量・開始/到達情報・履歴/一覧。誤記録の訂正入口は残す |
 | snapshot不整合 | 食い違ったGoal/Today/記録を混ぜず再取得。回復できなければ説明と再読込 |
 | 計算/通信失敗 | エラーと再読込。Goalと対象日が有効なら記録操作を残せる |
-| 今日の量編集 | 名前付きgroupにfocus。±/直接入力で未保存量を変え、明示保存。異なる有効量には設定量前提の注記 |
+| 今日の量編集 | 量の行（「今日記録する量：◯」−／＋・量を変更）は1行で、狭い幅では数と単位を割らずにボタンを次の行へ送る。−／＋はその場で未保存の量を変える。直接入力は「量を変更」から開き、名前付きgroupにfocus、明示保存。1回の量と異なる量には設定量前提の注記 |
 | 保存中／失敗／日付変更 | 共通の保存回復に従う。旧日の入力を新しい日に黙って保存しない |
 
-「やった」は表示中の既定/選択量で1回押すと保存、「今日は休む」は休んだ記録を保存する。±は入力を開くだけで保存しない。進捗の目標/累計/残り/超過は実績表示。未保存の量から「+20分で41%→42%」という未来プレビューを計算・表示しない。予測の数値意味・不足条件は[Today表示仕様](product-spec.md#today-decision画面の表示仕様)と[P-21](product-spec.md#p-21-todayの朝焼け山並み案)を参照し、本書で新定義しない。
+「やった」は表示中の既定/選択量で1回押すと保存、「今日は休む」は休んだ記録を保存する。−／＋は入力欄を開かず、表示中の量を1回の量に応じた段階の刻みで変えるだけで保存しない（刻みは[copy/amount](../apps/web/src/copy/amount.ts)、判断はP-21）。進捗の目標/累計/残り/超過は実績表示。未保存の量から「+20分で41%→42%」という未来プレビューを計算・表示しない。予測の数値意味・不足条件は[Today表示仕様](product-spec.md#today-decision画面の表示仕様)と[P-21](product-spec.md#p-21-todayの朝焼け山並み案)を参照し、本書で新定義しない。
 
 到達予定日が10回中8回の日数（なければ目安）の3倍より先なら、見通しまでの軸を途中で省く（//）。到達予定日は右端に年付き日付で示し、省いた先は日付に比例しないことを読み上げでも伝える。cut時の月目盛りは到達予定日未満で止め、右端より未来の月を左へ置かない。予測値・API・非cut軸は変更しない（PR212統合済み）。表示契約は[P-19](product-spec.md#p-19-到達予定日b案)、実装は[chart-geometry](../apps/web/src/features/today/chart-geometry.ts)・[OutlookPanel](../apps/web/src/features/today/OutlookPanel.tsx)、回帰は[target-gap](../apps/web/tests/target-gap.test.mjs)・[実SVG](../apps/web/tests/outlook-axis.native.tsx)。合成f106496の撮影はこの変更を含まない。
 
@@ -220,15 +222,15 @@ mobileの「×」は編集でも一覧へ戻る。desktopの編集パンくず/�
 
 | 昨日の状態 | 表示・操作 |
 | --- | --- |
-| 未記録で補完対象 | 初期折畳みの案内を開き、やった/休んだ/量変更/後で答える。後で答えるは記録を作らない |
+| 未記録で補完対象 | 初期折畳みの案内を開き、今日と同じ量の行（「昨日やった量：◯」−／＋・量を変更）を2択の上に、大きい2択（やった＋量／休んだ）と後で答える。押した2択ですぐ保存。後で答えるは記録を作らない |
 | 保存済み | 日付・内容・変更の要約行。直近7日の昨日とGoalメニューにも訂正入口 |
-| 訂正中 | 保存済み量/選択が初期値。明示保存または取消。今日の編集との排他 |
+| 訂正中 | 開始時は訂正の見出しへfocus。今日と同じ量の行と2択で、保存済み量/選択が初期値。押した2択でそのまま上書き保存し、「変更を保存」「キャンセル」はない。「変更をやめる」は保存しない。今日の編集との排他（訂正中は今日の「記録を変更」を押せない） |
 | 補完/訂正の失敗 | 未保存の変更内容と回復操作。補完と既存記録の訂正を取り違えない |
 | 記録開始日前 | 昨日の補完・訂正を出さず開始日前の扱いを案内 |
 | 訂正中に昨日が変わった | 元対象日を保持して保存を止め、新しい画面で選び直す |
-| 取消 | 同じowner/Goal/日付の有効な入口へfocus。消えた入口なら再表示された昨日の変更へ |
+| 変更をやめる | 同じowner/Goal/日付の有効な入口へfocus。消えた入口なら再表示された昨日の変更へ |
 
-根拠：[TodayPage](../apps/web/src/features/today/TodayPage.tsx)、[OutlookPanel](../apps/web/src/features/today/OutlookPanel.tsx)、[ProgressSummary](../apps/web/src/features/today/ProgressSummary.tsx)、[RecordChoiceBar](../apps/web/src/features/logs/RecordChoiceBar.tsx)、[AmountEditor](../apps/web/src/features/logs/AmountEditor.tsx)、[YesterdayPrompt](../apps/web/src/features/logs/YesterdayPrompt.tsx)、[YesterdayCorrection](../apps/web/src/features/logs/YesterdayCorrection.tsx)。保存・日付・不足の共通規則は[R-03〜R-08](product-spec.md#requirementsmvp)、[P-14](product-spec.md#p-14-記録のルール)、P-20/D-29へ。
+根拠：[TodayPage](../apps/web/src/features/today/TodayPage.tsx)、[OutlookPanel](../apps/web/src/features/today/OutlookPanel.tsx)、[ProgressSummary](../apps/web/src/features/today/ProgressSummary.tsx)、[RecordChoiceBar](../apps/web/src/features/logs/RecordChoiceBar.tsx)、[RecordChoices](../apps/web/src/features/logs/RecordChoices.tsx)、[AmountEditor](../apps/web/src/features/logs/AmountEditor.tsx)、[YesterdayPrompt](../apps/web/src/features/logs/YesterdayPrompt.tsx)、[YesterdayCorrection](../apps/web/src/features/logs/YesterdayCorrection.tsx)。保存・日付・不足の共通規則は[R-03〜R-08](product-spec.md#requirementsmvp)、[P-14](product-spec.md#p-14-記録のルール)、P-20/D-29へ。
 
 ### 記録の履歴
 
@@ -285,7 +287,7 @@ mobileの「×」は編集でも一覧へ戻る。desktopの編集パンくず/�
 - progressbarは値と名前、グラフは説明、記録日は状態名を持つ。色だけで完了/休み/未記録、予定日との差を伝えない。
 - Goalメニューは最初の項目へfocus、矢印/Home/End、Escape、Tabを扱う。[GoalMenu](../apps/web/src/features/today/GoalMenu.tsx)。
 - account/削除はnative dialog。取消側を初期focusにし、閉じた後は入口へ。保存中の取消禁止は結果を見失わないため。[ConfirmDialog](../apps/web/src/ui/components/ConfirmDialog.tsx)。
-- 今日の変更開始/保存後、量変更の開始/取消、昨日訂正取消のfocus遷移をコードで管理する。owner/日付/画面境界を越えて戻さない。
+- 今日の変更開始/保存後、量変更の開始/取消、昨日訂正の開始/取消のfocus遷移をコードで管理する。−／＋が上限・下限で押せなくなる前に反対側へfocusを移す。owner/日付/画面境界を越えて戻さない。
 - reduced-motionの規則がある。共通tap tokenは44pxだが、Todayの一部summaryには32px/40pxのmin-height指定があり、「全操作が44px以上」とは本書で断定しない。
 - キーボード到達性、200%文字拡大、320px、native date/select、読み上げ順、対比、iOS safe-area/soft keyboardは基準commitで追加確認が必要。既存QAの成功を包括的なWCAG適合と扱わない。
 
@@ -298,7 +300,7 @@ GitHub名は根拠がある役割だけに付す。[チームreview](https://git
 | 論点 | 現在の実装・未確認 | 選択肢 | 判断する人・記録先 | 期限・区分 |
 | --- | --- | --- | --- | --- |
 | R1の2段階入力 | 同一フォーム内の任意details。ウィザードではない | 現行維持／明示2段階 | 新仕様の判断者：未定（#171で確認）。D-26/P-15 | 10/12前に現状・残件を整理。2段階化は未採択の提出後案 |
-| R2/R4見出し・回答を見直す入口 | Core出所/条件付き計画あり。未回答かつ中心不足時だけ編集への質問導線。常設の「回答を見直す」はない | 現行維持／編集への常設入口 | 常設入口への変更判断者：未定（#171で確認）。D-26/P-15 | 10/12前は現行を正確に記載。常設入口への変更は未採択の提出後案 |
+| R2/R4見出し・回答を見直す入口 | Coreの出所に合わせた要約・見通しの回答使用の1文/条件付き計画あり。未回答かつ中心不足時だけ編集への質問導線。常設の「回答を見直す」はない | 現行維持／編集への常設入口 | 常設入口への変更判断者：未定（#171で確認）。D-26/P-15 | 10/12前は現行を正確に記載。常設入口への変更は未採択の提出後案 |
 | R5 Today回答dialog | 未実装。質問はGoal編集で行う。PR147もD-26未決として対象外 | 既存編集を利用／Today dialogを追加 | 追加仕様の判断者：未定（#171で確認）。D-26/P-17 | 10/12前に#146の未完条件として明記。追加は未採択の提出後案 |
 | 「今日20分やると」+20分/41→42% | 未保存量による予測/進捗previewはない | 現行維持／別途仕様・検証を追加 | 新予測仕様の判断者：未定（#171で確認）。既存表示判断はKaito-Iwase（P-21）、D-26 | 提出後案。未採択機能を今回実装しない |
 | 「目標まであと量/回分」 | ProgressSummaryに実残量、条件付きPlanにあと回分が既にある | 現行の意味/出所で表示／新しい予測ラベルを追加 | 新ラベル/計算の判断者：未定（#171で確認）。既存表示判断はKaito-Iwase（P-21）、P-18/D-26 | 提出前は既存表示を説明。追加計算・日数への読み替えはしない |

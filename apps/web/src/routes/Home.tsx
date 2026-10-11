@@ -15,6 +15,8 @@ export function Home() {
   return (
     <main className="fr fr-auth fr-auth--home">
       <PageTitle />
+      {/* 名前・問い・登録の操作を、Todayと同じ朝焼けの空の上に置き、山並みを背景の下側に広げる（#221） */}
+      <div className="fr-welcome-hero">
       <header className="fr-auth__head">
         <p className="fr-auth__name">{appCopy.name}</p>
       </header>
@@ -37,8 +39,8 @@ export function Home() {
             </div>
           )}
         </div>
-        <div className="fr-welcome__art" aria-hidden="true" />
       </section>
+      </div>
       <ol className="fr-welcome__steps" aria-label={c.stepsLabel}>
         {c.steps.map((step, index) => <li key={step}><span aria-hidden="true">0{index + 1}</span>{step}</li>)}
       </ol>

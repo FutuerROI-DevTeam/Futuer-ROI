@@ -212,6 +212,22 @@
   padding: var(--fr-space-6) var(--fr-gutter);
 }
 
+.fr-goalform__nowrap {
+  white-space: nowrap;
+}
+
+/* スマートフォン幅では上のバーに同じ「Goalを編集」が出るので、見出しは読み上げだけに残す（#221） */
+@media (max-width: 959px) {
+  .fr-goalform__intro h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 .fr-goalform__intro h1 {
   font-size: var(--fr-fs-date-pair);
   font-weight: 700;
@@ -289,10 +305,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--fr-space-5);
-}
-
-.fr-goalform__group--schedule {
-  background: var(--fr-dawn-soft);
 }
 
 .fr-goalform__pair {

@@ -10,7 +10,7 @@ import { fullDate, longDate, parseLocalDate, shortDate } from '../../copy/date.t
 import { choiceFromLog, describeChoice } from '../logs/record-log.ts';
 
 /** 今日は記録済み（R-07）。比較（中心指標）は出さず、記録内容を出す。「記録を変更」で下の2択を選び直せるようにする（#79）。 */
-export function RecordedSummary({ todayLog, fmt, onChange }: { todayLog: Log; fmt: AmountFormat; onChange: () => void }) {
+export function RecordedSummary({ todayLog, fmt, onChange, changeDisabled = false }: { todayLog: Log; fmt: AmountFormat; onChange: () => void; /** 昨日を訂正している間は押せない（今日と昨日を同時に編集しない）。 */ changeDisabled?: boolean }) {
   return (
     <section className="fr-today__top" aria-labelledby="fr-recorded-title">
       <h1 id="fr-recorded-title" className="fr-today__question" tabIndex={-1}>
@@ -25,7 +25,7 @@ export function RecordedSummary({ todayLog, fmt, onChange }: { todayLog: Log; fm
             </span>
           ) : null}
         </div>
-        <Button icon="edit" onClick={onChange}>
+        <Button icon="edit" disabled={changeDisabled} onClick={onChange}>
           {todayCopy.changeRecord}
         </Button>
       </div>
@@ -89,21 +89,11 @@ export function AchievedFacts({
   );
 }
 
-/** 今日の記録を選び直している間の上部（デザイン D5-change）。いまの記録を見せ、「変更をやめる」で元に戻す。 */
-export function ChangeHeader({
-  log,
-  sessionAmount,
-  fmt,
-  cancelDisabled,
-  onCancel,
-}: {
-  log: Log;
-  sessionAmount: number;
-  fmt: AmountFormat;
-  /** 今日の保存中は押せない（保存の結果・失敗を見失わないため）。 */
-  cancelDisabled: boolean;
-  onCancel: () => void;
-}) {
+/**
+ * 今日の記録を選び直している間の上部（デザイン D5-change）。いまの記録を見せる。
+ * 「変更をやめる」はスクロールしても押せるよう、下の記録の欄（RecordChoiceBar）に置く（#221）。
+ */
+export function ChangeHeader({ log, sessionAmount, fmt }: { log: Log; sessionAmount: number; fmt: AmountFormat }) {
   const record = describeChoice(choiceFromLog(log), sessionAmount, fmt.record, todayCopy.recordedRest);
   // 「記録を変更」を押すとそのボタンが消えるので、この見出しへフォーカスを移す
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -114,9 +104,6 @@ export function ChangeHeader({
         {todayCopy.changeTitle}
       </h1>
       <p className="fr-today__summary">{todayCopy.changeCurrent(record)}</p>
-      <Button variant="text" disabled={cancelDisabled} onClick={onCancel}>
-        {todayCopy.cancelChange}
-      </Button>
     </section>
   );
 }
@@ -125,12 +112,12 @@ export function ChangeHeader({
  * 達成済みの画面で、今日の記録を直す入口（R-03・R-08）。誤った量で達成済みになっても、正しい量や「休んだ」へ直せるようにする。
  * 押すと下の記録の2択が選び直しの状態になる。記録済みの昨日の要約行と同じ形にそろえる。
  */
-export function TodayRecordLine({ log, today, sessionAmount, fmt, onChange }: { log: Log; today: string; sessionAmount: number; fmt: AmountFormat; onChange: () => void }) {
+export function TodayRecordLine({ log, today, sessionAmount, fmt, onChange, changeDisabled = false }: { log: Log; today: string; sessionAmount: number; fmt: AmountFormat; onChange: () => void; changeDisabled?: boolean }) {
   const record = describeChoice(choiceFromLog(log), sessionAmount, fmt.record, todayCopy.recordedRest);
   return (
     <section className="fr-yesterday fr-yesterday--summary" aria-label={todayCopy.recordedTitle}>
       <p className="fr-yesterday__summary">{todayCopy.todaySummary(shortDate(parseLocalDate(today)), record)}</p>
-      <Button variant="text" icon="edit" aria-label={todayCopy.todayChangeLabel(longDate(today))} onClick={onChange}>
+      <Button variant="text" icon="edit" aria-label={todayCopy.todayChangeLabel(longDate(today))} disabled={changeDisabled} onClick={onChange}>
         {todayCopy.yesterdayChange}
       </Button>
     </section>

@@ -2,6 +2,7 @@ import { act, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AmountEditor } from '../src/features/logs/AmountEditor.tsx';
 import { RecordChoiceBar } from '../src/features/logs/RecordChoiceBar.tsx';
+import { YesterdayPrompt } from '../src/features/logs/YesterdayPrompt.tsx';
 import { amountFormat, RECORD_AMOUNT_MAX } from '../src/copy/amount.ts';
 import { todayCopy } from '../src/copy/today.ts';
 
@@ -31,10 +32,11 @@ const enter = async (text: string) => act(async () => {
 });
 const key = async (key: string, init: KeyboardEventInit = {}) => act(async () => { input().dispatchEvent(new KeyboardEvent('keydown', {key, bubbles: true, ...init})); await tick(); });
 const editor = (initial = 20, busy = false, unit: 'minutes' | 'sessions' = 'minutes', sessionAmount = 20) => <AmountEditor label="量のテスト" initial={initial} sessionAmount={sessionAmount} fmt={amountFormat({unit})} busy={busy} onSubmit={amount => writes.push({amount})} onCancel={() => { cancels++; }} />;
-const saver = (busy = false) => ({isSaving: busy, saving: busy ? {choice: {status: 'DONE'}} : null, failure: null, isStaleDate: () => false, save: (vars: unknown) => writes.push(vars)} as any);
-function Dock({initial = 20, amount = null, busy = false, locked = false}: {initial?: number; amount?: number | null; busy?: boolean; locked?: boolean}) {
+const failure = {vars: {localDate: '2026-10-10', unit: 'minutes', choice: {status: 'DONE', amount: 20}}, error: new Error('network')};
+const saver = (busy = false, failed = false) => ({isSaving: busy, saving: busy ? {choice: {status: 'DONE'}} : null, failure: failed ? failure : null, settingsReady: true, meaningChanged: false, reloadingSettings: false, settingsReloadFailed: false, reloadSettings: () => {}, retry: () => {}, reset: () => {}, isStaleDate: () => false, save: (vars: unknown) => writes.push(vars)} as any);
+function Dock({initial = 20, amount = null, busy = false, locked = false, failed = false, onCancel}: {initial?: number; amount?: number | null; busy?: boolean; locked?: boolean; failed?: boolean; onCancel?: () => void}) {
   const [editing, setEditing] = useState(false);
-  return <RecordChoiceBar today="2026-10-10" sessionAmount={initial} fmt={amountFormat({unit: 'minutes'})} current={amount === null ? null : {localDate: '2026-10-10', status: 'DONE', amount}} saver={saver(busy)} locked={locked} editingAmount={editing} onEditingAmountChange={setEditing} onRefresh={() => {}} />;
+  return <RecordChoiceBar today="2026-10-10" sessionAmount={initial} fmt={amountFormat({unit: 'minutes'})} current={amount === null ? null : {localDate: '2026-10-10', status: 'DONE', amount}} saver={saver(busy, failed)} locked={locked} editingAmount={editing} onEditingAmountChange={setEditing} onRefresh={() => {}} {...(onCancel ? {onCancelChange: onCancel} : {})} />;
 }
 
 async function run() {
@@ -124,7 +126,44 @@ async function run() {
   const rest = [...host.querySelectorAll<HTMLButtonElement>('.fr-choice')].find(b => b.textContent?.includes(todayCopy.choiceRest))!;
   await click(rest); ensure(writes.length === 1 && writes[0].choice.status === 'SKIPPED' && writes[0].choice.amount === null, 'rest contract altered');
   results.push('rest remains SKIPPED/null with no zero amount');
+  // 結果の writes は「休む」の保存を返す（呼び出し側の検査）。この後の検査で writes を使い直すので写しを取る
+  const restWrites = [...writes];
   ensure(host.textContent?.includes(todayCopy.choiceRest), 'rest label lost');
-  document.getElementById('result')!.textContent = JSON.stringify({ok: true, results, writes});
+
+  // 選び直し中の「変更をやめる」は下の欄にあり、保存失敗後・昨日の訂正中もやめられる。保存中は押せない（#221）
+  let cancelled = 0;
+  const onCancel = () => { cancelled++; };
+  const cancelButton = () => button(todayCopy.cancelChange);
+  await render(<Dock onCancel={onCancel} />); ensure(!cancelButton(), 'cancel shown outside change mode');
+  await render(<Dock amount={20} onCancel={onCancel} />); await click(cancelButton()); ensure(cancelled === 1, 'cancel in the dock did not stop the change');
+  await render(<Dock amount={20} locked onCancel={onCancel} />); await click(cancelButton()); ensure(cancelled === 2, 'cancel absent while yesterday is being corrected');
+  await render(<Dock amount={20} failed onCancel={onCancel} />); await click(cancelButton()); ensure(cancelled === 3, 'cancel absent after a failed save');
+  // 保存中は欄が「保存中」の案内だけになり、やめる入口を出さない（押して保存の状態を消さない）
+  await render(<Dock amount={20} busy onCancel={onCancel} />); ensure(!cancelButton() && cancelled === 3, 'cancel offered while saving');
+  results.push('change-mode cancel lives in the dock, survives locked/failed states and is not offered while saving');
+  // 量の入力を開いていても、選び直しそのものをやめられる（#221）
+  await render(<Dock amount={20} onCancel={onCancel} />); await click(button(todayCopy.changeAmount));
+  ensure(input() && cancelButton(), 'cancel absent while the amount editor is open in change mode');
+  await click(cancelButton()); ensure(cancelled === 4, 'cancel in the amount editor did not stop the change');
+  results.push('change-mode cancel stays available while the amount editor is open');
+
+  // 下限・上限で押せなくなるボタンにフォーカスを残さず、反対側へ移す（#221）
+  await render(<Dock initial={10} />); minus().focus(); await click(minus());
+  ensure(shown().includes('5分') && minus().disabled && document.activeElement === plus(), 'dock minus at the limit dropped focus');
+  await render(<Dock amount={RECORD_AMOUNT_MAX - 1} />); plus().focus(); await click(plus());
+  ensure(plus().disabled && document.activeElement === minus(), 'dock plus at the limit dropped focus');
+  await render(editor(10, false, 'minutes', 10)); minus().focus(); await click(minus());
+  ensure(input().value === '5' && minus().disabled && document.activeElement === plus(), 'editor minus at the limit dropped focus');
+  results.push('reaching a step limit moves focus to the opposite button instead of dropping it');
+
+  // 昨日の問いかけも今日と同じ量の行：−／＋で変えた量を、昨日の日付で保存する（#221）
+  writes.length = 0;
+  await render(<YesterdayPrompt yesterday="2026-10-09" sessionAmount={20} fmt={amountFormat({unit: 'minutes'})} saver={saver()} onLater={() => {}} onRefresh={() => {}} />);
+  await click(plus());
+  ensure(host.querySelector('.fr-record__amount-value')?.textContent === '25分' && writes.length === 0, 'yesterday step saved or did not change in place');
+  await click([...host.querySelectorAll<HTMLButtonElement>('.fr-choice')].find(b => b.textContent?.includes(todayCopy.yesterdayDone))!);
+  ensure(writes.length === 1 && writes[0].localDate === '2026-10-09' && writes[0].choice.status === 'DONE' && writes[0].choice.amount === 25, 'yesterday prompt did not save the stepped amount for yesterday');
+  results.push('yesterday prompt saves the stepped amount for yesterday');
+  document.getElementById('result')!.textContent = JSON.stringify({ok: true, results, writes: restWrites});
 }
 run().catch(error => { document.getElementById('result')!.textContent = JSON.stringify({ok: false, error: String(error), results, writes}); });

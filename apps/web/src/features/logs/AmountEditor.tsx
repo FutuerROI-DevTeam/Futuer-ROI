@@ -30,7 +30,7 @@ export function AmountEditor({
   busy: boolean;
   onSubmit: (amount: number) => void;
   onCancel: () => void;
-  /** 主ボタンの文言（既定は「この量で記録」。昨日の訂正では「変更を保存」）。 */
+  /** 主ボタンの文言（既定は「この量で記録」）。 */
   submitLabel?: string;
   cancelLabel?: string;
 }) {
@@ -46,6 +46,16 @@ export function AmountEditor({
   // −／＋の刻み（1回の量に合わせたきりのよい幅。copy/amount.ts）
   const stepSize = fmt.recordStep(sessionAmount);
   const canDecrease = valid && stepRecordAmount(value, stepSize, -1) !== value;
+  const minusRef = useRef<HTMLButtonElement>(null);
+  const plusRef = useRef<HTMLButtonElement>(null);
+  // ボタンで下限・上限に達して押せなくなるときは、先に反対側のボタンへフォーカスを移す（押せないボタンにフォーカスを残さない、#221）
+  const stepByButton = (direction: -1 | 1) => {
+    if (busy || !valid) return;
+    const next = stepRecordAmount(value, stepSize, direction);
+    const limit = direction === -1 ? stepRecordAmount(next, stepSize, -1) === next : next >= RECORD_AMOUNT_MAX;
+    if (limit) (direction === -1 ? plusRef : minusRef).current?.focus();
+    step(direction);
+  };
   const step = (direction: -1 | 1) => {
     if (busy || !valid) return;
     // 同じevent batchの連打でも、前の更新後の入力値を基準にする。
@@ -69,7 +79,7 @@ export function AmountEditor({
   return (
     <div className="fr-amount" ref={editor} role="group" aria-label={label} tabIndex={-1}>
       <div className="fr-amount__stepper">
-        <IconButton icon="minus" label={`${todayCopy.amountDecrease}（${fmt.record(stepSize)}ずつ）`} disabled={busy || !canDecrease} onClick={() => step(-1)} />
+        <IconButton ref={minusRef} icon="minus" label={`${todayCopy.amountDecrease}（${fmt.record(stepSize)}ずつ）`} disabled={busy || !canDecrease} onClick={() => stepByButton(-1)} />
         <Field id={id} label={label} error={error} help={help}>
           <NumberInput
             id={id}
@@ -100,7 +110,7 @@ export function AmountEditor({
             aria-describedby={hasDifferentAmount ? `${aria['aria-describedby']} ${id}-prediction-note` : aria['aria-describedby']}
           />
         </Field>
-        <IconButton icon="plus" label={`${todayCopy.amountIncrease}（${fmt.record(stepSize)}ずつ）`} disabled={busy || !valid || value >= RECORD_AMOUNT_MAX} onClick={() => step(1)} />
+        <IconButton ref={plusRef} icon="plus" label={`${todayCopy.amountIncrease}（${fmt.record(stepSize)}ずつ）`} disabled={busy || !valid || value >= RECORD_AMOUNT_MAX} onClick={() => stepByButton(1)} />
       </div>
       {hasDifferentAmount ? <p id={`${id}-prediction-note`} className="fr-amount__prediction-note">{todayCopy.amountPredictionNote(fmt.record(sessionAmount))}</p> : null}
       <div className="fr-amount__actions">
