@@ -3,7 +3,7 @@ import type { Log } from '@contracts';
 import { StatusBadge } from '../../ui/components/StatusBadge.tsx';
 import { Button } from '../../ui/components/Button.tsx';
 import { Icon } from '../../ui/components/Icon.tsx';
-import type { AmountFormat } from '../../copy/amount.ts';
+import { recordDisplay, type AmountFormat } from '../../copy/amount.ts';
 import { todayCopy } from '../../copy/today.ts';
 import { Link } from '@tanstack/react-router';
 import { fullDate, longDate, parseLocalDate, shortDate } from '../../copy/date.ts';
@@ -21,7 +21,7 @@ export function RecordedSummary({ todayLog, fmt, onChange, changeDisabled = fals
           <StatusBadge status={todayLog.status === 'DONE' ? 'done' : 'rest'} large />
           {todayLog.status === 'DONE' && todayLog.amount !== null ? (
             <span className="fr-recorded__amount">
-              {fmt.record(todayLog.amount)}
+              {recordDisplay(fmt, todayLog.amount)}
             </span>
           ) : null}
         </div>
@@ -94,7 +94,7 @@ export function AchievedFacts({
  * 「変更をやめる」はスクロールしても押せるよう、下の記録の欄（RecordChoiceBar）に置く（#221）。
  */
 export function ChangeHeader({ log, sessionAmount, fmt }: { log: Log; sessionAmount: number; fmt: AmountFormat }) {
-  const record = describeChoice(choiceFromLog(log), sessionAmount, fmt.record, todayCopy.recordedRest);
+  const record = describeChoice(choiceFromLog(log), sessionAmount, (n) => recordDisplay(fmt, n), todayCopy.recordedRest);
   // 「記録を変更」を押すとそのボタンが消えるので、この見出しへフォーカスを移す
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => headingRef.current?.focus(), []);
@@ -113,7 +113,7 @@ export function ChangeHeader({ log, sessionAmount, fmt }: { log: Log; sessionAmo
  * 押すと下の記録の2択が選び直しの状態になる。記録済みの昨日の要約行と同じ形にそろえる。
  */
 export function TodayRecordLine({ log, today, sessionAmount, fmt, onChange, changeDisabled = false }: { log: Log; today: string; sessionAmount: number; fmt: AmountFormat; onChange: () => void; changeDisabled?: boolean }) {
-  const record = describeChoice(choiceFromLog(log), sessionAmount, fmt.record, todayCopy.recordedRest);
+  const record = describeChoice(choiceFromLog(log), sessionAmount, (n) => recordDisplay(fmt, n), todayCopy.recordedRest);
   return (
     <section className="fr-yesterday fr-yesterday--summary" aria-label={todayCopy.recordedTitle}>
       <p className="fr-yesterday__summary">{todayCopy.todaySummary(shortDate(parseLocalDate(today)), record)}</p>

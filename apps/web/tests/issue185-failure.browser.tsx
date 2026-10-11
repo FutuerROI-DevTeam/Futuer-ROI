@@ -44,7 +44,11 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 5));
 const settle = async () => { for (let i = 0; i < 15; i++) await act(tick); };
 const input = () => host.querySelector<HTMLInputElement>('#goal-title');
 const submit = () => host.querySelector<HTMLButtonElement>('button[type="submit"]');
-const view = () => ({ title: input()?.value, total: host.querySelector<HTMLInputElement>('#goal-totalRequired')?.value,
+const totalMinutes = () => {
+  const h = host.querySelector<HTMLInputElement>('#goal-totalRequired'), m = host.querySelector<HTMLInputElement>('#goal-totalRequired-minutes');
+  return m ? String(Number(h?.value) * 60 + Number(m.value)) : h?.value;
+};
+const view = () => ({ title: input()?.value, total: totalMinutes(),
   amount: host.querySelector<HTMLInputElement>('#goal-sessionAmount')?.value,
   invalid: input()?.getAttribute('aria-invalid'), disabled: input()?.disabled, submitDisabled: submit()?.disabled,
   submitText: submit()?.textContent, conflict: host.textContent?.includes('ほかの画面で内容が変わりました') ?? false,
@@ -58,9 +62,12 @@ const view = () => ({ title: input()?.value, total: host.querySelector<HTMLInput
   initialDisabled: host.querySelector<HTMLInputElement>('#goal-initialProgress')?.disabled });
 const navigate = async (to: string) => { await act(async () => { void router.navigate({ to }); await tick(); }); await settle(); };
 const set = async (selector: string, value: string) => act(async () => {
-  const target = host.querySelector<HTMLInputElement>(selector)!;
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(target, value);
-  target.dispatchEvent(new Event('input', { bubbles: true })); await tick();
+  const parts = selector === '#goal-totalRequired' && host.querySelector<HTMLInputElement>(selector + '-minutes');
+  for (const [id, raw] of parts ? [[selector, String(Math.floor(Number(value) / 60))], [selector + '-minutes', String(Number(value) % 60)]] : [[selector, value]]) {
+    const target = host.querySelector<HTMLInputElement>(id!)!;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(target, raw);
+    target.dispatchEvent(new Event('input', { bubbles: true })); await tick();
+  }
 });
 const clickSave = async () => { await act(async () => { submit()!.click(); await tick(); }); await settle(); };
 const realNow = Date.now; let advance = 0, visibility = 'visible';
@@ -244,8 +251,8 @@ async function run() {
   await formSubmit(); ensure(writes.length === conflictCount, 'programmatic conflict submit sent');
   await reload(); ensure(!view().conflict && view().title === 'A-PRIVATE-185-DRAFT' && view().total === '123', 'explicit rebase lost edited input');
   await check(); ensure(!view().conflict && view().title === 'A-PRIVATE-185-DRAFT', 'check resurrected old409');
-  const lockedButtons = [...host.querySelectorAll<HTMLButtonElement>('[aria-labelledby="goal-unit-label"] button')];
-  ensure(lockedButtons.length === 2 && lockedButtons.every(b => b.disabled), 'fresh unitLocked missing');
+  const lockedRadios = [...host.querySelectorAll<HTMLInputElement>('input[name="goal-unit"]')];
+  ensure(lockedRadios.length === 2 && lockedRadios.every(b => b.matches(':disabled')), 'fresh unitLocked missing');
   await set('#goal-targetDate', '2020-01-01'); await formSubmit();
   ensure(host.querySelector('#goal-targetDate')?.getAttribute('aria-invalid') === 'true' && writes.length === conflictCount, 'fresh date validation missing');
   await set('#goal-targetDate', '2099-01-02'); saveError = api(503, 'UNAVAILABLE'); await formSubmit();
@@ -256,7 +263,7 @@ async function run() {
     results.push({ label: 'edit/409-fresh-lock-rebase-validation', preserved: false, error: String(error), view: view() } as any);
   }
   await reset();
-  await act(async () => { host.querySelectorAll<HTMLButtonElement>('[aria-labelledby="goal-unit-label"] button')[1]!.click(); await tick(); }); await settle();
+  await act(async () => { host.querySelector<HTMLInputElement>('input[name="goal-unit"][value="sessions"]')!.click(); await tick(); }); await settle();
   await failed(api(409, 'GOAL_SETTINGS_CONFLICT')); const editedUnitCount = writes.length;
   fresh = { unit: 'minutes', unitLocked: true, hasLogs: true, goalSettingsRevision: 10 };
   await check(); ensure(view().submitDisabled, 'fresh unit lock cleared conflict');

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { RECORD_AMOUNT_MAX, stepRecordAmount, type AmountFormat } from '../../copy/amount.ts';
+import { recordDisplay, RECORD_AMOUNT_MAX, stepRecordAmount, type AmountFormat } from '../../copy/amount.ts';
 import { todayCopy } from '../../copy/today.ts';
 import { Button, IconButton } from '../../ui/components/Button.tsx';
 import { ChoiceButton } from '../../ui/components/ChoiceButton.tsx';
@@ -140,7 +140,7 @@ export function RecordChoices({
   onSave: (choice: RecordChoice) => void;
   onCancelChange?: (() => void) | undefined;
 }) {
-  const label = fmt.record;
+  const label = (n: number) => recordDisplay(fmt, n);
   const predictionNoteId = useId();
   const minusRef = useRef<HTMLButtonElement>(null);
   const plusRef = useRef<HTMLButtonElement>(null);

@@ -1,4 +1,14 @@
 /* Goal 一覧・作成・編集。配色と文字は共有 tokens を使う。 */
+.fr-goals__amount { font-size: 24px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.fr-goals__initial { font-size: var(--fr-fs-help); color: var(--fr-ink-2); }
+.fr-goals__achieved { color: var(--fr-rec); font-size: var(--fr-fs-help); font-weight: 700; }
+.fr-unit-radio, .fr-time-mode { margin: 0; padding: 0; border: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; min-width: 0; }
+.fr-unit-radio legend { margin-bottom: 8px; font-weight: 700; }
+.fr-unit-radio label, .fr-time-mode label { display: inline-flex; align-items: center; gap: 8px; min-height: var(--fr-tap); cursor: pointer; }
+.fr-unit-radio input, .fr-time-mode input { accent-color: var(--fr-rec); width: 20px; height: 20px; }
+.fr-time-mode { font-size: var(--fr-fs-help); }
+.fr-time-parts { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; }
+.fr-time-parts > * { min-width: 0; }
 .fr-goals__head {
   padding: var(--fr-space-6) var(--fr-gutter) var(--fr-space-5);
   display: flex;

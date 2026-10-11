@@ -277,7 +277,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
   // 最新を読み直したときの回答。入力中の回答で上書きする前に確かめられるよう、知らせとして出す
   const [latestAnswers, setLatestAnswers] = useState<GoalWithAnswers['questionPrior'] | null>(restored?.latestAnswers ?? null);
   // 初期質問の開閉。保存済みの回答がある編集では開いた状態から始める
-  const [priorOpen, setPriorOpen] = useState(() => restored?.priorOpen ?? (values.questionPrior.a !== null || values.questionPrior.b !== null));
+  const [priorOpen, setPriorOpen] = useState(() => restored?.priorOpen ?? (mode === 'create' || values.questionPrior.a !== null || values.questionPrior.b !== null));
   const [reloadingLatest, setReloadingLatest] = useState(false);
   const reloadInFlight = useRef(false);
   // この画面がまだ表示されているか。保存の途中で離れた後に、別の画面を一覧へ移さないために使う

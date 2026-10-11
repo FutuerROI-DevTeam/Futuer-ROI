@@ -31,6 +31,7 @@ import { ProgressDetails, ProgressSummary } from './ProgressSummary.tsx';
 import { AchievedFacts, AchievedPanel, ChangeHeader, RecordedSummary, TodayRecordLine } from './RecordedSummary.tsx';
 import { useTodayData } from './useTodayData.ts';
 import { toForecastView } from './forecast-view.ts';
+import { SaveFeedback } from '../logs/SaveFeedback.tsx';
 import { useSaveLog } from '../logs/useSaveLog.ts';
 import { showYesterdayPrompt } from './yesterday-later.ts';
 import { YesterdayCorrection } from '../logs/YesterdayCorrection.tsx';
@@ -66,6 +67,14 @@ export function TodayPage({ goalId }: { goalId: string }) {
 }
 
 function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number }) {
+  // graphは一つだけ描画し、画面幅とともにDOM順も変える（PCは週間履歴の後、スマホは見通しの後）。
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 960px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 960px)');
+    const changed = () => setWide(media.matches);
+    media.addEventListener('change', changed);
+    return () => media.removeEventListener('change', changed);
+  }, []);
   // Goal・Today・記録は同じ時点の材料がそろったものだけを使う（snapshot）。日付の切り替わりでも取り直す
   const { goalQuery, todayQuery, logsQuery, snapshot, goal: acceptedGoal, resyncFailed, refresh, retryResync } = useTodayData(goalId, notBefore);
   // 今日の記録（#79）と昨日の補完・訂正（#80）。保存の状態は別々に持つ
@@ -255,6 +264,11 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
     }
   }
 
+  const validSnapshot = snapshot && !todayQuery.isError && !goalQuery.isError && !logsQuery.isError && !resyncFailed;
+  const historyArea = validSnapshot ? <ForecastBoundary resetKey={todayQuery.dataUpdatedAt}>
+    <TodayContent area="history" goal={snapshot.goal} today={snapshot.today} logs={snapshot.logs} changing={changing} changeDisabled={!!yesterdayEdit} onChange={startTodayChange} />
+  </ForecastBoundary> : null;
+  const feedback = [todaySaver.feedback, yesterdaySaver.feedback].filter(value => value !== null).sort((a, b) => (b.sequence ?? 0) - (a.sequence ?? 0))[0] ?? null;
   return (
     <div className="fr fr-page fr-page--today">
       <PageTitle title={recordGoal?.title} />
@@ -275,10 +289,11 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
         </Link>
         {goal ? <GoalMenu goalId={goalId} onCorrectYesterday={startYesterdayCorrection} /> : null}
       </nav>
-      {/* 同じsnapshotをareaで排他的に描画し、DOMをprimary→記録→detailsの順にする。
+      {/* 同じsnapshotをareaで排他的に描画し、DOMをPCではprimary→記録→graph→details、スマホではprimary→記録→details→graphの順にする。
           TodayContentは表示のみで取得/保存をせず、分割しても予測計算や操作部品を二重に実行しない。 */}
       <div className="fr-today-layout">
       <div className="fr-today__scroll">
+      <div className="fr-today__primary">
       {todayQuery.isError || goalQuery.isError || logsQuery.isError ? (
         savedButStale ? (
           <SavedButStale onRetry={refresh} />
@@ -303,6 +318,9 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
       )}
 
 
+      <SaveFeedback value={validSnapshot && !changing && !amountEditing && !yesterdayEdit ? feedback : null} />
+      </div>
+
       {goal && today && snapshot ? (
         <section className="fr-today__records" aria-label={todayCopy.recentDays}>
           <RecentDays
@@ -317,6 +335,8 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
         </section>
       ) : null}
 
+      {wide ? historyArea : null}
+
       {snapshot && !todayQuery.isError && !goalQuery.isError && !logsQuery.isError && !resyncFailed ? (
         <ForecastBoundary resetKey={todayQuery.dataUpdatedAt}>
           <TodayContent area="details"
@@ -329,6 +349,8 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
           />
         </ForecastBoundary>
       ) : null}
+
+      {!wide ? historyArea : null}
 
 
       </div>
@@ -378,7 +400,7 @@ function TodayContent({
   changeDisabled,
   onChange,
 }: {
-  area: 'primary' | 'details';
+  area: 'primary' | 'details' | 'history';
   goal: Goal;
   today: Today;
   logs: Log[];
@@ -393,13 +415,14 @@ function TodayContent({
   const view = toForecastView(today.prediction, goal.unit, { provenance: today.provenance, plan: today.plan, sessionAmount: today.context.sessionAmount });
   assertForecastPresentation(view);
   const fmt = amountFormat(goal);
+  if (area === 'history') return view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded'
+    ? <ProgressDetails progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} /> : null;
+  const missingA = today.provenance.a === 'NONE';
+  const missingB = today.provenance.b === 'NONE';
+  const questionLink = <Link to="/goals/$goalId/edit" params={{ goalId: goal.id }} hash="fr-goalform-prior" className="fr-link">{todayCopy.answerQuestions}（任意）</Link>;
   const progress =
     view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded' ? (
       <ProgressSummary showDetails={false} brief={view.kind === 'forecast' || view.kind === 'today-recorded' ? <CompletionBrief completion={view.completion} /> : null} progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} />
-    ) : null;
-  const progressDetails =
-    view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded' ? (
-      <ProgressDetails progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} />
     ) : null;
   const outlookTitle = todayCopy.outlookTitle(fmt.total(goal.totalRequired));
   const changeHeader =
@@ -416,16 +439,13 @@ function TodayContent({
       </> : <div className="fr-today__right">
         {progress}
         <AchievedFacts goalId={goal.id} recordStartDate={goal.recordStartDate} reached={reachedDate(goal.initialProgress, goal.totalRequired, logs)} />
-        <div className="fr-today__details">{progressDetails}</div>
       </div>;
     case 'today-recorded':
     case 'forecast':
       if (area === 'primary') {
         if (view.kind === 'today-recorded') return changeHeader ?? (today.todayLog ? <RecordedSummary todayLog={today.todayLog} fmt={fmt} onChange={onChange} changeDisabled={changeDisabled} /> : null);
         return <section className="fr-today__top" aria-labelledby="fr-question">
-          <CoreMetric core={view.core} guidance={view.core.kind === 'insufficient' && !hasAnswers(goal) ? (
-            <Link to="/goals/$goalId/edit" params={{ goalId: goal.id }} className="fr-link">{todayCopy.answerQuestions}</Link>
-          ) : null}>
+          <CoreMetric core={view.core} guidance={view.core.kind === 'insufficient' && missingB ? questionLink : null}>
             <h1 id="fr-question" className="fr-today__question">
               {todayCopy.question.split(/(?<=、|は)/).map((phrase, index) => <Fragment key={index}>{phrase}<wbr /></Fragment>)}
             </h1>
@@ -435,19 +455,15 @@ function TodayContent({
       return <div className="fr-today__right">
         {progress}
         <OutlookPanel showDetails={false} completion={view.completion} today={today.today} title={outlookTitle} fmt={fmt} targetDate={goal.targetDate} sessionAmount={today.context.sessionAmount} />
-        <div className="fr-today__details">
+        <Link to="/goals/$goalId/edit" params={{ goalId: goal.id }} hash="goal-sessionAmount" className="fr-link">計算に使う量を確認する</Link>
+        {view.completion.kind !== 'estimate' && (view.kind === 'today-recorded' ? missingA || missingB : missingA && !missingB) ? questionLink : null}
+        {view.completion.kind === 'estimate' ? <div className="fr-today__details">
           <CompletionDetails completion={view.completion} today={today.today} targetDate={goal.targetDate} />
-          {progressDetails}
-        </div>
+        </div> : null}
       </div>;
     default:
       throw new TypeError(`Today の表示データとして想定していない状態です: ${view.kind}`);
   }
-}
-
-/** R-11 の回答が1つでもあるか（Goal は ?view=r11 で読むので questionPrior を持つ）。 */
-function hasAnswers(goal: Goal & { questionPrior?: { a: unknown; b: unknown } }): boolean {
-  return goal.questionPrior !== undefined && (goal.questionPrior.a !== null || goal.questionPrior.b !== null);
 }
 
 function Loading() {

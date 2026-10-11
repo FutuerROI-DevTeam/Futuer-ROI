@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import type { Log } from '@contracts';
-import { ResponsiveDetails } from './ResponsiveDetails.tsx';
 import { Section, SectionLabel } from '../../ui/components/Section.tsx';
 import type { AmountFormat } from '../../copy/amount.ts';
 import { todayCopy } from '../../copy/today.ts';
@@ -58,10 +57,12 @@ export function ProgressSummary({ progress, initialProgress, logs, recordStartDa
 
 export function ProgressDetails({ progress, initialProgress, logs, recordStartDate, today, fmt }: Props) {
   return (
-    <ResponsiveDetails summary={todayCopy.progressDetailsTitle}>
+    <section className="fr-today__history-chart" aria-labelledby="fr-cumulative-title">
+      <h2 id="fr-cumulative-title">積み上げ推移</h2>
+      <p className="fr-note">表示期間：{recordStartDate}〜{today}</p>
       <p className="fr-note">{todayCopy.progressHelp(initialProgress > 0 ? fmt.total(initialProgress) : null)}</p>
       <CumulativeChartView logs={logs} initialProgress={initialProgress} total={progress.total} recordStartDate={recordStartDate} today={today} fmt={fmt} done={progress.done} />
-    </ResponsiveDetails>
+    </section>
   );
 }
 
@@ -82,7 +83,7 @@ function CumulativeChartView({
   fmt: AmountFormat;
   done: number;
 }) {
-  const axis = fmt.axis(total);
+  const axis = fmt.axis(done);
   // 実際の幅で描く（縮めて表示すると文字まで小さくなるため）
   const [ref, width] = useElementWidth<HTMLDivElement>(DEFAULT_CHART_WIDTH);
   // 分のGoalは、目盛りを1時間刻みにそろえる（P-18）
@@ -93,14 +94,15 @@ function CumulativeChartView({
   const lastPoint = c.points[c.points.length - 1];
   return (
     <div ref={ref} className="fr-chart-box">
+    <p className="fr-note">表示範囲：0〜{fmt.total(c.maxValue)}{c.targetY === null ? '（目標量は範囲外）' : ''}</p>
     <svg className="fr-chart" width={width} height={CUMULATIVE_HEIGHT} viewBox={`0 0 ${width} ${CUMULATIVE_HEIGHT}`} role="img" aria-label={`記録開始日から今日までの累計。今日 ${fmt.total(done)}。目標は${fmt.total(total)}`}>
       <text x="50" y="16" textAnchor="end" className="fr-chart__text">
         {axis.unit}
       </text>
-      <line x1={b.left} y1={c.targetY} x2={b.right} y2={c.targetY} className="fr-chart__target" />
+      {c.targetY !== null ? <><line x1={b.left} y1={c.targetY} x2={b.right} y2={c.targetY} className="fr-chart__target" />
       <text x={b.right} y={c.targetY - 8} textAnchor="end" className="fr-chart__text">
         目標 {fmt.total(total)}
-      </text>
+      </text></> : null}
       {c.gridLines.map((g) => (
         <g key={g.value}>
           <line x1={b.left} y1={g.y} x2={b.right} y2={g.y} className="fr-chart__grid" />
@@ -113,20 +115,20 @@ function CumulativeChartView({
       <text x="50" y={c.zeroY + 4} textAnchor="end" className="fr-chart__text">
         0
       </text>
-      <polygon points={area} className="fr-chart__area" />
-      <polyline points={line} className="fr-chart__line" />
+      {!c.singleDay ? <><polygon points={area} className="fr-chart__area" />
+      <polyline points={line} className="fr-chart__line" /></> : null}
       {lastPoint ? <circle cx={lastPoint.x} cy={lastPoint.y} r="5" className="fr-chart__now" /> : null}
-      <text x={b.left} y="218" textAnchor="start" className="fr-chart__text">
+      {!c.singleDay ? <><text x={b.left} y="218" textAnchor="start" className="fr-chart__text">
         {c.startLabel}
-      </text>
-      <text x={b.left} y="234" textAnchor="start" className="fr-chart__text">
+      </text></> : null}
+      {!c.singleDay ? <text x={b.left} y="234" textAnchor="start" className="fr-chart__text">
         記録開始
-      </text>
+      </text> : null}
       <text x={b.right} y="218" textAnchor="end" className="fr-chart__text">
         {c.todayLabel}
       </text>
       <text x={b.right} y="234" textAnchor="end" className="fr-chart__text">
-        今日
+        {c.singleDay ? '記録開始・今日' : '今日'}
       </text>
     </svg>
     </div>

@@ -89,22 +89,22 @@ function GoalRow({ goal, evaluationEnabled }: { goal: Goal; evaluationEnabled: b
   // 累計と総量（分のGoalは時間＋分、P-18）
   const fmt = amountFormat(goal);
   const percent = Math.min(100, Math.floor((goal.progressDone / goal.totalRequired) * 100));
+  const achieved = goal.progressDone >= goal.totalRequired;
   return (
     <li className="fr-goals__row">
       <Link to="/goals/$goalId" params={{ goalId: goal.id }} className="fr-goals__open">
         <span className="fr-goals__row-top">
           <span className="fr-goals__title">{goal.title}</span>
           <span className="fr-goals__row-end">
-            <StatusBadge status={badge[goal.todayStatus]} />
+            {achieved ? <span className="fr-goals__achieved">達成</span> : <StatusBadge status={badge[goal.todayStatus]} />}
           </span>
         </span>
         <span className="fr-goals__row-sub">
           <span className="fr-goals__amount">
             {fmt.total(goal.progressDone)}{' '}
-            <span className="fr-goals__amount-total">
-              / {fmt.total(goal.totalRequired)}
-            </span>
           </span>
+          <span className="fr-goals__amount-total">目標 {fmt.total(goal.totalRequired)} · {percent}%</span>
+          {goal.initialProgress > 0 ? <span className="fr-goals__initial">記録開始前の {fmt.total(goal.initialProgress)} を含む</span> : null}
         </span>
         <span
           className="fr-goals__track"
@@ -117,9 +117,9 @@ function GoalRow({ goal, evaluationEnabled }: { goal: Goal; evaluationEnabled: b
           <span className="fr-goals__fill" style={{ width: `${percent}%` }} />
         </span>
         <span className="fr-goals__row-foot">
-          <span>{c.todayStatus[goal.todayStatus]}</span>
+          <span>{achieved ? '決めた総量に届きました' : c.todayStatus[goal.todayStatus]}</span>
           <span className="fr-goals__next">
-            {c.openToday}
+            {achieved ? '積み上げを見る' : goal.todayStatus === 'UNRECORDED' ? '今日を記録する' : '今日の記録を見る'}
             <Icon name="chevronRight" size={18} />
           </span>
         </span>
