@@ -1,6 +1,4 @@
 import { exactIntegratedReached, integratedCompletionCdf } from './completion-integrated.js';
-import { gamma as sampleGamma, seedFor, splitmix32, uniform } from './random.js';
-import type { Uint32Source } from './random.js';
 import type {
   DurationArtifact, DurationFitOptions, DurationFitResult, DurationForecastInput,
   DurationForecastResult, DurationJointNode, DurationPrior,
@@ -325,12 +323,6 @@ function conditionalCdf(hazards: readonly number[], initialAge: number, N: numbe
   return cdf;
 }
 
-function betaSample(alpha: number, beta: number, random: Uint32Source): number {
-  // Existing Gamma sampler supports shape>=1; this log transform also supports sparse priors.
-  const logDraw = (shape: number) => shape < 1 ?
-    Math.log(sampleGamma(shape + 1, random)) + Math.log(uniform(random)) / shape : Math.log(sampleGamma(shape, random));
-  return sigmoid(logDraw(alpha) - logDraw(beta));
-}
 function quantile(cdf: readonly number[], q: number): number | null {
   const day = cdf.findIndex(value => value >= q - 1e-12); return day < 0 ? null : day;
 }
@@ -338,20 +330,20 @@ function quantile(cdf: readonly number[], q: number): number | null {
 /** Actual N/H/state completion-CDF refinement, including repeated SKIP spells.
  * Finite refinement remains a diagnostic, not a continuous-posterior error bound. */
 function completionRefined(artifact: Extract<DurationArtifact, { kind: 'DURATION_JOINT_V1' }>,
-  input: DurationForecastInput, N: number): boolean {
+  input: DurationForecastInput, N: number): readonly number[] | undefined {
   const { checks, tolerance } = artifact.integration;
   if (input.horizonDays > 30 || artifact.integration.order !== 64 || !checks || checks.length !== 2 ||
-      !positive(tolerance ?? NaN) || tolerance! > 1e-3) return false;
+      !positive(tolerance ?? NaN) || tolerance! > 1e-3) return undefined;
   const low = checks.find(rule => rule.order === 16), middle = checks.find(rule => rule.order === 32);
-  if (!low || !middle) return false;
+  if (!low || !middle) return undefined;
   const rules = [low.joint, middle.joint, artifact.joint];
   const atoms = artifact.gammaPrior.map(atom => atom.gamma), atomIndex = new Map(atoms.map((g, i) => [g, i]));
-  if (atoms.length === 0 || atoms.length > MAX_ATOMS || atomIndex.size !== atoms.length) return false;
+  if (atoms.length === 0 || atoms.length > MAX_ATOMS || atomIndex.size !== atoms.length) return undefined;
   for (const [index, nodes] of rules.entries()) {
     if (!integer(nodes.length, 1, MAX_ATOMS * ORDERS[index]!) ||
         nodes.some(node => !Number.isFinite(node.pDoneAfterSkip) || node.pDoneAfterSkip <= 0 ||
           node.pDoneAfterSkip >= 1 || !atomIndex.has(node.gamma) || !Number.isFinite(node.weight) || node.weight < 0) ||
-        Math.abs(sum(nodes.map(node => node.weight)) - 1) > 1e-10) return false;
+        Math.abs(sum(nodes.map(node => node.weight)) - 1) > 1e-10) return undefined;
   }
   const H = input.horizonDays, initialAge = input.initialState === 'DONE' ? 0 :
     Math.min(input.initialRestDays!, artifact.capDays);
@@ -370,10 +362,10 @@ function completionRefined(artifact: Extract<DurationArtifact, { kind: 'DURATION
   const cells = N === 1 || N === H ? H + 1 : (H + 2) * N * (artifact.capDays + 1);
   if (BigInt(count) * BigInt(p1Order) * BigInt(work) > 100_000_000n ||
       BigInt(count) * BigInt(p1Order) * BigInt(cells) > 100_000_000n ||
-      BigInt(count) * BigInt(artifact.capDays + 1) > 1_000_000n) return false;
+      BigInt(count) * BigInt(artifact.capDays + 1) > 1_000_000n) return undefined;
   let p1Rule: ReturnType<typeof durationBetaQuadrature>;
   try { p1Rule = durationBetaQuadrature(artifact.donePosterior.alpha, artifact.donePosterior.beta, p1Order); }
-  catch (error) { if (error instanceof NumericalInsufficiency) return false; throw error; }
+  catch (error) { if (error instanceof NumericalInsufficiency) return undefined; throw error; }
   const values = [middle.joint, artifact.joint].map(nodes => {
     const result = Array.from({ length: atoms.length + 1 }, () => Array<number>(H + 1).fill(0));
     for (const node of nodes) {
@@ -392,12 +384,16 @@ function completionRefined(artifact: Extract<DurationArtifact, { kind: 'DURATION
   });
   for (let atom = 0; atom <= atoms.length; atom++) for (let day = 0; day <= H; day++) {
     if (!Number.isFinite(values[1]![atom]![day]!) ||
-        Math.abs(values[1]![atom]![day]! - values[0]![atom]![day]!) > tolerance!) return false;
+        Math.abs(values[1]![atom]![day]! - values[0]![atom]![day]!) > tolerance!) return undefined;
   }
-  return true;
+  // Reuse the accepted finite-model CDF instead of adding Monte Carlo error.
+  const cdf = values[1]![atoms.length]!;
+  if (cdf.some(value => value < -1e-10 || value > 1 + 1e-10)) return undefined;
+  return cdf.map(value => Math.max(0, Math.min(1, value)));
 }
 
-/** Deterministic given input+seed. Joint p0/gamma and independent p1 are fixed per path.
+/** Deterministic finite joint mixture, with the independent p1 Beta integrated.
+ * Input samples/seed remain validated for caller compatibility but are unused.
  * Horizon tail mass remains missing, never re-normalized into a finite completion date. */
 export function forecastDurationModel(artifact: DurationArtifact, input: DurationForecastInput): DurationForecastResult {
   const H = input.horizonDays;
@@ -410,7 +406,7 @@ export function forecastDurationModel(artifact: DurationArtifact, input: Duratio
   const N = Math.ceil(input.remainingAmount / input.sessionAmount);
   const exact = artifact.kind === 'BETA_BASELINE_V1';
   const computation = exact ? { method: 'EXACT_BETA' as const, samples: null, seed: null } :
-    { method: 'POSTERIOR_PATHS' as const, samples: input.samples, seed: input.seed };
+    { method: 'POSTERIOR_QUADRATURE' as const, samples: null, seed: null };
   if (N === 0) return { status: 'available', cdf: Array<number>(H + 1).fill(1), p50Days: 0, p80Days: 0, computation };
   if (!exact && input.initialState === 'SKIPPED' && input.initialRestDays === null) {
     return { status: 'insufficient', reason: 'UNKNOWN_CURRENT_DURATION' };
@@ -440,37 +436,7 @@ export function forecastDurationModel(artifact: DurationArtifact, input: Duratio
     node.pDoneAfterSkip < 1 && Number.isFinite(node.gamma) && Number.isFinite(node.weight) && node.weight >= 0), 'Invalid joint node');
   const mass = sum(artifact.joint.map(node => node.weight));
   requireInput(Math.abs(mass - 1) <= 1e-10, 'Joint artifact is not normalized');
-  if (BigInt(input.samples) * BigInt(H) > 100_000_000n ||
-    BigInt(artifact.joint.length) * BigInt(artifact.capDays + 1) > 1_000_000n) {
-    return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
-  }
-  if (!completionRefined(artifact, input, N)) return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
-  const cumulative: number[] = []; let accumulated = 0;
-  artifact.joint.forEach(node => { accumulated += node.weight; cumulative.push(accumulated); });
-  cumulative[cumulative.length - 1] = 1;
-  const hits = Array<number>(H + 1).fill(0), hazardCache = new Map<number, readonly number[]>();
-  for (let path = 0; path < input.samples; path++) {
-    const random = splitmix32(seedFor(input.seed, path));
-    const p1 = betaSample(a.alpha, a.beta, random), u = uniform(random);
-    if (!Number.isFinite(p1)) return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
-    let low = 0, high = cumulative.length - 1;
-    while (low < high) { const middle = (low + high) >>> 1; if (u < cumulative[middle]!) high = middle; else low = middle + 1; }
-    const node = artifact.joint[low]!;
-    let hazards = hazardCache.get(low);
-    if (!hazards) {
-      hazards = Array.from({ length: artifact.capDays + 1 }, (_, r) => r === 0 ? 0 :
-        skipProbability(node.pDoneAfterSkip, node.gamma, feature(r, artifact.capDays)));
-      hazardCache.set(low, hazards);
-    }
-    let age = input.initialState === 'DONE' ? 0 : Math.min(input.initialRestDays!, artifact.capDays), done = 0;
-    for (let day = 1; day <= H; day++) {
-      if (uniform(random) < (age === 0 ? p1 : hazards[age]!)) {
-        age = 0;
-        if (++done === N) { hits[day] = hits[day]! + 1; break; }
-      } else age = age === 0 ? 1 : Math.min(age + 1, artifact.capDays);
-    }
-  }
-  let finished = 0;
-  const cdf = hits.map(count => { finished += count; return finished / input.samples; });
+  const cdf = completionRefined(artifact, input, N);
+  if (!cdf) return { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' };
   return { status: 'available', cdf, p50Days: quantile(cdf, .5), p80Days: quantile(cdf, .8), computation };
 }

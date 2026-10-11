@@ -162,7 +162,7 @@ test('Gamma-zero forecast agrees with independent Beta-ratio whole-path integrat
   }
 });
 
-test('Sampled paths retain joint dependence and one parameter draw per path; quantity comparison is coupled', () => {
+test('Accepted quadrature retains joint dependence and agrees with independent whole-path integration', () => {
   const fit = oracleFit(); assert.equal(fit.status, 'available'); const artifact = fit.artifact;
   const input = { initialState: 'SKIPPED', initialRestDays: 2, remainingAmount: 2,
     sessionAmount: 1, horizonDays: 8, samples: 12800, seed: 20261011 };
@@ -174,7 +174,10 @@ test('Sampled paths retain joint dependence and one parameter draw per path; qua
       initialState: input.initialState, age: 2, n: 2, h: 8, b: artifact.donePosterior });
     cdf.forEach((p, i) => { expected[i] += node.weight * p; });
   }
-  output.cdf.forEach((value, i) => close(value, expected[i], .02));
+  output.cdf.forEach((value, i) => close(value, expected[i], 1e-11));
+  assert.deepEqual(output.computation, { method: 'POSTERIOR_QUADRATURE', samples: null, seed: null });
+  assert.deepEqual(output, forecastDurationModel(artifact, { ...input, samples: 1, seed: 0 }));
+  assert.deepEqual(output, forecastDurationModel(artifact, { ...input, samples: 65536, seed: 0xffffffff }));
   const largerDose = forecastDurationModel(artifact, { ...input, sessionAmount: 2 });
   assert.equal(largerDose.status, 'available');
   output.cdf.forEach((value, i) => assert.ok(value <= largerDose.cdf[i]));
@@ -186,12 +189,13 @@ test('Sampled paths retain joint dependence and one parameter draw per path; qua
   assert.ok(impossible.cdf.every(p => p === 0)); assert.equal(impossible.p80Days, null);
 });
 
-test('Synthetic scoring accepts 65536 fixed paths and rejects an oversized work request before sampling', () => {
+test('Legacy sample input remains valid; finite quadrature rejects unsupported horizon and input limits', () => {
   const fit = oracleFit(); assert.equal(fit.status, 'available');
   const input = { initialState: 'SKIPPED', initialRestDays: 2, remainingAmount: 2,
     sessionAmount: 1, horizonDays: 8, samples: 65536, seed: 20261011 };
   const output = forecastDurationModel(fit.artifact, input);
-  assert.equal(output.status, 'available'); assert.equal(output.computation.samples, 65536);
+  assert.equal(output.status, 'available'); assert.equal(output.computation.method, 'POSTERIOR_QUADRATURE');
+  assert.equal(output.computation.samples, null); assert.equal(output.computation.seed, null);
   assert.ok(output.cdf.every((p, i) => p >= 0 && p <= 1 && (i === 0 || p >= output.cdf[i - 1])));
   assert.deepEqual(forecastDurationModel(fit.artifact, { ...input, horizonDays: 10000 }),
     { status: 'insufficient', reason: 'NUMERICAL_INSUFFICIENCY' });
