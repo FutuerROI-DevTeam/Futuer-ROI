@@ -9,7 +9,7 @@ import { recoveryExamples, unknownGapInput, unknownGapExpected, todayDoneInput,
   todayDoneExpected, dpBoundaryExample } from '../dist/tests/fixtures.js';
 
 test('package: documented defaults and a real pure calculation entry', () => {
-  assert.deepEqual(Object.keys(entry).sort(), ['DEFAULT_CONFIG', 'PredictionConfigError', 'PredictionInputError', 'QuestionPriorError', 'predict', 'predictWithQuestionPrior']);
+  assert.deepEqual(Object.keys(entry).sort(), ['DEFAULT_CONFIG', 'PredictionConfigError', 'PredictionInputError', 'QuestionPriorError', 'baselineCompletionCdf', 'fitDurationModel', 'forecastDurationModel', 'observeDuration', 'predict', 'predictWithQuestionPrior']);
   assert.equal(typeof entry.predict, 'function');
   assert.equal(typeof entry.predictWithQuestionPrior, 'function');
   assert.deepEqual(entry.DEFAULT_CONFIG, {

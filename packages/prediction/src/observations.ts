@@ -2,7 +2,7 @@ import type { PredictionInput, TransitionCounts } from './types.js';
 import { PredictionInputError } from './errors.js';
 
 // Gregorian暦の日数を整数で計算して隣接日を判定する。UTCへの変換や実行環境のtimezoneに依存させない。
-function ordinal(localDate: string, path: readonly (string | number)[]): number {
+export function calendarOrdinal(localDate: string, path: readonly (string | number)[]): number {
   if (typeof localDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(localDate)) {
     throw new PredictionInputError('INVALID_LOCAL_DATE', path, 'Expected a YYYY-MM-DD calendar date');
   }
@@ -39,13 +39,13 @@ export function observe(input: PredictionInput): {
   quantity(input.goal.totalRequired, 1, ['goal', 'totalRequired']);
   quantity(input.goal.initialProgress, 0, ['goal', 'initialProgress']);
   quantity(input.goal.sessionAmount, 1, ['goal', 'sessionAmount']);
-  const todayOrdinal = ordinal(input.today, ['today']);
+  const todayOrdinal = calendarOrdinal(input.today, ['today']);
   const seen = new Set<number>();
   let actualDone = input.goal.initialProgress;
   let todayStatus: 'DONE' | 'SKIPPED' | 'UNRECORDED' = 'UNRECORDED';
   const logs = input.logs.map((log, index) => {
     const datePath = ['logs', index, 'localDate'];
-    const day = ordinal(log.localDate, datePath);
+    const day = calendarOrdinal(log.localDate, datePath);
     if (day > todayOrdinal) throw new PredictionInputError('FUTURE_LOG_DATE', datePath, 'Future log date');
     if (seen.has(day)) throw new PredictionInputError('DUPLICATE_LOG_DATE', datePath, 'Duplicate log date');
     seen.add(day);

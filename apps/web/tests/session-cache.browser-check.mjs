@@ -34,6 +34,10 @@ function setupSessionTransport() {
     if (new URL(url, location.href).pathname === '/api/evaluation' && (!init?.method || init.method === 'GET')) {
       return Response.json({ enabled: false, policyVersion: 'self-evaluation-v1', retentionDays: 90, maxSnapshots: 90, observationDays: 30 });
     }
+    // Today reads only the default-OFF learning capability; mutation rejection stays below.
+    if (new URL(url, location.href).pathname === '/api/learning' && (!init?.method || init.method === 'GET')) {
+      return Response.json({ enabled: false, policyVersion: 'self-learning-v1', retentionDays: 90, maxArtifacts: 5, observationDays: 30, capDays: 14 });
+    }
     if (state.allowSignOut && new URL(url, location.href).pathname === '/api/auth/sign-out' && init?.method === 'POST') {
       state.signOutCalls++;
       if (state.signOutHold) await new Promise((resolve) => state.signOutHeld.push(resolve));
@@ -55,6 +59,25 @@ function setupSessionTransport() {
       session: { id: 'synthetic-' + state.owner, userId: state.owner, token: 'synthetic-test-token', expiresAt: '2099-01-01T00:00:00Z', createdAt: '2026-10-09T00:00:00Z', updatedAt: '2026-10-09T00:00:00Z' },
     });
   };
+}
+
+// Mock-auth entries may install their own strict fetch fixture after this prelude.
+// Keep only the new read-only capability outside their operation counters.
+function setupMockLearningCapabilityTransport() {
+  const wrap = (transport) => async (request, init) => {
+    const url = typeof request === 'string' ? request : request instanceof URL ? request.href : request.url;
+    const method = init?.method ?? (request instanceof Request ? request.method : 'GET');
+    if (new URL(url, location.href).pathname === '/api/learning' && method === 'GET') {
+      return Response.json({ enabled: false, policyVersion: 'self-learning-v1', retentionDays: 90, maxArtifacts: 5, observationDays: 30, capDays: 14 });
+    }
+    return transport.call(globalThis, request, init);
+  };
+  let transport = wrap(globalThis.fetch);
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    get: () => transport,
+    set: (next) => { transport = wrap(next); },
+  });
 }
 
 async function runBrowser(t, entry, mockAuth, realRouter = false) {
@@ -81,7 +104,7 @@ async function runBrowser(t, entry, mockAuth, realRouter = false) {
   const outputs = (Array.isArray(bundle) ? bundle : [bundle]).flatMap((b) => b.output);
   const code = outputs.filter((out) => out.type === 'chunk').map((out) => out.code).join('\n');
   const page = join(dir, 'index.html');
-  const prelude = mockAuth ? '' : '(' + setupSessionTransport.toString() + ')();';
+  const prelude = '(' + (mockAuth ? setupMockLearningCapabilityTransport : setupSessionTransport).toString() + ')();';
   const html = `<meta charset="utf-8"><div id="app"></div><pre id="result">PENDING</pre><script>${prelude}
     onerror=(message)=>{document.getElementById('result').textContent=JSON.stringify({ok:false,error:String(message)});};
     onunhandledrejection=(event)=>{document.getElementById('result').textContent=JSON.stringify({ok:false,error:String(event.reason)});};

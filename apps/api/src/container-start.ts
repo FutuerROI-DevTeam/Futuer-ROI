@@ -4,12 +4,14 @@ import { loadAuthConfig, loadConfig } from './config.ts';
 import { migrate } from './db/migrate.ts';
 import { createMigrationPool } from './db/pool.ts';
 import { startupFailureMessage, type StartupPhase } from './startup-error.ts';
+import { loadLearningOptions } from './learning/policy.ts';
 
 let phase: StartupPhase = 'configuration';
 async function start(): Promise<void> {
   const config = loadConfig();
   // production認証設定の不足を、DBを書き換える前に検出する。
   loadAuthConfig(process.env, config);
+  loadLearningOptions();
   phase = 'migration';
   const pool = createMigrationPool({ connectionString: config.databaseUrl });
   try {

@@ -8,6 +8,7 @@ import { loadAuthConfig, loadConfig } from './config.ts';
 import { createAppPool, createAuthPool } from './db/pool.ts';
 import { errorBody } from './http/errors.ts';
 import { loadEvaluationOptions } from './evaluation/policy.ts';
+import { loadLearningOptions } from './learning/policy.ts';
 
 // Vercelだけの起動境界。常駐serverのlisten/signal処理やmigrationには関与しない。
 async function initialize(): Promise<FastifyInstance> {
@@ -30,6 +31,7 @@ async function initialize(): Promise<FastifyInstance> {
       webDist: fileURLToPath(new URL('../../web/dist/', import.meta.url)),
       logLevel: config.logLevel,
       evaluation: loadEvaluationOptions(),
+      learning: loadLearningOptions(),
       auth: { instance: auth, baseURL: authConfig.baseURL,
         allowedOrigins: [authConfig.baseURL, ...authConfig.trustedOrigins], trustProxyHops: authConfig.trustProxyHops } });
     await app.ready();

@@ -6,6 +6,11 @@ import type { TodayR11 } from '../contracts/r11.ts';
 import { runQuestionPredictionWithDiagnostics } from '../prediction/engine.ts';
 import { validateSavedQuestion } from '../questions/snapshot.ts';
 import type { TodaySnapshot } from '../prediction/store.ts';
+import { forecastDurationModel, observeDuration, type DurationArtifact, type DurationForecastInput } from '@futureroi/prediction';
+import type { LearningPolicy } from '../contracts/learning.ts';
+import type { LearningReadState } from '../learning/types.ts';
+import { selectLearningToday } from '../learning/service.ts';
+import { LEARNING_PROTOCOL } from '../learning/gates.ts';
 
 export type SavedEvaluation = Omit<EvaluationForecast, 'id' | 'issuedAt' | 'expiresAt' | 'p50State' | 'p80State'> & {
   schemaVersion: 'evaluation-v1'; prefixHash: string;
@@ -15,8 +20,11 @@ export type SavedEvaluation = Omit<EvaluationForecast, 'id' | 'issuedAt' | 'expi
   config: TodayR11['prediction']['config']; provenance: TodayR11['provenance'];
   mappingVersion: string; usedPrior: TodayR11['prediction']['posterior'];
   computation: import('@futureroi/prediction').CompletionComputation | null;
-  stateVersion: 'explicit-daily-state-v1'; featureVersion: 'adjacent-record-counts-v1';
+  stateVersion: 'explicit-daily-state-v1'; featureVersion: 'adjacent-record-counts-v1' | 'duration-records-v1';
   evaluationVersion: 'frozen-remaining-quantile-v1'; presentationPolicyVersion: 'manual-current-state-v1';
+  learningArtifactId?: string; learningArtifactHash?: string; learningActiveRevision?: number; learningRetentionAnchor?: string;
+  learningReplay?: { schemaVersion: 'duration-frozen-replay-v1'; numeric: DurationArtifact; input: DurationForecastInput;
+    baselineMetadataVersion: 'r11-reference-only-v1' };
 };
 export type ForecastRow = { id: string; issued_at: Date; expires_at: Date; payload: SavedEvaluation };
 
@@ -24,7 +32,8 @@ export function prefixFingerprint(logs: readonly Log[], anchor: string): string 
   return createHash('sha256').update(JSON.stringify(logs.filter(log => log.localDate <= anchor)
     .map(log => [log.localDate, log.status, log.amount]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))))).digest('hex');
 }
-export function makeEvaluation(snapshot: TodaySnapshot, buildVersion: string): SavedEvaluation {
+export function makeEvaluation(snapshot: TodaySnapshot, buildVersion: string,
+  selection?: { state: LearningReadState; policy: LearningPolicy }): SavedEvaluation {
   const today = localDateIn(snapshot.now, snapshot.goal.timezone);
   const savedQuestion = validateSavedQuestion(snapshot.question, { unit: snapshot.goal.unit,
     sessionAmount: snapshot.goal.sessionAmount, recordStartDate: snapshot.goal.recordStartDate });
@@ -33,7 +42,7 @@ export function makeEvaluation(snapshot: TodaySnapshot, buildVersion: string): S
       sessionAmount: snapshot.goal.sessionAmount }, logs: snapshot.logs, today }, answers: savedQuestion.answers, mapping: savedQuestion.mapping });
   if (prediction.todayStatus === 'UNRECORDED' || prediction.progress.completed) throw new Error('Evaluation requires recorded, incomplete state');
   const completion = prediction.completion;
-  return { schemaVersion: 'evaluation-v1', anchorDate: today, timezone: snapshot.goal.timezone, unit: snapshot.goal.unit,
+  const saved:SavedEvaluation = { schemaVersion: 'evaluation-v1', anchorDate: today, timezone: snapshot.goal.timezone, unit: snapshot.goal.unit,
     remainingAmount: prediction.progress.total - prediction.progress.done,
     sessionAmount: snapshot.goal.sessionAmount, issuedTodayStatus: prediction.todayStatus,
     goalSettingsRevision: snapshot.goal.goalSettingsRevision, answerRevision: savedQuestion.revision,
@@ -50,6 +59,28 @@ export function makeEvaluation(snapshot: TodaySnapshot, buildVersion: string): S
     computation: completion.status === 'available' ? completion.computation ?? null : null,
     stateVersion: 'explicit-daily-state-v1', featureVersion: 'adjacent-record-counts-v1',
     evaluationVersion: 'frozen-remaining-quantile-v1', presentationPolicyVersion: 'manual-current-state-v1' };
+  if(selection){
+    const chosen=selectLearningToday(selection.state,selection.policy).selectedForecast;
+    if(chosen.source==='LEARNED'){
+      const artifact=selection.state.artifacts.find(row=>row.id===chosen.artifactId&&row.hash===chosen.artifactHash)!;
+      const current=observeDuration({goal:snapshot.goal,logs:snapshot.logs,today},selection.policy.capDays).records.at(-1)!;
+      saved.modelVersion=artifact.modelVersion;saved.featureVersion='duration-records-v1';
+      saved.predictionStatus=chosen.status==='available'?'available':'insufficient';saved.predictionReason=chosen.reason;
+      saved.p50Days=chosen.p50Days;saved.p80Days=chosen.p80Days;saved.computation=null;
+      saved.learningArtifactId=artifact.id;saved.learningArtifactHash=artifact.hash;saved.learningActiveRevision=selection.state.activeRevision;
+      if(!selection.state.participationJoinedAt)throw new Error('Missing learning participation anchor');
+      saved.learningRetentionAnchor=new Date(Math.min(artifact.createdAt.getTime(),selection.state.participationJoinedAt.getTime())).toISOString();
+      saved.learningReplay={schemaVersion:'duration-frozen-replay-v1',numeric:structuredClone(artifact.numeric!),
+        input:{initialState:current.status,initialRestDays:current.restDays,remainingAmount:saved.remainingAmount,
+          sessionAmount:saved.sessionAmount,horizonDays:selection.policy.observationDays,samples:LEARNING_PROTOCOL.primarySamples,seed:LEARNING_PROTOCOL.seed},
+        baselineMetadataVersion:'r11-reference-only-v1'};
+    }
+  }
+  return saved;
+}
+export function replayLearnedEvaluation(saved:SavedEvaluation){
+  if(!saved.learningReplay||saved.learningReplay.schemaVersion!=='duration-frozen-replay-v1')throw new Error('Not a learned evaluation');
+  return forecastDurationModel(saved.learningReplay.numeric,saved.learningReplay.input);
 }
 
 function quantileState(saved: SavedEvaluation, q: number | null, snapshot: TodaySnapshot, now: Date, horizon: number): EvaluationState {

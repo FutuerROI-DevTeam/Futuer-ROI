@@ -8,7 +8,7 @@ import { requireUserId } from '../http/guards.ts';
 import { evaluationPolicy, type EvaluationOptions } from './policy.ts';
 import { captureEvaluation, EvaluationConflict, evaluationReport, joinEvaluation, withdrawEvaluation } from './store.ts';
 
-export async function registerEvaluationRoutes(app: FastifyInstance, deps: { pool: Pool; now: () => Date; options?: EvaluationOptions | undefined }) {
+export async function registerEvaluationRoutes(app: FastifyInstance, deps: { pool: Pool; now: () => Date; options?: EvaluationOptions | undefined; learning?: import('../learning/policy.ts').LearningOptions | undefined }) {
   const policy = evaluationPolicy(deps.options);
   await app.register(async instance => {
     requireUserId(instance);
@@ -19,7 +19,7 @@ export async function registerEvaluationRoutes(app: FastifyInstance, deps: { poo
     const path = '/api/goals/:goalId/evaluation';
     const missing = errorBody('NOT_FOUND', 'Goal not found.');
     api.get(path, { schema: { params: GoalParams, response: { 200: EvaluationReport, 404: ErrorBody } } }, async (request, reply) => {
-      const result = await evaluationReport(deps.pool, request.userId, request.params.goalId, deps.now, policy);
+      const result = await evaluationReport(deps.pool, request.userId, request.params.goalId, deps.now, policy, deps.learning);
       return result ?? reply.code(404).send(missing);
     });
     api.put(`${path}/participation`, { schema: { params: GoalParams, body: EvaluationParticipation,
@@ -40,7 +40,7 @@ export async function registerEvaluationRoutes(app: FastifyInstance, deps: { poo
       response: { 200: EvaluationForecast, 201: EvaluationForecast, 404: ErrorBody, 409: ErrorBody } } }, async (request, reply) => {
       try {
         const result = await captureEvaluation(deps.pool, request.userId, request.params.goalId,
-          request.body.expectedGoalSettingsRevision, deps.now, policy, deps.options!.buildVersion);
+          request.body.expectedGoalSettingsRevision, deps.now, policy, deps.options!.buildVersion, deps.learning, request.body.displayedForecast);
         return result ? reply.code(result.replayed ? 200 : 201).send(result.forecast) : reply.code(404).send(missing);
       } catch (error) {
         if (error instanceof EvaluationConflict) return reply.code(409).send(errorBody(error.code, error.message));

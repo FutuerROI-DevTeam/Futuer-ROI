@@ -42,5 +42,6 @@ export const EvaluationReport = Type.Object({
 export type EvaluationReport = Static<typeof EvaluationReport>;
 export const EvaluationParticipation = Type.Object({ policyVersion: Type.Literal('self-evaluation-v1') }, strict);
 export type EvaluationParticipation = Static<typeof EvaluationParticipation>;
-export const EvaluationCapture = Type.Object({ expectedGoalSettingsRevision: GoalSettingsRevision }, strict);
+export const EvaluationCapture = Type.Object({ expectedGoalSettingsRevision: GoalSettingsRevision,
+  displayedForecast: Type.Optional(Type.Literal('BASELINE')) }, strict);
 export type EvaluationCapture = Static<typeof EvaluationCapture>;

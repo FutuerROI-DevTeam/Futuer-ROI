@@ -2,6 +2,8 @@
 
 本人向け予測保存・照合の既定OFF追加機能（#225）は[Product R-12](product-spec.md#本人向けの予測保存実績照合r-12既定off)と[D-32](#d-32-本人向け評価の保存境界225)を参照する。実データ有効化・保持/削除運用は未採択。
 
+本人の記録から学ぶ既定OFF機能（#227）は[Product R-13/P-23](product-spec.md#本人の記録から学ぶ予測r-13既定off)と[D-33](#d-33-本人の記録から学ぶ予測227)を参照する。source・所有合成検証だけの明示依頼であり、実データfit・運用承認はOPEN。
+
 ## 現行状態（2026-09-30）
 
 Future ROI（[Product P-11](product-spec.md#p-11-future-roiの採用とcoreの境界)）の実現方式を記録する。予測モデル（[D-19](#d-19)〜[D-22](#d-22)）、Data Modelと記載済みの業務API・Prediction Engineの規則は確定。成功応答のデータ項目（DTO）・HTTP status等の未定義部分と文書間の解釈差は[契約の判断事項](contract-review-proposal.md)へ分ける。**2026-10-03、依頼者によるチーム合意報告を受け[D-23](#d-23)の基本構成を採用。[D-24](#d-24)／[D-25](#d-25)は検証・運用条件付きの第一候補。** [合意範囲](#2026-10-03の技術構成合意)を超えて認証・公開先・API細則を確定しない。2026-10-08時点のGoal・記録・Today APIと実APIを使う画面、既存ローカル検証記録、製品受入・公開配置等の残条件は[対応表](change-map.md#現在地の読み方)から確認する。純粋Prediction Engineと関連テストは[#103](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/103)でmain統合済みで、#77で`/today`から呼ぶ形でアプリへ結合した。構成の採用や下記の契約をアプリ動作確認済みとは扱わない。
@@ -662,6 +664,8 @@ resetは同ユーザーの初回にも効くtransaction advisory lock→認証us
 | D-29 | 2026-10-09 | 依頼者の実装指示・チームレビュー対象 | [量・設定版・作成操作の保全](#d-29-量と作成操作の保全148) |
 | D-30 | 2026-10-10 | 依頼者判断（Code Freeze前のため文書のチーム事前承諾なし。コードはHuman Review対象） | [Todayの同一owner再確認で入力を保つ](#d-30-todayの同一owner再確認で入力を保つ190)。D-29・#155の別owner・失敗時の境界は維持 |
 | D-31 | 2026-10-10 | DECIDED（Kaito-Iwaseの明示判断、PR #204） | [同一モデルの完了CDF積分](#d-31-同一モデルの完了cdf統合候補203)を標準整数域の既定に採用。D-22の完了計算のみ置換し、範囲外・数値gate・明示`sampled`、公開DTO非追加を維持 |
+| D-32 | 2026-10-11 | CONDITIONAL（#225範囲維持。学習除外の一般化はD-33へ限定変更） | [本人向け評価の保存境界](#d-32-本人向け評価の保存境界225) |
+| D-33 | 2026-10-11 | CONDITIONAL（#227 source・合成検証依頼あり、実運用OPEN） | [durationモデル・時系列holdout・CAS明示採用](#d-33-本人の記録から学ぶ予測227) |
 
 ### D-31 同一モデルの完了CDF統合候補（#203）
 
@@ -866,3 +870,32 @@ Alternatives / Reason: 既存Todayを再取得するだけでは発行値が残�
 Consequences / Invariants: 読み取り期限は物理削除の実施日を保証しない。mutableな業務記録で途中の訂正履歴すべてを復元できず、設定変更は保守的にcensorする。複数人の代表性・accuracy改善は得られない。migrationの既存checksum、既存Engine式・認証設定は維持する。実DB適用、有効化、公開やmergeは別承認とする。
 
 Evidence / 再検討条件: [対応表](change-map.md#本人向け評価225)、[検証・手順・限界](changes/issue-225-evaluation-verification.md)。人数横断の校正、学習利用、長期保存、全編集履歴、運用負荷が必要になった時に新しい判断を行う。現在の合成テストの成功で実利用のOPENを採択へ昇格しない。
+
+Reconsideration（2026-10-11、#227）: D-32の「学習基盤を追加せず既存式を維持」は#225単独で有効なままとする。学習をすべての追加実装から除外する適用だけを、明示依頼に基づく[D-33](#d-33-本人の記録から学ぶ予測227)へ限定変更する。D-19〜D-22/D-31の従来R-11計算を置換せず、別契約・別同意の採用候補を追加する。
+
+### D-33 本人の記録から学ぶ予測（#227）
+
+2026-10-11 / **CONDITIONAL：標準主表示を保持する明示本人履歴fit・実験並列比較の追加承認。実データfit・有効化・説明/保持/削除/バックアップ運用はOPEN。** [Product R-13/P-23](product-spec.md#本人の記録から学ぶ予測r-13既定off)、[Issue #227](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/227)。既存の認証・所有者境界・TypeBox・PostgreSQL・独立計算packageを使い、新しいサービスやライブラリを導入しない。
+
+Decision / 計算: `duration-model-v1`はDONE後の実行確率p1を独立Beta事後、SKIPPED後の基準確率p0と休み期間係数gammaを同時事後として扱う。休みr日のlogitは `logit(p0) + gamma * log(min(r, capDays))/log(capDays)`。gammaは−4〜4を0.5刻みの17点に固定し、標準偏差1.5のGaussian重みを正規化したpriorを使う。先にgammaや期間を探索してから同じholdoutで採用しない。
+
+- canonical日次記録から実在する隣接日遷移を一度だけ抽出する。未知日をSKIPPEDへ補完せず休み期間をリセットし、期間不明のSKIPPED起点はduration学習から除外する。質問由来priorは既存R-11の範囲で使い、回答を記録や遷移へ加算しない。
+- p0/gammaの同時分布を平均値へ潰さず保持し、将来の1経路につき同じp1/p0/gammaを使う。数値積分はBeta重みの16/32/64点で有限診断を行い、学習completionはH≤30に限定する。実際の必要DONE回数N/H/起点状態に対するcompletion CDFの32→64点の有限refinementと、単一spellのsurvival補助診断を使う。単一spellだけの収束を複数spellの到達CDF全体の保証にしない。p1のBeta積分は次数がmin(H, NまたはN−1)以下の条件付きDPをGauss積分し、短期の全path oracleへ照合する。採用結果は64点のp0/gamma同時分布とp1 Beta積分から求めたCDFを直接返し、path Monte Carloを重ねない。`computation.method`は`POSTERIOR_QUADRATURE`、`samples`/`seed`はnull。従来の入力signatureは保持するが、この方式の結果は入力samples/seedに依存しない。**連続事後分布の全completion CDFに対する厳密誤差保証ではない**。固定検査workの予算超過・診断不足・非有限・未知期間は不足/fallbackとし、有限値を捏造しない。
+- 初回は時系列の60%学習・20%検証・20%未見テスト。境界をまたぐH+2日の観測/訂正窓を除く。再fitは既に比較した最終日より後だけを新しいholdoutにし、学習部分は過去の全記録を使う。比較の従来R-11も各起点までの全履歴を使い、都合のよい切り詰めbaselineへ置き換えない。
+- 固定gateは学習80遷移以上（DONE起点40、期間既知SKIPPED起点40）、検証/テストそれぞれ16起点、H+2日間隔の有効block3以上、候補適用8起点以上。両区分でRPS（到達時期分布と実績のずれ）を0.01以上改善し、`POSTERIOR_PATHS`ではpath Monte Carloの誤差envelopeを含む保守側でも成立すること、P80過信とP50/P80有限率を悪化させないことを要求する。`POSTERIOR_QUADRATURE`は有限同時モデルのCDFを直接積分するため、そのモデルに対するMC誤差は0として扱う。不足はINSUFFICIENT、条件未達はREJECTED、全部を満たす候補だけADOPTABLE。sampling envelopeはpath samplingだけを扱い、数値積分方式のMC誤差0、実N/H/状態のcompletion CDF有限refinement（H≤30）、survival補助診断を合わせても連続posterior全CDFの厳密保証へ昇格しない。期間・候補・閾値をデモ都合で緩めない。
+- 実験比較と資格検証は同じH=`observationDays`（初期30日）を使う。CDF(H)の到達見込みとP50/P80/nullを別公開契約へ出し、1095日等の別範囲の値を30日で検証済みと扱わない。正の量は同じDONE起点経路、0はSKIPPED起点の別scenarioで、g50因果遅延を主張しない。
+
+実験 / 追加承認: 標準R-11の主表示を保持する。旧資格v1/v2/gateと採用pointerは監査履歴として残す。90日保持対約190日の比較資格、as-of回答履歴の問題はHOLDであり、v2固定priorをその解決と呼ばない。本人の明示POSTはtraining-onlyのduration fitを行い、purpose=EXPERIMENTAL、gate=INSUFFICIENTの結果を保存する。numeric不足でも不足reasonを持つ結果として保存し、資格ADOPTABLEや改善実証へ進めない。
+
+保存/API: [0007 migration](../apps/api/migrations/0007_record_learning.sql)の参加世代、immutable候補、採用pointer、holdout最終日receiptをowner/Goal付きで持つ。初期最大90日・最新5候補・H30・休み期間cap14。保持3〜90日、件数1〜5、H1〜30、cap2〜30、保持≥H+2を検証する。候補期限は参加期限を超えない。read filterは物理削除の運用保証ではない。
+
+- `LEARNING_ENABLED`未設定/`0`でOFF。認証付き `GET /api/learning` は能力だけ返し、OFFでは学習DBを読まない。以下のGoal routeはOFFなら利用不可。設定名・初期値は[policy](../apps/api/src/learning/policy.ts)が実装の入口。
+- Goal prefix `/api/goals/:goalId/learning` のGETはreport、`PUT /participation` はpolicy版で参加、`DELETE /participation` は期待参加idで解除、`POST /fits` は期待設定/回答/参加/採用版でfitする。`PUT /active` は正確な候補id/hashと参加/採用版でCAS採用、`DELETE /active` は期待参加/採用版でrollback。参加・解除・採用・rollback成功は204、fit成功は候補summary201（不採用/不足も候補として保存）。`GET /today` は別DTO、`?amount=` はcanonical整数の未保存比較。
+- `POST /experiments` は既存fitと同じ参加/設定/回答/採用版CASで201の実験結果summaryを保存する。`GET /compare?artifactId&artifactHash&amount` は同じRR snapshotを採取し接続解放後に計算するreadonly比較。amountはcanonical整数0〜2,147,483,647。referenceはBASELINE、experimentはEXPERIMENTAL、両方同じ量/H≤30。不足/訂正/期限切れは実験値nullとreasonを返し、baseline値を実験へfallbackしない。snapshot GETの遅延replyはサーバの再CASを意味しない。
+- fit準備/最終保存、採用時にowner・Goal・参加世代・fit世代・現地日・設定/回答版・入力/evidence hashを確認する。計算中にDB接続を保持せず、競合・訂正・期限切れは副作用なしで拒否する。read時もcandidate hash/context/期限/gateを確認し、無効pointerは従来モデルへfallbackする。旧資格Today DTOと旧クライアント未指定の評価発行は既存selectorを維持する。新FEの評価発行はdisplayedForecast=BASELINEを明示し、標準R11主表示の値を凍結する。実験予測は評価保存せず、既存同日記録はimmutable replayで維持する。
+- 解除で参加・候補・採用pointer・学習予測に属する評価行を削除する。holdout再利用防止の最終日1個だけはGoal削除まで残す。receiptに観測・モデル・email・自由記述を保存しない。Goal/owner削除は学習行とreceiptへcascadeする。既存日次記録や#225の独立参加を学習へ流用しない。
+- FEはowner/PrivateEpoch/query世代/draft世代、Goal日付/設定/回答版、採用版・候補hash・baseline一致を確認する。書込み前にlearning/Today/evaluationをcancel/invalidateし、abortを無視する遅延応答もローカル読取世代で拒否する。書込み結果が不明な間は、画面を開き直しても実験比較・資格予測と操作を保留し、標準主表示は維持する。fresh採用状態とfreshToday予測の両方が同じ採用版で確認できてから解除し、片側だけの成功では旧LEARNEDを戻さない。タブ復帰はfresh読取だけで採用を自動変更しない。401/404は旧候補を隠し、500と旧snapshotを分け、自動書込み再送はしない。pointerの選択済みと資格確認用予測への実適用は区別し、標準主表示へ採用したとは表示しない。compare開始時のreport/Today Query identity・成功更新count・idle/invalidated状態も捕捉して応答/描画時に再確認する。版番号を変えない記録訂正や再取得後も旧compareを再表示しない。
+
+Alternatives / Consequences: 純粋な合成ツールだけではTodayの量判断へ接続できない。全ユーザーの自動学習やgateなし即採用は収集・過学習・解除後再利用の範囲を広げる。標準保持＋独立実験比較を追加承認に沿って選び、資格gate/CAS採用は別監査として保持し、長い記録が必要なこと、数値近似と小sample、最終日receiptの追加保持、同期計算の資源上限、実運用未確定を受け入れる。既存R-11の式、認証設定、既存migration checksumを変更せず、実データfit・本番migration/flag・merge/deployは本判断に含めない。
+
+Evidence / 再検討条件: [Design Intent](intents/issue-227-record-learning.md)と[対応表](change-map.md#本人の記録から学ぶ予測227)。source/testの存在と実行結果を分ける。全CDFの積分誤差保証、代表性のある実データ評価、ユーザー理解、実runtime性能、物理削除とbackupの運用を未検証として残し、合成成功だけで実利用OPENを昇格しない。

@@ -34,6 +34,7 @@
 現行の未決定事項と当時の検証記録への入口は[開発基盤の状態](docs/operations/development-foundation-status.md)で区別しています。
 次の案で使える資産と再評価が必要な条件は[引き継ぎの棚卸し](docs/operations/reuse-handoff.md)にまとめています。
 実装の棚卸し・調査基準・関連する判断Issueは[仕様・実装・確認方法の対応表](docs/change-map.md)を参照してください。
+本人の記録から学ぶ予測（#227）は[既定OFFのsource実装・合成検証の範囲と確認入口](docs/change-map.md#本人の記録から学ぶ予測227)を参照してください。実データfit・本番有効化・保持/削除運用は未承認です。
 初めてコードを読む場合は、[記録保存から予測表示までのtrace・用語・テスト入口](docs/change-map.md#コードを読むための短いtrace)から進めます。
 旧音楽案のML Issue向けCodex Harnessは通常の実行タスクとCIから外しました。再利用前の確認事項は[引き継ぎ](docs/operations/reuse-handoff.md)を参照してください。
 

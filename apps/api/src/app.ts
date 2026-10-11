@@ -16,6 +16,8 @@ import { PredictionFailed } from './prediction/engine.ts';
 import { registerTodayRoute } from './prediction/routes.ts';
 import { registerEvaluationRoutes } from './evaluation/routes.ts';
 import type { EvaluationOptions } from './evaluation/policy.ts';
+import { registerLearningRoutes } from './learning/routes.ts';
+import type { LearningOptions } from './learning/policy.ts';
 
 export type AppOptions = {
   pool: Pool;
@@ -38,6 +40,8 @@ export type AppOptions = {
   now?: () => Date;
   /** 本人の明示操作による評価保存。省略時OFF、本番有効化は別途判断。 */
   evaluation?: EvaluationOptions;
+  /** Separate owner consent and adoption. Omitted/default OFF. */
+  learning?: LearningOptions;
 };
 
 type PgError = FastifyError & { code?: string };
@@ -124,7 +128,8 @@ export async function buildApp(o: AppOptions): Promise<FastifyInstance> {
     await registerGoalRoutes(app, deps);
     await registerLogRoutes(app, deps);
     await registerTodayRoute(app, deps);
-    await registerEvaluationRoutes(app, { ...deps, options: o.evaluation });
+    await registerEvaluationRoutes(app, { ...deps, options: o.evaluation, learning: o.learning });
+    await registerLearningRoutes(app, { ...deps, options: o.learning });
   }
 
   // Type Providerはpluginごとに適用する（Fastifyのカプセル化により外側の指定は継承されない）。

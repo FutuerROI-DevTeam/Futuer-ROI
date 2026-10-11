@@ -8,3 +8,9 @@ export { predictWithQuestionPrior, QuestionPriorError } from './question-prior.j
 export type { QuestionPriorAnswer, QuestionPriorAnswers, QuestionPriorMapping,
   QuestionPriorPredictionInput, QuestionPriorPredictionConfig, QuestionPriorEvidenceSource,
   QuestionPriorPredictionResult, QuestionPriorEvaluation } from './question-prior.js';
+
+export type { DurationTransition, DurationPrior, GammaAtom, DurationFitOptions, DurationArtifact, DurationFitResult, DurationForecastInput, DurationForecastResult, DurationJointNode, DurationTrainingDiagnostics, DurationIntegrationDiagnostics } from './duration-types.js';
+export { observeDuration } from './duration-observations.js';
+export type { DurationRecord } from './duration-observations.js';
+export { baselineCompletionCdf } from './baseline-completion-cdf.js';
+export { fitDurationModel, forecastDurationModel } from './duration-model.js';

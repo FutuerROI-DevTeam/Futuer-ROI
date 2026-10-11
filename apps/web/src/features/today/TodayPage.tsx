@@ -35,6 +35,7 @@ import { useSaveLog } from '../logs/useSaveLog.ts';
 import { showYesterdayPrompt } from './yesterday-later.ts';
 import { YesterdayCorrection } from '../logs/YesterdayCorrection.tsx';
 import { editLocks, isCurrentToday, reachedDate, yesterdayRecord } from '../logs/record-log.ts';
+import { LearningToday, LearningBaselineDetails } from '../learning/LearningToday.tsx';
 import '../../ui/tokens.css';
 import '../../ui/page.css';
 import './today.css';
@@ -289,6 +290,8 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
         <Inconsistent onRetry={retryResync} />
       ) : snapshot ? (
         <ForecastBoundary resetKey={todayQuery.dataUpdatedAt}>
+          <LearningToday goal={snapshot.goal} today={snapshot.today} logs={snapshot.logs} changing={changing}
+            locked={changing || amountEditing || yesterdayEdit !== null || todaySaver.isSaving || yesterdaySaver.isSaving}>
           <TodayContent area="primary"
             goal={snapshot.goal}
             today={snapshot.today}
@@ -297,6 +300,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
             changeDisabled={!!yesterdayEdit}
             onChange={startTodayChange}
           />
+          </LearningToday>
         </ForecastBoundary>
       ) : (
         <Loading />
@@ -319,6 +323,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
 
       {snapshot && !todayQuery.isError && !goalQuery.isError && !logsQuery.isError && !resyncFailed ? (
         <ForecastBoundary resetKey={todayQuery.dataUpdatedAt}>
+          <LearningBaselineDetails>
           <TodayContent area="details"
             goal={snapshot.goal}
             today={snapshot.today}
@@ -327,6 +332,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
             changeDisabled={!!yesterdayEdit}
             onChange={startTodayChange}
           />
+          </LearningBaselineDetails>
         </ForecastBoundary>
       ) : null}
 

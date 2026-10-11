@@ -148,6 +148,23 @@ FE結合は[#137](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/1
 | 本人の明示画面 | [評価Page](../apps/web/src/features/evaluation/EvaluationPage.tsx)、[境界hook](../apps/web/src/features/evaluation/useEvaluation.ts)、[契約client](../apps/web/src/api/evaluation-http.ts)、[実hook/QueryClient回帰](../apps/web/tests/evaluation-boundary.test.mjs) |
 | 実ブラウザと限界 | [実SPA/API/専用合成DBのChrome入口](../apps/web/tests/evaluation.browser-check.mjs)、[検証範囲・設定・運用待ち](changes/issue-225-evaluation-verification.md)。精度改善、正式校正、個人横断の人数・学習利用・本番削除運用の成功を意味しない |
 
+## 本人の記録から学ぶ予測（#227）
+
+[Product R-13/P-23](product-spec.md#本人の記録から学ぶ予測r-13既定off)・[Architecture D-33](architecture.md#d-33-本人の記録から学ぶ予測227)が正本。source・所有合成検証の明示依頼に限定し、実データfitと実利用運用はOPEN。#225の参加と分離し、既定OFFのまま扱う。[Design Intent](intents/issue-227-record-learning.md)から理由・他案・不変条件・限界へたどる。
+
+| 対象 | 実装と確認入口 |
+|---|---|
+| 別契約・既定OFF・保持上限 | [共有契約](../apps/api/src/contracts/learning.ts)、[policy](../apps/api/src/learning/policy.ts)、[既定OFF/設定回帰](../apps/api/tests/learning-policy.test.ts)。初期90日/5候補/H30/cap14 |
+| 日次記録の正規化・duration数値コア | [隣接遷移と期間抽出](../packages/prediction/src/duration-observations.ts)、[型](../packages/prediction/src/duration-types.ts)、[joint学習/積分診断/path予測](../packages/prediction/src/duration-model.ts)、[canonical回帰](../packages/prediction/tests/duration-observations.test.mjs)、[数値回帰](../packages/prediction/tests/duration-model.test.mjs)。未知日を休みに補完しない |
+| 固定holdout・gate・共有selector | [60/20/20計画・fit・採用適格性・Today選択](../apps/api/src/learning/service.ts)、[固定gate](../apps/api/src/learning/gates.ts)。比較window、最終日receipt、RPS/P80/finiteと、POSTERIOR_PATHS限定のMC envelope・POSTERIOR_QUADRATUREの有限モデルMC誤差0を仕様に照合する。連続posteriorの積分誤差保証や実データ改善を合成成功から主張しない |
+| owner保存・CAS・解除 | [0007 migration](../apps/api/migrations/0007_record_learning.sql)、[store](../apps/api/src/learning/store.ts)、[route](../apps/api/src/learning/routes.ts)、[実HTTP/合成DB回帰](../apps/api/tests/learning.test.ts)。解除のreceipt保持と学習予測評価削除、遅延fit/再参加/CASの拒否を確認する |
+| 標準Today保持・本人の明示実験比較 | [Today接続](../apps/web/src/features/today/TodayPage.tsx)、[標準保持/参加/資格監査](../apps/web/src/features/learning/LearningToday.tsx)、[境界hook](../apps/web/src/features/learning/useLearning.ts)、[context/整数検査](../apps/web/src/features/learning/presentation.ts)、[HTTP client](../apps/web/src/api/learning-http.ts) |
+| 実験モデル・同量/同H比較 | [実験比較カード](../apps/web/src/features/learning/LearningComparisonPanel.tsx)・[production hook](../apps/web/src/features/learning/useLearning.ts)・[厳密HTTP reader](../apps/web/src/api/learning-http.ts)。POST experimentsは明示CAS、GET compareはreadonly、主表示とactivepointerを保持。実fitの結果と改善証明を区別する |
+| FE確認の範囲 | [production hook＋実QueryClient](../apps/web/tests/learning-boundary.test.mjs)と[実部品SSR](../apps/web/tests/learning-presentation.test.mjs)。担当による39件（INT4上限・上限+1の2境界回帰を含む）と型検査はPASS。session/React lifecycleは制御されており実ブラウザと区別する。後続変更の全suite・build・実SPA/APIブラウザ確認は主担当の最終検証として別途記録する |
+| 学習UIの実Chrome | [production部品の実DOM fixture](../apps/web/tests/learning.browser.tsx)、[専用runner](../apps/web/tests/learning.browser-check.mjs)。auth state/transportだけ合成化した7確認群PASS。実React/QueryClient/private guard・strict reader・確認modal・量副カード・同owner/別owner/遅延DTO・解除cacheを検査する。ADOPTABLE注入はUI経路の検証で数理採用証明ではなく、実API/DB・SDK・pixel検証は別。専用profile cleanupを確認 |
+
+再現は既存のworkspace `typecheck` / `test` / `build` を使う。FEだけの専用検証は `apps/web` で `node --import ./tests/register-contracts.mjs --test tests/learning-boundary.test.mjs tests/learning-presentation.test.mjs`。上記の独立Chrome検証は同じ場所で `node --import ./tests/register-contracts.mjs --test tests/learning.browser-check.mjs`（既存Chrome/Edgeが必要、見つからない場合はskip PASSにしない）。実ユーザーfit、Productionのflag/migration、公開性能、accuracy/校正、削除/backup運用は未検証・未承認であり、テストの存在や合成成功から昇格しない。
+
 ## 未採択の追加提案
 
 PR #131の実Engine混合負荷は[2026-10-07の訂正・追加報告](../experiments/architecture-verification/REAL-ENGINE-2026-10-07.md)から、独立oracle、[測定cohort](../experiments/architecture-verification/candidate-1.7.7/verify/load-cohort.ts)、[入力/worker/HTTP回帰](../experiments/architecture-verification/candidate-1.7.7/verify/v9-real-engine-regression.test.ts)、[再実行runner](../experiments/architecture-verification/candidate-1.7.7/verify-real-engine.ps1)へたどれる。旧JSONは保持し、採用環境の性能やworker/prior採択の証拠にはしない。
@@ -198,3 +215,9 @@ TodayのP80計算範囲の文言（[#154](https://github.com/jogi-hack-2026-team
 材料不足と計算範囲外の補足訂正（[#198](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/198)）も同じ表示仕様・copy・回帰で追跡する。P50範囲外ラベルと50%／80%未到達の説明を出所によらずそろえ、実APIの純粋[buildR11Today](../apps/api/src/prediction/r11.ts)から未回答・不明・片方回答の材料不足と、両方回答・必要回数が計算上限を超える範囲外を実Engine→FE→部品SSRで区別する。DB/HTTP・実ユーザーの予測精度はこの合成回帰の検証範囲外。画面配置とAPI契約は変更しない。
 
 #187のcut軸で月目盛りが右端の到達予定日より未来になる回帰（PR212）は、[target-gap.test.mjs](../apps/web/tests/target-gap.test.mjs)で4反例・有限/範囲外P80・短期/長期・年越し/うるう年・幅別の日付順とboundsを検査する。[outlook-axis.native.tsx](../apps/web/tests/outlook-axis.native.tsx)を[既存native Chrome入口](../apps/web/tests/responsive-details.browser-check.mjs)で描き、製品の11px書体の実SVG・文字bounds・重なりを検査する。予測数値・API・非cut軸の変更を含めない。
+
+
+2026-10-11 追加承認の実験比較FE（source freeze useLearning `86707cc6…`）: latest main `208d481` 統合後のWeb単体248 PASS / 1 skip（skipは単体runner内のブラウザ案内）、型検査・production build PASS。専用実Chromeの9確認群はproduction React/QueryClient/guard/strict reader/ConfirmDialogでPASSし、専用profile終了・一時directory削除を確認した。auth state/transport/数値は合成fixtureで、数学資格・実APIfitの証明ではない。標準主表示保持、明示experiment POST、正量/0のGET比較、旧資格監査、uncertain reset、所有者遅延境界を確認。独立pure再レビューは通常並行読取とreset ABA失効も確認した。実App/認証/API/隔離DBの本人合成履歴fit縦断は別証跡で記録し、この結果で実データ精度・校正・運用承認を置き換えない。
+
+
+2026-10-11 最終追加確認: 全session実Chrome 21/21 PASS、skip0。新実験比較は本物App build＋Better Auth login＋実Fastify API＋所有embedded DBを使い、8日HIGH/HIGH合成記録だけから本人UIの別同意→POST experiments 201実fit→GET compare 200（量10/20/0）→標準主表示/activepointer保持・日次ログ不変→認証APIで昨日記録訂正→App再読取後のINPUT_CORRECTED不足（baseline値を実験へ借りない）→実ConfirmDialog参加解除・候補消去までPASS。numeric/gateの注入なし。訂正操作自体はUI編集ではなく認証APIによる合成操作である。390pxと1280pxのPNG/DOM証跡を取得し横overflow無しを確認したが、pixelの視覚評価は別途。専用Chrome終了/profile削除は確認済み。合成fitは本人実データ運用・精度改善・実80%的中・採用資格の証明ではない。初回driverは参加後UI反映待ち不足で未fitのまま停止し、失敗証跡を別保全してfresh専用環境で再実行した。

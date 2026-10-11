@@ -83,7 +83,7 @@ export function useEvaluation(goalId: string, enabled: boolean) {
       if (!valid()) return;
       if (kind === 'participate') await evaluationHttp.participate(goalId, { policyVersion: data.policy.policyVersion }, controller.signal);
       if (kind === 'withdraw') await evaluationHttp.withdraw(goalId, controller.signal);
-      if (kind === 'capture') await evaluationHttp.capture(goalId, { expectedGoalSettingsRevision: data.goalSettingsRevision }, controller.signal);
+      if (kind === 'capture') await evaluationHttp.capture(goalId, { expectedGoalSettingsRevision: data.goalSettingsRevision, displayedForecast: 'BASELINE' }, controller.signal);
       if (!valid()) return;
       if (kind === 'withdraw') {
         const empty = { REACHED: 0, NOT_REACHED: 0, UNKNOWN: 0, PENDING: 0, NULL: 0,

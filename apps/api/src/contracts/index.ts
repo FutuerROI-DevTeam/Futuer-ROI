@@ -8,3 +8,5 @@ export { Log, LogList, LogParams, LogPut, LogStatus, LogsQuery, PredictionResult
 export { QuestionAnswer, QuestionAnswers, AnswerRevision } from './question.ts';
 export { GoalR11, PredictionR11, TodayR11, R11ViewQuery } from './r11.ts';
 export { EvaluationPolicy, EvaluationForecast, EvaluationState, EvaluationQuantileCounts, EvaluationReport, EvaluationParticipation, EvaluationCapture } from './evaluation.ts';
+
+export { LearningPolicy, LearningGate, LearningArtifactPurpose, LearningArtifactSummary, LearningReport, LearningParticipation, LearningFit, LearningActivate, LearningRollback, LearningWithdraw, LearningTodayQuery, LearningCompareQuery, LearningSelectedForecast, TodayLearning, LearningReferenceForecast, LearningExperimentalForecast, LearningComparison } from './learning.ts';

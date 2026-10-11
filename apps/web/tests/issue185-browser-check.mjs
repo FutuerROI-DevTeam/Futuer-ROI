@@ -35,6 +35,10 @@ function setupSessionTransport() {
     if (new URL(url, location.href).pathname === '/api/evaluation' && (!init?.method || init.method === 'GET')) {
       return Response.json({ enabled: false, policyVersion: 'self-evaluation-v1', retentionDays: 90, maxSnapshots: 90, observationDays: 30 });
     }
+    // Today reads only the default-OFF learning capability; mutation rejection stays below.
+    if (new URL(url, location.href).pathname === '/api/learning' && (!init?.method || init.method === 'GET')) {
+      return Response.json({ enabled: false, policyVersion: 'self-learning-v1', retentionDays: 90, maxArtifacts: 5, observationDays: 30, capDays: 30 });
+    }
     if (new URL(url, location.href).pathname !== '/api/auth/get-session' || (init?.method && init.method !== 'GET')) {
       state.writes++; throw new Error('unexpected request: ' + url);
     }

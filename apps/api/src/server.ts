@@ -3,6 +3,7 @@ import { createAuth } from './auth/options.ts';
 import { loadAuthConfig, loadConfig } from './config.ts';
 import { createAppPool, createAuthPool } from './db/pool.ts';
 import { loadEvaluationOptions } from './evaluation/policy.ts';
+import { loadLearningOptions } from './learning/policy.ts';
 
 const config = loadConfig();
 const authConfig = loadAuthConfig(process.env, config);
@@ -22,6 +23,7 @@ const app = await buildApp({
   webDist: config.webDist,
   logLevel: config.logLevel,
   evaluation: loadEvaluationOptions(),
+  learning: loadLearningOptions(),
   auth: {
     instance: auth,
     baseURL: authConfig.baseURL,

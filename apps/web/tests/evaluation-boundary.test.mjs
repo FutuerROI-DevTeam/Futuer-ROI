@@ -33,7 +33,7 @@ registerHooks({
       export const evaluationKeys = {capability:()=>['goals','evaluation','capability'],report:id=>['goals','evaluation',id]};
       export const evaluationHttp = {
         capability:()=>globalThis.ev.read(),report:()=>globalThis.ev.read(),
-        participate:()=>globalThis.ev.write('participate'),withdraw:()=>globalThis.ev.write('withdraw'),capture:()=>globalThis.ev.write('capture')
+        participate:()=>globalThis.ev.write('participate'),withdraw:()=>globalThis.ev.write('withdraw'),capture:(_id,body)=>{globalThis.ev.captureBody=body;return globalThis.ev.write('capture');}
       };
     ` };
     return nextLoad(url, context);
@@ -51,6 +51,7 @@ function setup() {
 }
 function cleanup() { ev.cleanups.forEach(callback => callback?.()); ev.client.clear(); delete globalThis.ev; }
 const dispatched = () => new Promise(resolve => setImmediate(resolve));
+test('explicit capture freezes the displayed standard baseline even with a separate qualified learner pointer',async()=>{const hook=setup();try{await hook.action('capture');assert.deepEqual(ev.captureBody,{expectedGoalSettingsRevision:1,displayedForecast:'BASELINE'});assert.deepEqual(ev.writes,['capture']);}finally{cleanup();}});
 for (const change of ['owner', 'roundtrip', 'checking', 'unmount']) {
   test(`held capture response cannot write evaluation cache after ${change}`, async () => {
     const hook = setup();
