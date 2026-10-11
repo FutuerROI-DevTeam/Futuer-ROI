@@ -20,6 +20,8 @@
     "typecheck": "npm run build:prediction && npm run typecheck --workspaces",
     "test": "npm run build:prediction && npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
+    "build:vercel": "npm run build && node scripts/build-vercel.mjs",
+    "verify:vercel": "node --test apps/api/tests/vercel.test.ts scripts/tests/vercel-bundle.test.mjs",
     "db:migrate": "npm run db:migrate --workspace=@futureroi/api",
     "db:migrate:auth": "npm run db:migrate:auth --workspace=@futureroi/api",
     "db:migrate:app": "npm run db:migrate:app --workspace=@futureroi/api",

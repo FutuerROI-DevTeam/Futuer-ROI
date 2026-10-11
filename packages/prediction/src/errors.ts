@@ -4,7 +4,8 @@
 type FieldPath = readonly (string | number)[];
 type InputReason = 'INVALID_LOCAL_DATE' | 'FUTURE_LOG_DATE' | 'DUPLICATE_LOG_DATE' |
   'INVALID_QUANTITY' | 'INVALID_LOG_STATUS' | 'INVALID_LOG_AMOUNT' | 'UNSAFE_PROGRESS';
-type ConfigReason = 'INVALID_INTEGER' | 'INVALID_SEED' | 'UNSUPPORTED_MODEL' | 'UNSAFE_POSTERIOR';
+type ConfigReason = 'INVALID_INTEGER' | 'INVALID_SEED' | 'UNSUPPORTED_MODEL' | 'UNSAFE_POSTERIOR' |
+  'UNSUPPORTED_METHOD' | 'RESOURCE_LIMIT';
 
 export class PredictionInputError extends RangeError {
   readonly reason: InputReason;

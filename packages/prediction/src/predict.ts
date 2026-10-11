@@ -18,6 +18,9 @@ function validateConfig(config: PredictionConfig): void {
   if (config.modelVersion !== DEFAULT_CONFIG.modelVersion) {
     throw new PredictionConfigError('UNSUPPORTED_MODEL', ['modelVersion'], 'Unsupported modelVersion');
   }
+  if (config.completionMethod !== undefined && !['auto', 'sampled'].includes(config.completionMethod)) {
+    throw new PredictionConfigError('UNSUPPORTED_METHOD', ['completionMethod'], 'Unsupported completion method');
+  }
 }
 
 export function predict(input: PredictionInput, config: PredictionConfig = DEFAULT_CONFIG): PredictionResult {

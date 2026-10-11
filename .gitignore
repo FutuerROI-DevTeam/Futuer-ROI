@@ -25,6 +25,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 coverage/
+.vercel/
 
 # Local PostgreSQL data and credentials for API tests (embedded fallback).
 .local/

@@ -78,6 +78,9 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
   const queryClient = useQueryClient();
   // 記録済みの昨日を訂正している。訂正を始めた時点の記録（対象日）を固定して持つ。今日と同時には編集しない
   const [yesterdayEdit, setYesterdayEdit] = useState<Log | null>(null);
+  const yesterdayChangeEntry = useRef<HTMLButtonElement>(null);
+  const yesterdayOriginalEntry = useRef<HTMLElement | null>(null);
+  const yesterdayFocusAfterCancel = useRef<string | undefined>(undefined);
   // 保存中の状態は Goal・日付ごとに見る（画面を作り直しても、同じ日の保存が残っていれば保存中のまま）
   // 今日の記録を保存したとき・選び直しをやめたときは、押したボタンが消えるので、記録済み（または達成済み）の見出しへ
   // フォーカスを移す（キーボード・読み上げで場所を見失わない）
@@ -119,6 +122,22 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
     heading.focus();
   });
 
+  // edit/viewのkey切替で元の変更ボタンが消える。取消commit後に同じ日の入口へ戻す。
+  // refへのintentだけでは再renderしないため、依存配列を置かずcommit後に一度だけ消費する。
+  // owner/Goal/draft世代のremountでintentを破棄し、日付や無効な入口へfocusを持ち越さない。
+  useEffect(() => {
+    const date = yesterdayFocusAfterCancel.current;
+    if (!date) return;
+    yesterdayFocusAfterCancel.current = undefined;
+    const entry = yesterdayChangeEntry.current;
+    if (!privateDataReady(getPrivateEpoch()) || date !== snapshot?.today.yesterday || !entry?.isConnected || entry.disabled) return;
+    const original = yesterdayOriginalEntry.current;
+    const page = entry.closest('.fr-page--today');
+    const originalAvailable = original?.isConnected && page?.contains(original)
+      && !(original instanceof HTMLButtonElement && original.disabled);
+    (originalAvailable ? original : entry)?.focus();
+  });
+
   if (isNotFound(goalQuery.error) || isNotFound(todayQuery.error)) return <NotFound />;
   // ログインが切れたら、キャッシュに残る前の表示（タイトル・昨日の案内・記録の帯）を出さず、画面全体をログイン切れにする
   if ([goalQuery.error, todayQuery.error, logsQuery.error].some(isUnauthenticated)) return <SignedOutPage />;
@@ -152,6 +171,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
   const startYesterdayCorrection =
     yesterday?.kind === 'recorded' && !yesterdayEdit && !locks.yesterdayLocked
       ? () => {
+          yesterdayOriginalEntry.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
           yesterdaySaver.reset();
           setYesterdayEdit(yesterday.log);
         }
@@ -190,7 +210,10 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
           editing
           disabled={false}
           onStart={() => {}}
-          onEnd={() => setYesterdayEdit(null)}
+          onEnd={() => {
+            yesterdayFocusAfterCancel.current = yesterdayEdit.localDate;
+            setYesterdayEdit(null);
+          }}
         />
       );
     } else if (showYesterdayPrompt(today, yesterdayLaterFor)) {
@@ -209,11 +232,13 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
         <YesterdayCorrection
           key="view"
           {...common}
+          entryRef={yesterdayChangeEntry}
           log={log}
           currentYesterday={today.yesterday}
           editing={false}
           disabled={locks.yesterdayLocked}
           onStart={() => {
+            yesterdayOriginalEntry.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
             yesterdaySaver.reset();
             setYesterdayEdit(log);
           }}
@@ -250,7 +275,8 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
         </Link>
         {goal ? <GoalMenu goalId={goalId} onCorrectYesterday={startYesterdayCorrection} /> : null}
       </nav>
-      {/* 予測の表示境界・記録の操作を保ったまま、画面幅に合わせてカードを配置する。 */}
+      {/* 同じsnapshotをareaで排他的に描画し、DOMをprimary→記録→detailsの順にする。
+          TodayContentは表示のみで取得/保存をせず、分割しても予測計算や操作部品を二重に実行しない。 */}
       <div className="fr-today-layout">
       <div className="fr-today__scroll">
       {todayQuery.isError || goalQuery.isError || logsQuery.isError ? (

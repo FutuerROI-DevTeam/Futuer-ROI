@@ -19,6 +19,31 @@ env:
   CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
+  vercel-bundle:
+    name: Production install and Vercel bundle smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Install with the actual Vercel configuration
+        run: >-
+          node --input-type=module -e
+          "import config from './vercel.json' with { type: 'json' };
+          import { execSync } from 'node:child_process';
+          execSync(config.installCommand, { stdio: 'inherit' });"
+      - name: Build the self-contained Function without secrets or a database
+        run: npm run build:vercel
+      - name: Verify structure and source copy boundaries without full HTTP asset probing
+        run: node --test --test-name-pattern='^(配備構造|コピー前|欠落asset)' scripts/tests/vercel-bundle.test.mjs
+
   application:
     name: Install, typecheck, test, build
     runs-on: ubuntu-latest

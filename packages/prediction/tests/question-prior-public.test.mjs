@@ -68,7 +68,7 @@ test('公開R-11: 公開key順と状態別の形を固定し、内部候補の�
       assert.deepEqual(Object.keys(result.prediction.config), ['samples', 'horizonDays', 'seed']);
       assert.deepEqual(result.provenance, source);
       assert.deepEqual(Object.keys(result.prediction.completion), result.prediction.completion.status === 'available'
-        ? ['status', 'scenario', 'p50Days', 'p80Days']
+        ? ['status', 'scenario', 'p50Days', 'p80Days', 'computation']
         : result.prediction.completion.status === 'completed' ? ['status'] : ['status', 'reason']);
       if (result.plan !== null) {
         assert.deepEqual(Object.keys(result.plan), ['remainingAmount', 'remainingSessions', 'lastSessionAmount']);

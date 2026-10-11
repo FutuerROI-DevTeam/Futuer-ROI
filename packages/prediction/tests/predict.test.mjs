@@ -6,7 +6,8 @@ import { samplePosterior } from '../dist/src/random.js';
 import { mixtureCompletionQuantiles } from '../dist/src/completion.js';
 import { unknownGapInput, unknownGapExpected, todayDoneInput } from '../dist/tests/fixtures.js';
 
-const smallConfig = { ...DEFAULT_CONFIG, samples: 24, horizonDays: 60 };
+// 従来のseeded数値回帰は明示sampledで保持し、autoは独立oracleで検証する。
+const smallConfig = { ...DEFAULT_CONFIG, samples: 24, horizonDays: 60, completionMethod: 'sampled' };
 const copy = value => structuredClone(value);
 const goal = { totalRequired: 20, initialProgress: 0, sessionAmount: 1 };
 const log = (localDate, status, amount = status === 'DONE' ? 1 : null) => ({ localDate, status, amount });
@@ -73,7 +74,7 @@ test('T-08/T-12: today actual amount is counted once; CURRENT_STATE counts only 
   assert.equal(result.progress.done, 7);
   assert.deepEqual(result.coreMetric, { status: 'not_applicable', reason: 'TODAY_RECORDED' });
   const samples = samplePosterior(result.posterior, smallConfig.samples, smallConfig.seed);
-  assert.deepEqual(result.completion, { status: 'available', scenario: 'CURRENT_STATE',
+  assert.deepEqual(completionValues(result.completion), { status: 'available', scenario: 'CURRENT_STATE',
     ...mixtureCompletionQuantiles(samples, 'DONE', 2, smallConfig.horizonDays) });
   const wrongDoubleCount = mixtureCompletionQuantiles(samples, 'DONE', 1, smallConfig.horizonDays);
   assert.notEqual(result.completion.p50Days, wrongDoubleCount.p50Days);
@@ -83,7 +84,7 @@ test('T-08: unrecorded today uses one hypothetical session; remaining one gives0
   const input = { ...todayDoneInput, today: '2026-10-04' };
   const done = 7;
   const one = predict({ ...input, goal: { ...input.goal, totalRequired: done + 10 } }, smallConfig);
-  assert.deepEqual(one.completion, { status: 'available', scenario: 'TODAY_DONE', p50Days: 0, p80Days: 0 });
+  assert.deepEqual(completionValues(one.completion), { status: 'available', scenario: 'TODAY_DONE', p50Days: 0, p80Days: 0 });
   const two = predict({ ...input, goal: { ...input.goal, totalRequired: done + 20 } }, smallConfig);
   const samples = samplePosterior(two.posterior, smallConfig.samples, smallConfig.seed);
   // DONE起点から最初の将来DONEへ到達する確率を、独立した閉形式で求める。
@@ -94,7 +95,7 @@ test('T-08: unrecorded today uses one hypothetical session; remaining one gives0
     }
     return null;
   };
-  assert.deepEqual(two.completion, { status: 'available', scenario: 'TODAY_DONE',
+  assert.deepEqual(completionValues(two.completion), { status: 'available', scenario: 'TODAY_DONE',
     p50Days: quantile(.5), p80Days: quantile(.8) });
   assert.equal(two.progress.done, done);
 });
@@ -139,7 +140,7 @@ test('T-12: CURRENT_STATE first-future-DONE quantiles match an independent close
       }
       return null;
     };
-    assert.deepEqual(result.completion, { status: 'available', scenario: 'CURRENT_STATE',
+    assert.deepEqual(completionValues(result.completion), { status: 'available', scenario: 'CURRENT_STATE',
       p50Days: quantile(.5), p80Days: quantile(.8) });
   }
 });
@@ -169,7 +170,7 @@ test('T-11/T-12: priority completed > today recorded > insufficient; never publi
   ] }, smallConfig);
   assert.equal(todaySkipped.completion.scenario, 'CURRENT_STATE');
   const samples = samplePosterior(todaySkipped.posterior, smallConfig.samples, smallConfig.seed);
-  assert.deepEqual(todaySkipped.completion, { status: 'available', scenario: 'CURRENT_STATE',
+  assert.deepEqual(completionValues(todaySkipped.completion), { status: 'available', scenario: 'CURRENT_STATE',
     ...mixtureCompletionQuantiles(samples, 'SKIPPED', 2, smallConfig.horizonDays) });
 });
 
@@ -202,3 +203,6 @@ test('integer ceil and technical config errors remain separate from HTTP error m
   ]) assert.throws(() => predict(todayDoneInput, { ...smallConfig, ...changed }), RangeError);
   assert.equal(predict(todayDoneInput, { ...smallConfig, prior: 1 }).posterior.a.alpha, 1);
 });
+
+// 新しい方式metadataは専用契約テストで検査し、既存の日数・状態の期待値を保持する。
+function completionValues({ computation, ...values }) { return values; }

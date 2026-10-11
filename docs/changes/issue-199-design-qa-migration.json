@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "cb39176ba5b9c43ee64d8fb5cf93ef1c45ca2f0c",
+  "issue": 199,
+  "reason": "QA全文を規約のSupporting履歴へ移動。旧見出し/anchorと原文/訂正履歴を保全する。",
+  "preserveHeadings": [
+    "design-qa.md"
+  ],
+  "preserveUnmovedLines": [],
+  "moves": [
+    {
+      "id": "issue-199-design-qa-fulltext",
+      "source": "design-qa.md",
+      "destination": "docs/changes/issue-199-design-qa.md",
+      "after": null,
+      "before": null,
+      "destinationAfter": "<!-- issue-199-qa-preserved-begin -->",
+      "destinationBefore": "<!-- issue-199-qa-preserved-end -->",
+      "headingMap": {}
+    }
+  ]
+}

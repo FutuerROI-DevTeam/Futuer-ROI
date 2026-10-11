@@ -1,6 +1,6 @@
 # Prediction Engine（Refs #71・#72・#73）
 
-**Supporting Doc / Not a Source of Truth.** 正式仕様は[Prediction Engine D-19〜D-22](../../docs/architecture.md#prediction-engine)と[Test Strategy T-01〜T-15](../../docs/architecture.md#test-strategy)。このpackageはDB・HTTP・UI・時計から独立した計算本体とローカルテストを持つ。現在はAPIへ結合済みで、公開環境・製品受入の完了とは区別する。純粋Engineの型検査・数値テストCIは[検証CI](#検証ci)を参照する。
+**Supporting Doc / Not a Source of Truth.** 正式仕様は[Prediction Engine D-19〜D-22・D-31](../../docs/architecture.md#prediction-engine)と[Test Strategy T-01〜T-15](../../docs/architecture.md#test-strategy)。このpackageはDB・HTTP・UI・時計から独立した計算本体とローカルテストを持つ。現在はAPIへ結合済みで、公開環境・製品受入の完了とは区別する。純粋Engineの型検査・数値テストCIは[検証CI](#検証ci)を参照する。
 
 ## 承認範囲と現在の状態
 
@@ -14,15 +14,17 @@
 
 ## 計算の利用条件と処理
 
-2026-10-05の継続指示に基づく[Goal別priorの内部候補](GOAL_PRIOR_CANDIDATE.md)を独立branchで追加した。a/b別の初期snapshotとsource/versionを受け取り、既存の数値経路を共有する。公開`predict`の共通prior=2・入力／出力契約・不足判定は維持する。数値prior候補の9テストを含む従来56テストを保持し、[PR118候補adapter](QUESTION_PRIOR_ADAPTER_CANDIDATE.md)の5テストとsnapshot／worker接続例の3テストを加え、n=H限定の境界回帰2件と合わせて当時66テストへ拡張した。#133時点の公開入口4件を含む70件を保持し、#188の公開結果契約・再帰収集の回帰3件を加え、現在は73件を同じCIで実行する。独立CDFオラクル3テストは別コマンドで確認する。Supporting候補全体の採択と、下記#133の依頼者承認範囲を分ける。
+2026-10-05の継続指示に基づく[Goal別priorの内部候補](GOAL_PRIOR_CANDIDATE.md)を独立branchで追加した。a/b別の初期snapshotとsource/versionを受け取り、既存の数値経路を共有する。公開`predict`の共通prior=2・入力／出力契約・不足判定は維持する。数値prior候補の9テストを含む従来56テストを保持し、[PR118候補adapter](QUESTION_PRIOR_ADAPTER_CANDIDATE.md)の5テストとsnapshot／worker接続例の3テストを加え、n=H限定の境界回帰2件と合わせて当時66テストへ拡張した。#133時点の公開入口4件を含む70件を保持し、#188の公開結果契約・再帰収集の回帰3件を加え、当時73件を同じCIへ含めた。独立CDFオラクル3テストは別コマンドで確認する。Supporting候補全体の採択と、下記#133の依頼者承認範囲を分ける。
 
 [src/index.ts](src/index.ts)の`predict(input, config?)`は正本と同じ必須項目を持つ`PredictionResult`を返す。日数metadataの具体的な集計と公開エラーも依頼者承認を反映し、現在は上のAPI adapterから利用する。呼び出し側がGoalのtimezoneで計算した`today`と実記録を渡す。DONEは実際の正の整数amount、SKIPPEDはnull、Goal量は整数。日付生成・timezone変換・DONE量の入力・HTTPエラーへの変換は外側の責務。型どおりでない外部JSONの構造検証は呼び出し側が行い、EngineがすべてのJavaScript例外を入力エラーへ変換する契約にはしない。
 
 1. [observations.ts](src/observations.ts)は整数のGregorian日付演算で入力を検証し、コピーを整列する。未来・重複・不正な日付や量は達成判定前に拒否する。隣接した記録だけを数え、欠けたUNKNOWN日を跨がない。実績は初期量＋全DONEの実量で、今日の量も1回だけ含む。内部事実として最古記録日〜今日／昨日のordinal範囲・暦日数と有効記録件数を返す。ログ0では観測開始日を決められないため窓はnullで、初期進捗から開始日を推測しない。
 2. [predict.ts](src/predict.ts)は正式な優先順「入力エラー → 達成済み → 今日記録済み／データ不足」を適用し、各遷移へ既定prior=2を加えて事後分布を作る。達成済みのcompletionは`completed`、未達成で起点状態の遷移がない場合は`insufficient`。0日やnullで不足を隠さない。
 3. [recovery.ts](src/recovery.ts)はBeta-Geometricの中央値・80%分位点をBigIntの厳密な整数比で比較する。約分は計算量を抑えるためだけで、閾値への一致を保持する。中心計算へlgamma・乱数・epsilon・Hの打ち切りを使わない。
-4. [random.ts](src/random.ts)は採択済みseedFor／SplitMix32／Box–Muller／Marsaglia–Tsangの順序でa、続けてbを抽選する。[config.ts](src/config.ts)の既定値はmodelVersion=`behavior-persistence-m1-v1`、prior=2、K=200、H=1095、seed=20261012。
-5. [completion.ts](src/completion.ts)は各抽選について将来DONE回数0から初到達日の確率を計算し、等重みに混合する。到達不能な状態だけを除き、微小な確率を切り捨てず、H以後の尾を再正規化しない。累積確率は仕様のepsilon=1e-12で判定する。今日未記録なら1回の仮のsessionを実績と分けて引き、今日記録済みなら実績を増やさずCURRENT_STATEから始める。必要回数がHを超える場合は両分位点null、今日の仮実行で届く場合は0日。
+4. [completion-integrated.ts](src/completion-integrated.ts)は[D-31で採択した既定方式](../../docs/architecture.md#d-31-同一モデルの完了cdf統合候補203)の有限整数域で同じMarkovモデルのBeta事後積分を行い、閾値近傍だけ限定BigInt比較を使う。明示sampled／範囲外／数値gateでは[random.ts](src/random.ts)の既存抽選順を使う。[config.ts](src/config.ts)の既定要求値はmodelVersion=`behavior-persistence-m1-v1`、prior=2、K=200、H=1095、seed=20261012。configは要求のechoで実抽選数ではない。内部computationは閉形式／境界値でsamples/seed=null、samplingで実K/seedとfallback理由を持ち、API境界で公開DTOから除く。
+5. sampling経路の[completion.ts](src/completion.ts)は各抽選について将来DONE回数0から初到達日の確率を計算し、等重みに混合する。到達不能な状態だけを除き、微小な確率を切り捨てず、H以後の尾を再正規化しない。両方式の累積確率は仕様のepsilon=1e-12で判定する。今日未記録なら1回の仮のsessionを実績と分けて引き、今日記録済みなら実績を増やさずCURRENT_STATEから始める。必要回数がHを超える場合は両分位点null、今日の仮実行で届く場合は0日。
+
+統合方式の数値／metadata／資源保護4テストを加え計77テスト。samplingの確保前work上限とgの短い厳密積・safe day上限は[検証資料](../../experiments/completion-cdf-integration/README.md)を参照する。gはHで切らず、上限超過を不足／nullへ変換しない。以前のsampling計測・固定例は当時の方式の証拠として保持し、代表入力・全域・公開runtimeを混同しない。
 
 数量・posterior形状はNumberのsafe integer範囲を確認し、厳密性を失う入力は拒否する。configは正の整数prior／K／H、uint32 seed、実装済みmodelVersionを検証する。これは計算の技術的な入力境界で、Productの新しい上限やAPIのエラーコードを採択したものではない。数値部品は内部用で、外部入力は`predict`の検証を通す。Goal別候補の内部型・検証範囲と極端な非対称priorの性能制約は[候補の説明](GOAL_PRIOR_CANDIDATE.md)を参照する。
 
@@ -88,7 +90,7 @@ npm run typecheck --workspace=@futureroi/prediction
 npm test --workspace=@futureroi/prediction
 ```
 
-型検査はsource・固定fixture・公開Resultの型契約を確認する。testはコンパイル後に`tests`配下の`*.test.mjs`を再帰収集して実行し、数値・回帰・固定seed vector・既存MCと独立オラクルの47テストに内部候補9件を加え、PR118候補adapterの5件とsnapshot／worker接続例3件も含め、n=Hの境界回帰2件も加え、#133の公開入口4件を加え、#188の3回帰も含め現在73テストを実行する（候補も同じPR CIで確認する）。compiler・install・テストの失敗はjobを失敗させ、skipや代用の成功値へ変換しない。Actionsログで版・実コマンド・pass/fail件数を確認する。test後に11種類の[接続用入出力例](examples/README.md)を実行し、2種類の[30日合成デモ入力](examples/README.md#デモ向けの30日合成入力)も実行し、実EngineのT-14必須3条件を同じNode matrixで計測する。各条件の初回＋5回をすべて500ms未満と判定し、失敗をjob失敗として保持する。固定入力・seed・CPU/メモリ・実runtime・Actions公開来歴を含むJSON・11接続例JSON・30日デモ入力JSONは、benchmark失敗時も公式upload-artifact v4（SHA固定）で14日保存する。artifactはNode版・run/attemptごとに分け、欠落時も失敗する。これはCI検証ホストの計測で、採用runtime／配備先でのT-14再確認は残る。required checksやbranch protectionは変更しない。
+型検査はsource・固定fixture・公開Resultの型契約を確認する。testはコンパイル後に`tests`配下の`*.test.mjs`を再帰収集して実行し、数値・回帰・固定seed vector・既存MCと独立オラクルの47テストに内部候補9件を加え、PR118候補adapterの5件とsnapshot／worker接続例3件も含め、n=Hの境界回帰2件も加え、#133の公開入口4件を加え、#188の3回帰も含め#203の4回帰を加えて現在77テストを実行する（候補も同じPR CIで確認する）。compiler・install・テストの失敗はjobを失敗させ、skipや代用の成功値へ変換しない。Actionsログで版・実コマンド・pass/fail件数を確認する。test後に11種類の[接続用入出力例](examples/README.md)を実行し、2種類の[30日合成デモ入力](examples/README.md#デモ向けの30日合成入力)も実行し、実EngineのT-14必須3条件を同じNode matrixで計測する。各条件の初回＋5回をすべて500ms未満と判定し、失敗をjob失敗として保持する。固定入力・seed・CPU/メモリ・実runtime・Actions公開来歴を含むJSON・11接続例JSON・30日デモ入力JSONは、benchmark失敗時も公式upload-artifact v4（SHA固定）で14日保存する。artifactはNode版・run/attemptごとに分け、欠落時も失敗する。これはCI検証ホストの計測で、採用runtime／配備先でのT-14再確認は残る。required checksやbranch protectionは変更しない。
 
 ## 補完・訂正後の再計算例
 

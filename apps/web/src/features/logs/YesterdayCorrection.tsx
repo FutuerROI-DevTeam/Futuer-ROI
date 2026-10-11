@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import type { Log } from '@contracts';
 import { longDate, parseLocalDate, shortDate } from '../../copy/date.ts';
 import { amountFormat, type AmountFormat } from '../../copy/amount.ts';
@@ -29,6 +29,7 @@ export function YesterdayCorrection({
   onStart,
   onEnd,
   onRefresh,
+  entryRef,
 }: {
   /** 保存済みの昨日の記録。訂正中は、訂正を始めた時点の記録（親が固定して渡す）。 */
   log: Log;
@@ -43,6 +44,8 @@ export function YesterdayCorrection({
   onStart: () => void;
   onEnd: () => void;
   onRefresh: () => void;
+  /** view/editの作り直しを所有する親が、取消後の入口へフォーカスを戻す。 */
+  entryRef?: Ref<HTMLButtonElement>;
 }) {
   const current = choiceFromLog(log);
   const currentText = describeChoice(current, sessionAmount, fmt.record, todayCopy.recordedRest);
@@ -56,7 +59,7 @@ export function YesterdayCorrection({
       <section className="fr-yesterday fr-yesterday--summary" aria-label={todayCopy.yesterdayQuestion}>
         {/* 1行に収まるよう日付は短く（10/6）。読み上げ名には曜日付きの日付を入れる */}
         <p className="fr-yesterday__summary">{todayCopy.yesterdaySummary(shortDate(parseLocalDate(log.localDate)), currentText)}</p>
-        <Button variant="text" icon="edit" disabled={disabled} aria-label={todayCopy.yesterdayChangeLabel(longDate(log.localDate))} onClick={onStart}>
+        <Button ref={entryRef ?? null} variant="text" icon="edit" disabled={disabled} aria-label={todayCopy.yesterdayChangeLabel(longDate(log.localDate))} onClick={onStart}>
           {todayCopy.yesterdayChange}
         </Button>
       </section>

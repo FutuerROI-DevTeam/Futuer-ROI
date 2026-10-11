@@ -163,3 +163,6 @@
   .fr-welcome__body { padding-block: 16px; }
   .fr-welcome__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 }
+
+/* 旧Heroを保ち、狭い幅でも「何日遠ざかる？」の語を途中で分断しない。 */
+.fr-welcome__phrase { display: inline-block; }

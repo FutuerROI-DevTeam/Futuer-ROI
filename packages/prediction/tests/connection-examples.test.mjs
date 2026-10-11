@@ -30,12 +30,15 @@ test('Published connection examples distinguish UNKNOWN, recorded, insufficient,
   assert.deepEqual(results['done-origin-only'].completion, { status: 'insufficient', reason: 'NO_SKIP_ORIGIN_TRANSITION' });
   assert.deepEqual(results['skip-origin-only'].completion, { status: 'insufficient', reason: 'NO_DONE_ORIGIN_TRANSITION' });
   assert.equal(results['skip-origin-only'].coreMetric.status, 'available');
-  assert.deepEqual(results['available-null'].completion, {
+  assert.deepEqual(completionValues(results['available-null'].completion), {
     status: 'available', scenario: 'TODAY_DONE', p50Days: null, p80Days: null,
   });
-  assert.deepEqual(results['available-zero'].completion, {
+  assert.deepEqual(completionValues(results['available-zero'].completion), {
     status: 'available', scenario: 'TODAY_DONE', p50Days: 0, p80Days: 0,
   });
   assert.equal(results['available-zero'].progress.completed, false);
   assert.equal(results['available-zero'].progress.done, 60);
 });
+
+// 新しい方式metadataは専用契約テストで検査し、既存の日数・状態の期待値を保持する。
+function completionValues({ computation, ...values }) { return values; }

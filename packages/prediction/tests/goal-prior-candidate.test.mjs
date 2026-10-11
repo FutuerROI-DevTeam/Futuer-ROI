@@ -8,7 +8,8 @@ import { unknownGapInput, todayDoneInput } from '../dist/tests/fixtures.js';
 import { cases } from '../examples/recalculate.mjs';
 
 const { predict, DEFAULT_CONFIG, PredictionConfigError } = publicEngine;
-const smallConfig = { ...DEFAULT_CONFIG, samples: 24, horizonDays: 60 };
+// 従来のseeded数値回帰は明示sampledで保持し、autoは独立oracleで検証する。
+const smallConfig = { ...DEFAULT_CONFIG, samples: 24, horizonDays: 60, completionMethod: 'sampled' };
 const parameter = (alpha, beta, source = 'synthetic-test', version = 'fixture-v1') => ({ alpha, beta, source, version });
 const prior = () => ({ a: parameter(3, 7), b: parameter(5, 11) });
 const log = (day, status, amount = status === 'DONE' ? 1 : null) => ({
@@ -92,7 +93,7 @@ test('candidate: recorded today actual amount stays 7; DP begins with zero futur
   assert.equal(result.progress.done, 7);
   assert.deepEqual(result.coreMetric, { status: 'not_applicable', reason: 'TODAY_RECORDED' });
   const samples = samplePosterior(result.posterior, smallConfig.samples, smallConfig.seed);
-  assert.deepEqual(result.completion, { status: 'available', scenario: 'CURRENT_STATE',
+  assert.deepEqual(completionValues(result.completion), { status: 'available', scenario: 'CURRENT_STATE',
     ...mixtureCompletionQuantiles(samples, 'DONE', 2, smallConfig.horizonDays) });
   assert.notEqual(result.completion.p50Days,
     mixtureCompletionQuantiles(samples, 'DONE', 1, smallConfig.horizonDays).p50Days);
@@ -149,7 +150,7 @@ test('candidate: source/version are detached provenance and do not alter counts 
     evaluateGoalPriorCandidate(frozenInput, { a: parameter(20, 1), b: parameter(2, 8) }, config);
     assert.deepEqual(evaluateGoalPriorCandidate(frozenInput, frozenPrior, config), first);
     const samples = samplePosterior(first.posterior, config.samples, seed);
-    assert.deepEqual(first.completion, { status: 'available', scenario: 'TODAY_DONE',
+    assert.deepEqual(completionValues(first.completion), { status: 'available', scenario: 'TODAY_DONE',
       ...mixtureCompletionQuantiles(samples, 'DONE', 3, config.horizonDays) });
     assert.equal(first.config.seed, seed);
   }
@@ -198,3 +199,6 @@ test('candidate: independent a changes completion but not b-driven core; source 
   assert.notDeepEqual(two.completion, one.completion);
   assert.deepEqual(two.posterior.b, one.posterior.b);
 });
+
+// 新しい方式metadataは専用契約テストで検査し、既存の日数・状態の期待値を保持する。
+function completionValues({ computation, ...values }) { return values; }

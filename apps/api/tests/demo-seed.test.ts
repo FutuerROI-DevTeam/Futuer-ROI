@@ -13,6 +13,12 @@ import { setup, signedInClient, type Client } from './helpers/stack.ts';
 
 const INSTANT = new Date('2026-12-31T15:00:00.000Z'); // 東京の年越し
 const options = (userId: string) => ({ userId, timezone: 'Asia/Tokyo', now: () => INSTANT });
+// Engineの内部診断だけを除き、公開値はすべて完全一致で検査する。
+function publicPrediction(result: ReturnType<typeof predict>) {
+  if (result.completion.status !== 'available') return result;
+  const { computation: _internal, ...completion } = result.completion;
+  return { ...result, completion };
+}
 async function userId(client: Client) {
   const session = await client.call('GET', '/api/auth/get-session');
   assert.equal(session.status, 200);
@@ -102,7 +108,7 @@ test('Todayは実Engineと完全一致し、昨日補完・今日記録を通常
     assert.equal(today.yesterday, '2026-12-31');
     assert.equal(today.yesterdayMissing, true);
     assert.equal(today.todayLog, null);
-    assert.deepEqual(today.prediction, predict(data[i]!.input));
+    assert.deepEqual(today.prediction, publicPrediction(predict(data[i]!.input)));
     assert.equal((await owner.call('PUT', `/api/goals/${goal.id}/logs/2026-12-30`, { status: 'DONE', amount: 1, expectedGoalSettingsRevision: 0 })).status, 422);
     assert.equal((await owner.call('PUT', `/api/goals/${goal.id}/logs/2026-12-31`, { status: 'SKIPPED' })).status, 200);
     assert.equal((await owner.call('PUT', `/api/goals/${goal.id}/logs/2027-01-01`, { status: 'DONE', amount: 1, expectedGoalSettingsRevision: 0 })).status, 200);

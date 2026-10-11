@@ -1,6 +1,6 @@
 # 予測モデルの判断記録
 
-2026-09-30のCore／「遠ざかる」表現は当時の採択理由の履歴。現行g50の意味と表示改訂は[Architecture D-21](../architecture.md#d-21)と[Product P-21](../product-spec.md#p-21-todayの朝焼け山並み案)を参照する。再開待ちを完了日差へ読み替えない。
+2026-09-30のCore／「遠ざかる」表現と採択理由を保持する。2026-10-10の全面否定は公開レビューで訂正した。同じ継続傾向・設定量と再開後の経路共有ではGはモデル上の追加遅れであり、完了日P50どうしの差とは別。[Architecture D-21](../architecture.md#d-21)と[Product P-21](../product-spec.md#p-21-todayの朝焼け山並み案)を参照する。
 
 Supporting Doc。正式な状態と結論は[Architecture](../architecture.md#architecture-decision-log)のD-19〜D-22・[D-28](../architecture.md#d-28)を正本とし、本書はその比較理由・代替案・影響を1回だけ記録する。数値の出典は[Evidence](evidence.md)。ADR番号はProduct議論で使った呼び名で、正式IDはD-19〜D-22。実行方式のD-28も比較理由を本書にまとめ、採択状態はArchitectureを参照する。
 
@@ -57,6 +57,8 @@ Supporting Doc。正式な状態と結論は[Architecture](../architecture.md#ar
 - **Evidence**：[中心指標の候補比較](evidence.md#中心指標の候補比較)。
 
 ## ADR-004 将来のMonte CarloをやめてDPで計算
+
+2026-10-10の[D-31](../architecture.md#d-31-同一モデルの完了cdf統合候補203)により、完了の既定計算だけをBeta事後積分へ置換した。以下は旧判断の理由・当時の測定であり、将来の日々のMonte Carlo／CRNを使わない判断は維持する。事後サンプル＋DPは範囲外・数値gate・明示`sampled`で残る。週表示は維持するが、標準整数域の既定経路では有限Kの抽選を使わず、有限記録・将来行動・モデルの不確実性は残る。
 
 - **Context**：初期案は、事後サンプルごとに将来の毎日のDONE / SKIPPEDを乱数で生成し、2つのシナリオを共通乱数法（CRN）で比べていた。
 - **Candidates**：A）事後サンプル＋将来の日々もMonte Carlo、B）事後サンプル＋到達日分布をDPで厳密計算。

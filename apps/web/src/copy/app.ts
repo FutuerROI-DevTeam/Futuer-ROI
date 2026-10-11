@@ -2,12 +2,12 @@
 
 export const appCopy = {
   name: 'Future ROI',
-  tagline: '日々の記録から、再開とゴールの見通しを。',
+  tagline: '今日サボると、ゴールは何日遠ざかる？',
   home: {
     eyebrow: '続ける道のりを、記録から。',
-    titleFirst: '続ける日も、',
-    titleSecond: '休む日も。',
-    lead: 'やった量や休んだ日を記録して、次に再開する目安とゴールまでの見通しを確かめる。',
+    titleFirst: '今日サボると、',
+    titleSecond: ['ゴールは', '何日遠ざかる？'],
+    lead: 'やった量や休んだ日を記録して、今日休むことでゴールが遠ざかる日数の目安と、設定量で続けた完了の見通しを確かめる。',
     register: '登録してはじめる',
     login: 'ログイン',
     returning: '登録済みの方はこちら',

@@ -80,6 +80,16 @@ test('回答だけ・回答と記録の見通しでは、注釈で「あなた�
   const { completionNoteFor, coreNoteFor, todayCopy } = await import('../src/copy/today.ts');
   // 記録だけのときは Product Spec の固定文言のまま
   assert.equal(coreNoteFor('RECORDS'), todayCopy.coreNote);
+  // g50の遅れ解釈を全面否定せず、どの出所でもモデル条件とP50差・因果の限界を伝える。
+  for (const source of ['RECORDS', 'QUESTION', 'QUESTION_AND_RECORDS']) {
+    const note = coreNoteFor(source);
+    assert.match(note, /同じ継続傾向と設定量/);
+    assert.match(note, /再開後に同じ道をたどるモデル/);
+    assert.match(note, /完了が遅れる日数の中央値/);
+    assert.match(note, /完了日の中央値どうしの差/);
+    assert.match(note, /実際の因果効果.*表すものではなく/);
+    assert.doesNotMatch(note, /完了日の差ではなく/);
+  }
   assert.equal(completionNoteFor({ a: 'RECORDS', b: 'RECORDS' }), todayCopy.completionNote);
   // 実ログ0件・回答だけ
   assert.doesNotMatch(coreNoteFor('QUESTION'), /記録から推定した/);

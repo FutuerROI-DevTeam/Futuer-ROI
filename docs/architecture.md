@@ -158,13 +158,25 @@ Evidenceは[Compose検証](../scripts/smoke-compose.sh)と[Application CI](../.g
 | ライブラリと版 | Better Auth 1.7.7（#74で固定）。メール＋パスワード、DBセッション、同一originのCookie、`/api/auth/*` | #84・#96で登録〜ログアウト・回数制限・Cookie属性・Linuxコンテナを実測した版。自作よりパスワード・セッションの保守責任が小さい |
 | Fastifyとの接続 | [bridge.ts](../apps/api/src/auth/bridge.ts)。URLは`BETTER_AUTH_URL`から組み立て、client IPはFastifyの`trustProxy`判定の結果だけを専用headerで渡し、複数のSet-Cookieをそのまま転送する | 公式ガイドの形では、Host偽装・X-Forwarded-For偽装による回数制限の回避と、sign-outのCookie消去漏れが起きうる（#84 F-5〜F-7） |
 | 保護の既定 | [guards.ts](../apps/api/src/http/guards.ts)はrouterの確定routeで判定する。登録済み`/api/health`・`/api/auth/*`以外の業務APIはセッション必須（route未定義のAPI pathも401）。業務APIの状態変更（GET／HEAD／OPTIONS以外）は許可originのOriginヘッダーが必須（違反は403 `ORIGIN_REJECTED`） | 追加し忘れで公開されるAPIを作らない。`SameSite=Lax`だけでは同一siteの別originを防げない（#84 F-8）。認証endpointは固定版Better Authの`trustedOrigins`・Referer／Fetch Metadata検査に委ね、業務APIの「Originなしは403」とは異なる。#76・#77はこのhookの内側に置く |
-| session更新とlogout故障 | 保護APIでgetSessionが返す複数のSet-Cookieを転送し、DB expiry延長とCookie更新を揃える。画面は通信例外・API errorを表示しbusyをfinallyで解除、logout error時は遷移しない | 通常時のlogoutではDB session削除とCookie消去を確認する。Better Auth 1.7.7はDB削除例外を内部でlogして成功を返すため、その故障時の保存済み旧Cookie失効は保証しない。fail-closed処理・復旧／再試行の方式はD-24/#75/#84の人の判断待ち |
+| session更新とlogout故障 | 保護APIでgetSessionが返す複数のSet-Cookieを転送し、DB expiry延長とCookie更新を揃える。画面は通信例外・API errorを表示しbusyをfinallyで解除、logout error時は遷移しない。#215で[削除確認hook](../apps/api/src/auth/sign-out.ts)を追加する（[失敗契約](#ログアウトの失敗と明示再試行215)） | Cookie消去前に署名tokenのDB削除完了を待つ。失敗・結果不明は503 `SIGN_OUT_UNCONFIRMED`、Cookie保持、明示再試行。503時の旧Cookie失効は保証しない。公開HTTPS・復旧担当等のD-24残条件は維持 |
 | Cookie | HttpOnly・SameSite=Lax・Path=/。`BETTER_AUTH_URL`がhttpsなら`Secure`と`__Secure-`接頭辞。本番（`NODE_ENV=production`）はhttpsのURLを必須にし、ローカルのコンテナ確認だけ`BETTER_AUTH_ALLOW_HTTP=1`で許可 | staging／本番で`Secure`が付かない設定ミスを起動時に止める |
 | 回数制限 | DB保存（`rateLimit`表）。1 IPあたり60秒にsign-in／sign-up各5回（`AUTH_SIGN_IN_MAX`／`AUTH_SIGN_UP_MAX`で上書き）、その他の認証endpointは100回。429の`X-Retry-After`は整数秒で、画面は残り秒数を数えて表示し、経過後に再試行できる | 再起動・複数instance・並列要求をまたいで効く（#84で実測）。現行アプリの[並列受入回帰](../apps/api/tests/auth-concurrency.test.ts)（#142）で、2instance・IP/endpoint隔離・拒否時のDB不変・再起動・期限切れ窓からの並列再開を確認する。共有回線のデモ会場向けの上限は未合意のため環境変数で変えられる |
 | Secret・URL | `BETTER_AUTH_SECRET`（本番必須、32文字以上。開発では`apps/api/.local/auth-secret`に自動生成）、`BETTER_AUTH_URL`（本番必須）、`AUTH_TRUSTED_ORIGINS`（任意）、`TRUST_PROXY_HOPS`（既定0） | 実値をGitへ入れず、開発者ごとの生成を手順から外す。proxyのhop数は公開先の実形式で確認する（#83） |
 | 画面 | `/`は公開トップ（P-16）。`/login`・`/register`は[AuthPage](../apps/web/src/routes/AuthPage.tsx)。[router](../apps/web/src/router.tsx)はURLに現れない2つのまとまり（pathless layout route）で分ける：認証画面はログイン済みなら戻り先へ移り、Goal4画面はログインの確認を1か所で行う（未ログインは元のURLを戻り先にログインへ、確認できない通信失敗はログインへ送らず「接続できませんでした」）。ログイン後・ログアウト後は履歴を置き換える。戻り先はアプリ内pathだけ。ログアウトはGoal一覧のアカウントメニュー。セッション切れ（401）は理由付き（`reason=expired`）で再ログインへ誘導。404・エラー・読込中はルーター全体の既定の画面。Goalの記録の履歴は`/goals/$goalId/history`（カレンダー）。デスクトップ幅ではログイン必須の画面の外側（AppShell）に画面全体の上のバーを出。上のバーは1段にし、Goalの作成・編集と記録の履歴では画面ごとの上のバーの代わりに戻り先と見出し（[DeskHeader](../apps/web/src/ui/components/DeskHeader.tsx)）を出す（#146） | R-01の画面要件。Goal・記録の画面は#78〜#81、デザインに合わせた画面とルート構成は#146 |
 
-FEの私的な表示・入力（R-01／#155）は次の境界を持つ。
+#### ログアウトの失敗と明示再試行（#215）
+
+目的はログアウト失敗を成功として表示せず、DB復帰後に本人が再試行できること。固定SDK 1.7.7のsign-outはDELETE例外を捕捉してCookieを消去し200を返す。内部の`deleteSession`は削除前lookup例外でもDELETEを飛ばすため、内部関数の正常終了だけでは削除確認にならない。[confirmSignOut](../apps/api/src/auth/sign-out.ts)を`createAuth`のbefore hookへ限定登録し、HTTP routerの既存Origin/Referer/Fetch Metadata・callbackURL検査後、SDKの`getSignedCookie`で確かめたtokenだけをDB adapterで削除する。既存SDK endpointがCookie消去と200応答を担当し、正常経路では追加のDELETEを行わない。未ログイン・不正署名はSDKの従来処理に委ね、他sessionは削除しない。
+
+削除完了が確認できないときは503 `SIGN_OUT_UNCONFIRMED`を返し、Cookieを消去しない。画面は「ログアウトを確認できませんでした」と再試行の案内を表示し、busyを解除してその場に留まる。自動再試行は行わない。DB復帰後に再びログアウトを押し、削除完了→Cookie消去→ログイン画面へ進む。DELETE応答が失われた場合は削除済みでも503とし、次の0行DELETEを成功として収束できる。HTTP応答は共通のno-storeを維持する。
+
+この契約はDB故障中の失効保証ではない。DELETEだけ失敗した場合、コピー済みの有効Cookieは再試行成功まで使用できる。session読取も失敗する場合、保護APIは500で拒否する。削除前に認証済みの実行中要求を取り消す仕組みは追加しない。現設定はDB sessionのみでsecondary storage・session delete hooksを使わないため、SDK adapterの単一token削除を選ぶ。これらの追加、SDK更新、DB/認証方式の変更時はこの境界を再検討する。SDK内部関数への先行削除はlookup故障を見落とし、成功応答を後から500へ変える方式はCookieを失って再試行できないため採用しない。SDK全面置換・新認証方式・設定権限変更は行わず、D-24の条件付き採択・公開HTTPS/DB復旧の残条件は変えない。
+
+Evidence: [合成DB回帰](../apps/api/tests/sign-out-failure.test.ts)は実createAuth/bridge/guard・固定SDKとDB I/Oだけの合成で、故障/復帰、署名、CSRF、lookup故障、削除応答喪失、同時要求、別session隔離を検査する。[PostgreSQL回帰](../apps/api/tests/auth.test.ts)は専用DBと実appで503/no-store・Cookie保持・復旧後の旧Cookie401を確認し、[実Chrome回帰](../apps/web/tests/sign-out.browser.tsx)は実SDK/AccountMenu/routerと合成HTTPでbusy・503表示・セッション保持・明示再試行後だけの遷移を検査する。実User・公開HTTPS・本番DB障害の受入とは区別する。
+
+#### FEの私的な表示・入力（R-01／#155）
+
+次の境界を持つ。
 
 - 表示とquery: [session-cache.ts](../apps/web/src/api/session-cache.ts)で描画時のsession ownerとcache消去の状態を照合する（R-01／#155）。別ownerを認識した最初の描画から一覧・編集・Today・履歴と作成draftを停止し、旧取得のcancelとcache resetが済んでから新取得を使う。連続切替では、その切替に対応するcancel完了だけが境界を開く。履歴もGoal・logs双方の取得時刻を照合し、ownerごとに表示月を作り直す。sessionの初回確認中・再取得中（isRefetching）・取得失敗も私的な表示・フォームを停止する。再取得中に到着した業務応答の所有者は旧session dataから確定できないため、同じownerで回復してもcacheを消して新取得から開く。Todayだけは、表示していたownerと同じsession dataが残る正常な再確認（初回確認・失敗・別owner・未ログインを除く）の間、画面をunmountせず入力中の状態を保つ。その間と確認後のcache消去が済むまでに届いた応答は採用せず、保存は預かって同じowner・連続性の確定後に1回だけ送る（[D-30](#d-30-todayの同一owner再確認で入力を保つ190)）。
 - session確認: ルートの[ログイン確認](../apps/web/src/auth/session.ts)も独立したgetSessionの成功だけを使わず、useSessionと同じstoreの確認完了を待つ。並行するルート確認をまとめ、focus等が確認を置き換えた場合も最新の完了を待つ。[AccountMenu](../apps/web/src/features/account/AccountMenu.tsx)の空session回復は同じ欠落につき1回とし、null→取得中→nullの再取得ループを防ぐ。
@@ -389,7 +401,7 @@ interface PredictionInput {
 const DEFAULT_CONFIG = {
   modelVersion: 'behavior-persistence-m1-v1',
   prior: 2,            // a, b とも Beta(2,2)
-  samples: 200,        // 完了の目安で使う事後サンプル数 K
+  samples: 200,        // sampling経路へ要求する事後サンプル数 K（実使用数とは区別）
   horizonDays: 1095,   // 完了の目安の打ち切り H
   seed: 20261012,
 } as const;
@@ -455,6 +467,7 @@ interface PredictionResult {
    - `α = 2+nSD`、`β = 2+nSS`。今日SKIPPEDとした後に最初のDONEへ戻るまでの待ち日数`G`の事後予測分布はBeta-Geometric分布：`P(G > t) = B(α, β+t) / B(α, β) = Π_{i=0}^{t−1} (β+i)/(α+β+i)`（`t = 0, 1, 2, …`）。
    - `g50 = min{ t ≥ 1 : P(G > t) ≤ 0.5 }`、`g80 = min{ t ≥ 1 : P(G > t) ≤ 0.2 }`。CDFが閾値にちょうど一致する日も到達とみなす。
    - **厳密に計算する**：事前分布は整数（`prior = 2`）なのでα・βは整数。`N_t = Π (β+i)`、`D_t = Π (α+β+i)`を任意精度の整数（BigInt等）で持ち、`g50`は`2·N_t ≤ D_t`、`g80`は`5·N_t ≤ D_t`を満たす最小の`t`とする。乱数も浮動小数点も使わない。`lnB`（lgamma）の差のexpで計算すると、CDFが閾値に一致する境界で1日ずれる（α,β = 2〜20で722件中15件。[Evidence](prediction/evidence.md#中心指標の候補比較)）。`config.prior`が整数でない場合は設定エラーとする。
+   - **Gと完了の追加遅れの関係**：未達目標・毎回同じ設定量・共通θ=(a,b)の下で、休む側が最初のDONE以後の経路をG日遅らせて共有するなら`T_skip = T_done + G`。共通posteriorからθを一度引いて共有するBeta混合でも成立するが、混合後のT_doneとGは一般に依存するため、別々に混合した周辺分布を独立に畳み込まない。これは完了日P50どうしの差や実際の因果効果の保証ではなく、任意の今日量・設定変更・シナリオごとのposterior更新・既達成へそのまま適用しない。計算式やAPIの変更ではない（[D-21](#d-21)）。
 5. **完了の目安**（未達成の場合だけ計算する。[判定順](#状態の判定順)の3）：
    - `nDD+nDS = 0`なら`insufficient / NO_DONE_ORIGIN_TRANSITION`、`nSD+nSS = 0`なら`insufficient / NO_SKIP_ORIGIN_TRANSITION`。両方の状態からの遷移を1回以上観測するまで、事前分布だけで決まる部分を含む目安を表示しない（件数の閾値ではない）。
    - 「今日までの実績」と「明日以降に必要なDONE回数」を分ける。今日のDONEをDPの中で数え直さない。
@@ -468,12 +481,13 @@ interface PredictionResult {
      ```
 
    - `requiredFutureDone > H`なら、DPをせずに両方`null`。
-   - `m = 0 … K−1`について、[乱数の仕様](#乱数とサンプラーの仕様)に従い`a_m`、次に`b_m`を事後分布から抽選する。
+   - [D-31](#d-31-同一モデルの完了cdf統合候補203)で採択した既定の`auto`では、正整数shape<=1,000,000、`N<=H<=1095`の通常経路で独立Beta事後分布を積分した同一MarkovモデルのCDFを使う。閾値の近傍だけ共通整数分母による比較を行う。質量・単調性等のgate、範囲外、明示`sampled`は下記のsampling経路を残す。浮動小数点誤差・有限sampling近似・モデルの不確実性を解消したとは扱わない。
+   - **sampling経路**では`m = 0 … K−1`について、[乱数の仕様](#乱数とサンプラーの仕様)に従い`a_m`、次に`b_m`を事後分布から抽選する。
    - 各`(a_m, b_m)`で、状態（DONE / SKIPPED）×`futureDoneCount`の確率を、明日（`d = 1`）から1日ずつ進める。`requiredFutureDone`回目のDONEが起きた日`d`（`1 ≤ d ≤ H`）の確率を`1/K`倍して混合分布に加える。
    - **確率の大きさで計算を打ち切らない。** 微小な確率でも、累積確率が閾値の近くにあると分位点を変えうる（PR #86レビュー：打ち切りでP50が3日から5日に変わる例。[Evidence](prediction/evidence.md#dpの微小確率の打ち切りpr-86レビュー対応)）。
    - 計算量の工夫（H日以内の累積確率を変えないものだけ）：配列は2組を使い回す。`d`日目に`futureDoneCount < requiredFutureDone − (H − d + 1)`の状態はH日以内に届かないので計算しない（その確率は「3年以内に未到達」に入る）。生きている状態が1つもなくなったら、以後の到達確率は厳密に0なので終了してよい。1抽選あたりの計算量は高々`H × requiredFutureDone`で、刈り込みによりおよそ`H²/4`以下になる。
    - `p50Days = min{ d : 累積 ≥ 0.5 − ε }`、`p80Days = min{ d : 累積 ≥ 0.8 − ε }`、`ε = 1e−12`。H日以内に届かなければ`null`（到達した分だけで分位点を計算しない）。`ε`は浮動小数点の丸め誤差（実測の最大は約3e−15）より十分大きくとった許容幅で、累積確率が閾値にちょうど一致する日を到達とみなすため（中心指標と同じ扱い）。真の累積確率が閾値より`ε`未満だけ小さい場合も到達とみなすが、その差は確率`1e−12`未満。
-6. `modelVersion`と`config`を結果に含める。
+6. `modelVersion`と要求設定`config`を結果に含める。`samples`と`seed`はsampling経路へ渡す要求値で、実際に抽選した回数・使用seedの証明ではない。閉形式／境界値では抽選しない。実方式・実使用値・fallback理由はEngine内部の`completion.computation`に保持し、既存HTTP DTOには追加しない。公開数値は内部計算のp50/p80をそのまま返す。
 
 ### 乱数とサンプラーの仕様
 
@@ -507,7 +521,7 @@ const normal  = (next) => Math.sqrt(-2 * Math.log(uniform(next))) * Math.cos(2 *
 
 ### 数学的な根拠（実装者向けの要約）
 
-固定した`θ = (a, b)`の条件下では、今日サボった場合の完了日`T_skip`と今日やった場合の完了日`T_done`について、
+手順4の未達・同量・再開後経路共有の結合で、固定した`θ = (a, b)`の条件下では、今日サボった場合の完了日`T_skip`と今日やった場合の完了日`T_done`について、
 
 ```text
 T_skip = T_done + G,   G ~ Geometric(b),   G ⫫ T_done | θ
@@ -517,7 +531,7 @@ T_skip = T_done + G,   G ~ Geometric(b),   G ⫫ T_done | θ
 
 ### Known Limitations
 
-1. g50は再開までの待ち日数を表し、完了日の差や今日の行動の因果効果は表さない。連続日数による継続しやすさはモデル化しない。[合成Bの連続中](prediction/evidence.md#合成ユーザー)では完了日の期待値差4.44日と再開待ちの期待値3.33日に約1.1日差があった。この期待値比較は表示する中央値g50の誤差ではなく、実ユーザーの誤差方向・大きさは未検証。
+1. g50は再開までの待ち日数の中央値であり、手順4の経路共有モデルでは完了の追加遅れ中央値でもある。完了日中央値どうしの差や今日の行動の因果効果とは区別する。連続日数による継続しやすさはモデル化しない。[合成Bの連続中](prediction/evidence.md#合成ユーザー)では完了日の期待値差4.44日と再開待ちの期待値3.33日に約1.1日差があった。この期待値比較は表示する中央値g50の誤差ではなく、実ユーザーの誤差方向・大きさは未検証。
 2. 因果効果ではない。記録から推定した傾向が今後も続くと仮定している。
 3. やらなかった日ほど未記録になる場合など、欠測が行動状態に依存する（MNAR）と、観測された遷移だけの予測には選択の偏りが残る。UNKNOWNのペアを除くことはその補正ではない。休んだ状態が欠けると楽観的になる可能性があるが、誤差の方向・大きさは欠測の仕組みによる。前日補完は欠測を減らす狙いで、実ユーザーでの効果と予測精度は未検証。
 4. Beta(2,2)により、記録が少ない間は値が中央（確率0.5）側に寄る。
@@ -537,6 +551,8 @@ T_skip = T_done + G,   G ~ Geometric(b),   G ⫫ T_done | θ
 | `packages/prediction` | `node:test`＋固定例・固定seed・独立オラクル（性質T-01〜T-15を具体例と閉形式で検査）。fast-check（性質ベースの入力生成）は未採択の候補 | 下表T-01〜T-15。CIで毎回実行 |
 | `apps/api` | `node:test`＋PostgreSQL（Compose、CIのservice、または`embedded-postgres`） | 認証（未ログイン401、登録→再読み込み→ログアウト→旧Cookie 401、期限切れ、別origin403、https Cookie、DB保存の回数制限と再起動。[auth.test.ts](../apps/api/tests/auth.test.ts)）、Goal API（契約違反の422と全項目列挙、無効timezone、他人・uuidでないidの404、記録があるGoalの変更禁止、削除の連鎖、timezoneの日付境界。[goals.test.ts](../apps/api/tests/goals.test.ts)）、記録API（DONEの明示量必須、同日上書き、SKIPPEDの量拒否、今日・昨日の窓と開始日前、Asia/Tokyoの23:59→0:00、期間指定の一覧。[logs.test.ts](../apps/api/tests/logs.test.ts)）、Today API（`yesterdayMissing`の条件、Engineの`predict`との完全一致、記録後の再計算、達成済み。[today.test.ts](../apps/api/tests/today.test.ts)）、所有者チェック（他人は404）、`(goal_id, local_date)`の上書き、DB制約（DONE＋`amount`がNULLの挿入は失敗し、SKIPPED＋NULLは成功する）、今日・昨日以外、または記録開始日より前は422、timezoneの日付境界、無効なIANA名は422、記録があるGoalの`timezone`・`initialProgress`変更は422、`/today`の組み立て |
 | `apps/web` | `node:test`の純粋module・HTTP契約・SSR、実React/Router/SDKのブラウザ回帰（合成transport）、実API/DBの手動ブラウザ確認。Playwright CLIは採択済み・未導入 | 前者は所有者切替・再確認・draft・保存成功の訪問寿命を検査。実認証・実HTTP・DBの通し確認とは分ける。登録→Goal作成→記録→前日補完→Today Decisionの実環境結果は対象SHAと操作をPRへ記録する |
+
+responsive詳細の実Chrome回帰では、[起動helper](../apps/web/tests/browser-startup.mjs)が一度だけ起動した専用profileの子processを待つ。endpoint検出・`/json/list`・WebSocket接続・最初の`Browser.getVersion`で30秒の起動予算を共有し、10秒時点では途中診断を出す。期限・test中断・spawn error・早期終了は失敗にし、再起動やskipで成功に置換しない。中断済みsignalから新たにspawnせず、fixture build完了時も中断を確認してcleanup後のHTTP/Chrome起動を防ぐ。通常のUI待ち・CDP commandは10秒、全testは180秒を保持する。cleanupには別途各2秒の猶予で`Browser.close`・SIGTERM・SIGKILLを使い、所有した子のexitを確認できなければ失敗としてprofileを残す。stage時刻・最後のI/O・stderr末尾・子の生存/終了・host負荷を診断し、環境値・Cookie・storageを収集しない。[合成回帰](../apps/web/tests/browser-startup.test.mjs)は遅延成功と停止I/O/異常終了/残存・中断後の遅延buildを検証する。起動の遅れの根因、未知の子孫processの全停止、速度改善の保証とは分ける（[#213](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/213)）。
 
 | ID | Prediction Engineの性質 |
 | --- | --- |
@@ -583,10 +599,12 @@ timezoneの日付境界（23:59 / 0:00）はEngineではなくAPI層のテスト
 | 形 | D-23の単一SPA／APIコンテナ＋PostgreSQLはローカルDockerで維持。公開候補はSPAの静的assets＋Fastifyの単一Fluid Function＋Neonで、同一originの`/api`と既存の業務・認証境界を保つ。コンテナを公開する方式との差は未検証 |
 | 公開先 | [D-25](#d-25)：**FE・BEともVercel Hobby、DBはNeon Free、ローカル開発はDocker**が第一候補。本人アカウント・費用0円が前提で、採用確定・配備済みではない。作成・権限・公開操作は別途承認後 |
 | 早期のstaging確認 | 本番でしか見えない問題（Cookie・`BETTER_AUTH_URL`・proxy・migration・環境変数・DB接続・cold start・SPA fallback・HTTPS）を早く見つけるため、最終公開を待たずに2段階で確認する。①I-01：healthだけのコンテナ（当時の候補）をstagingへ出し、DBへ接続できる ②I-06：stagingで登録・ログイン・セッション維持ができる。I-14は最終確認・E2E・Demo Seed・仕上げを担う。現在の第一候補ではFunctionで同等のhealth／DB・SPA確認を行う。公開先の承認が遅れた場合の既存移管例外（[#70](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/70)のstaging項目を[#75](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/75)へ、#75のstaging確認を[#83](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/83)へ）に従い、移管先で未確認項目を追跡する。移管を公開確認済みと扱わない |
-| 環境変数 | `DATABASE_URL`（必須）、`BETTER_AUTH_SECRET`、`BETTER_AUTH_URL`。任意の`HOST`・`PORT`・`WEB_DIST`・`LOG_LEVEL`・`SHUTDOWN_TIMEOUT_MS`は[.env.example](../.env.example)を参照。実値はProviderのSecret設定に置き、Gitへ入れない |
+| 環境変数 | `DATABASE_URL`（必須）、`BETTER_AUTH_SECRET`、`BETTER_AUTH_URL`。任意の`HOST`・`PORT`・`WEB_DIST`・`LOG_LEVEL`・`SHUTDOWN_TIMEOUT_MS`は[.env.example](../.env.example)を参照。実値はProviderのSecret設定に置き、Gitへ入れない。production／公開候補の名前・必要条件と未決設定は[配備前の照合表](operations/release-demo.md#配備前に照合する環境変数) |
 | デモ | Demo Seed（合成記録）を開発データと分けて投入。手順は[リリースとデモ](operations/release-demo.md) |
 
 ### 第一候補の評価理由と代替案
+
+候補の最小起動点・repository root build・Web資産の収容は[#208の配備物手順](operations/vercel-bundle.md)へ分離する。明示的なBuild Output API v3を使う実装候補であり、D-25の最終採択・公開受入や既存Docker構成の変更ではない。
 
 R-10の主要Flowを公開URLから使えるようにし、3人で機能QAを行うための候補。[VercelのネイティブFastify対応](https://vercel.com/docs/frameworks/backend/fastify)は`listen()`を使う既存APIを単一Vercel Functionとして扱い、Fluid Computeを使う。これを利用するため、Fastifyの全面的なフレームワーク置換は不要と考える。ただし本リポジトリのworkspace・静的配信・DB接続まで動くという推論は未検証で、設定・entrypoint等の最小適合は必要になり得る。公開運用をまとめ、NeonにDBサーバー管理を任せる利点と、無料枠・休止・関数のlifecycleへの適合コストを比較する。
 
@@ -631,7 +649,7 @@ resetは同ユーザーの初回にも効くtransaction advisory lock→認証us
 | D-19 | 2026-09-30 | DECIDED | [予測モデルにM1（2状態Bayesian Markov）を採用、M0・M2は不採用](#d-19)（ADR-001） |
 | D-20 | 2026-09-30 | DECIDED（旧predictの共通prior。R-11の依頼者承認範囲はD-26へ分離） | [事前分布をBeta(2,2)とする範囲と変更案](#d-20)（ADR-002） |
 | D-21 | 2026-09-30 | DECIDED | [中心指標をBeta-Geometric分布の中央値とする](#d-21)（ADR-003） |
-| D-22 | 2026-09-30 | DECIDED | [将来の日々のMonte Carloをやめ、DPで計算する](#d-22)（ADR-004） |
+| D-22 | 2026-09-30 → 2026-10-10 | PARTIALLY SUPERSEDED by D-31（完了の既定計算のみ） | [将来の日々のMonte Carlo／CRNを使わない判断は維持](#d-22)（ADR-004）。K=200の事後サンプル＋DPは範囲外・数値gate・明示`sampled`の経路として残る |
 | D-23 | 2026-09-30 → 2026-10-03（2026-10-05・10-06追加） | DECIDED（基本構成、[FE報告・BE本人記録](#2026-10-03の技術構成合意)） | [言語・FE／API・DB・単一コンテナ・独立計算コアを採用](#d-23)。[npm workspacesと`pg`を追加採択](#2026-10-05の追加採択)。[版・runner・起動構成を固定](#2026-10-06の版固定と起動構成)。[migration方式を固定](#2026-10-06のmigration方式74)。既存方式の[Docker一式起動補完](#docker一式起動の補完130)は#130でレビュー |
 | D-24 | 2026-09-30 → 2026-10-03（2026-10-06実装） | RECOMMENDED / CONDITIONAL（第一候補、最終採択待ち） | [Better Authは検証・運用条件付き](#d-24)。[#74で版固定、#75で実装](#2026-10-06の認証実装75)。公開HTTPS・運用担当は残条件 |
 | D-25 | 2026-09-30 → 2026-10-03 → 2026-10-08 | RECOMMENDED / CONDITIONAL（第一候補、最終受入待ち） | [FE・BEともVercel Hobby＋Neon Free、ローカルDocker。厳密0円・非商用・検証条件付き](#d-25)。Cloud Runの旧候補記録を保持 |
@@ -640,6 +658,19 @@ resetは同ユーザーの初回にも効くtransaction advisory lock→認証us
 | D-28 | 2026-10-09 | DECIDED（依頼者の方針変更・敵対的セルフレビューを根拠に同期維持と再検討条件を採択） | [予測計算はMVPでは同期実行を維持し、worker化は再検討条件付きで見送る](#d-28) |
 | D-29 | 2026-10-09 | 依頼者の実装指示・チームレビュー対象 | [量・設定版・作成操作の保全](#d-29-量と作成操作の保全148) |
 | D-30 | 2026-10-10 | 依頼者判断（Code Freeze前のため文書のチーム事前承諾なし。コードはHuman Review対象） | [Todayの同一owner再確認で入力を保つ](#d-30-todayの同一owner再確認で入力を保つ190)。D-29・#155の別owner・失敗時の境界は維持 |
+| D-31 | 2026-10-10 | DECIDED（Kaito-Iwaseの明示判断、PR #204） | [同一モデルの完了CDF積分](#d-31-同一モデルの完了cdf統合候補203)を標準整数域の既定に採用。D-22の完了計算のみ置換し、範囲外・数値gate・明示`sampled`、公開DTO非追加を維持 |
+
+### D-31 同一モデルの完了CDF統合候補（#203）
+
+2026-10-10 / **DECIDED（Kaito-Iwaseの明示判断）** / [PR #204](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/204)の計算方式を採用する。見出しは候補実装時の参照先として保持する。判断の出所はKaito-Iwaseであり、チーム全員の合意・Human APPROVED review・mainへのMerge・公開配置・実ユーザー検証を済みとする記録ではない。
+
+Context: 同じBeta事後分布の完了CDFを有限Kで近似する差と、同期計算が記録等を待たせる条件を区別する。T-14・D-19〜D-22・D-26・D-28を対象に、依頼者が所有合成環境での実装・実API検証・Draft PRを指示した。実ユーザー校正や公開SLOの検証ではない。
+
+Decision: 同一MarkovモデルのBeta-binomial積分を標準整数域の既定`auto`に採用し、閾値近傍の限定整数比較、sampling／中心指標の有限work保護を保持する。D-22の完了の目安の既定計算だけを置換し、範囲外・数値gate・明示`sampled`には事後サンプル＋DPを残す。gの定義・H非適用、入力prior・全履歴・量・今日の仮実行・状態判定は維持する。公開metadataを追加しない案1を採用し、実方式は内部診断へ保持する。configは要求設定であり実抽選を偽らない。
+
+Alternatives: 案2の明示した新表現版は外部consumerに方式情報を提供する必要が生じた場合に再検討する。案3の同版field追加＋API/FE同時更新＋旧タブfull reloadは、現FEがmetadataを使わない一方で旧strict readerを拒否するため今回選ばない。初期の追加DTOを拒否した証拠とD-22の旧sampling記録は当時の方式として保持する。現在の公開field集合／`r11-v1`は維持する。
+
+Consequences: 同seedの再現性と全事後分布の積分を区別する。同じ確率法則に対する有限Kの近似差を減らす採択であり、現実の行動予測精度の改善ではない。範囲外／数値gateのsamplingは有限Kの近似を残し、資源上限はtyped計算エラーとして既存の安全なHTTP失敗へ接続する。代表入力の成功だけで全域の速度・精度を保証しない。公開runtimeと校正は未検証。採択は上記のKaito-Iwaseの明示判断、技術検証は独立した敵対的セルフレビュー・検証・最終SHAのCIで区別して記録する。GitHubのreview状態・merge条件は変更せず、merge/deployは未実施とする。理由・不変条件・再検討条件・実測は[#203検証資料](../experiments/completion-cdf-integration/README.md)を参照する。
 
 ### D-27
 
@@ -695,9 +726,11 @@ Consequences / Invariants: marker用の最小tableと複合unique制約を追加
 
 2026-09-30 / **DECIDED（依頼者判断）** / ADR-003。中心指標を「今日サボった場合に遠ざかる日数G」のBeta-Geometric事後予測分布の中央値`g50`とする。期待値（発散しうる）、完了日P50の差（分位点の差・打ち切りの影響）、期日到達確率の差（期日が必要）は不採用。[詳細](prediction/decision-log.md#adr-003-中心指標はbeta-geometric分布の中央値)。
 
-2026-10-10 / 表示上の意味の明確化（[Product P-21](product-spec.md#p-21-todayの朝焼け山並み案)）。上記の旧「遠ざかる日数G」は、実計算ではSKIPPEDから最初のDONEまでの待ち日数。`g50`はそのCDFが50%へ達する最小の日であり、必要残量・設定量・aを使う完了予測や、その中央値の差とは別である。計算採択・APIは変えず、旧文言を数値の現行ラベルへ転用しない。
+2026-10-10 / 公開レビューによる意味の訂正（[Product P-21](product-spec.md#p-21-todayの朝焼け山並み案)、[公開レビューの計算例](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/202#issuecomment-6096062267)と[数学的訂正](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/202#issuecomment-6096211540)）。GはSKIPPEDから最初のDONEまでの待ち日数であり、未達目標・今日も将来も同じ設定量・共通θ=(a,b)を前提に、休む側が再開後に同じ経路をG日遅らせてたどる結合なら、`T_skip − T_done = G`。したがってg50はこのモデル上の追加遅れの中央値でもある。a・残量をGに使わないことは、この解釈を否定する理由にならない。2つの完了日分布のP50差とは別であり、因果効果は保証しない。計算採択・API・既存Coreコピーを保持する。
 
 ### D-22
+
+2026-10-10 / **完了の既定計算のみD-31で部分置換**。標準整数域の`auto`はBeta事後積分を使い、事後サンプル＋DPは範囲外・数値gate・明示`sampled`で残す。将来の日々のMonte Carlo／CRNを使わない判断と中心指標の定義は維持する。以下は2026-09-30の判断理由であり、当時の方式・測定を保持する。
 
 2026-09-30 / **DECIDED（依頼者判断）** / ADR-004。将来の日々のMonte Carloと共通乱数法（CRN）を使わない。中心指標は閉形式、完了の目安は事後サンプル（K=200）ごとに到達日分布をDPで厳密に計算する。決定的・再現可能で、シミュレーションノイズとCRNが不要になり、テストが書きやすい。[詳細](prediction/decision-log.md#adr-004-将来のmonte-carloをやめてdpで計算)。
 
@@ -767,7 +800,8 @@ Consequences / Invariants: marker用の最小tableと複合unique制約を追加
 - **明示量**：DONEは正のint4 `amount`必須、SKIPPEDはamount禁止／保存NULL。API補完は設定更新と競合して表示量を変えるため廃止する。FEはGoal・日・量・版・元unit／timezoneを保存操作へ固定し、409後の最新GET成功まで再保存を止める。意味が同じときだけ元量で明示再保存する。
 - **作成ledger**：POSTのUUID `Idempotency-Key`を小文字化し、ownerとの複合主キーで予約する。検証済みbodyを固定順でcanonical化し、省略initialProgress=0・questionPrior=両nullとしてSHA-256で照合する。到達予定日はhashへ含め、省略/nullは未設定として同値にする。その場合はcanonical形に新しい欄を加えず#148の既存hashを保持する。予約とGoal作成は同じREAD COMMITTED transaction。競合INSERTを待った後、新しいSELECTで確定ledgerを読む。初回201、同body再送200＋`Idempotency-Replayed: true`（現在DTO）、異body409 `IDEMPOTENCY_CONFLICT`。Goal削除ではFK SET NULLでledgerのowner／元hashを保持し、再送410 `CREATE_RESULT_DELETED`。owner削除のみcascade、TTLなし。独立した予約commitは孤立行を生むため採用しない。
   - **FE回復**：sessionStorageへowner・キー・元bodyのみを送信前に保存する（token／passwordなし）。戻る・reload・同account再認証で復元し、表示中のフォームの確定422または成功で消す。実離脱したフォームの応答はstorageを終了せず、次のフォームへ引き継ぐ。#155の同owner確認による一時unmountでは、親が同じ連続性・訪問の確定成功を消費する直前に、その操作だけを終了する。復元済みの操作は同じキー・元bodyで再確認し、再送の未知結果やreloadでも新キーに替えない。再送前の非cache session確認に加え、FEの`X-Create-Owner`をAPIで比較する。確認後にaccountが替わっても409 `CREATE_OWNER_CHANGED`として新ownerで作成しない。APIへの正規callerはUUIDキー必須で、このownerヘッダーは追加防御として任意。
-- **確定応答の後始末**：送信操作が保持するowner・キー・保存原文が現sessionStorageと一致するときだけ終了する。APIが拒否したbodyをcleanupで再検証しない（NULを含む422でも訂正可能にする）。初回ロードは厳密なschema検証を維持する。遅延K1の成功／422は異なるK2や同keyの変更原文を消さない。Storageの読取・削除例外では原文と操作を保持して回復エラーを出し、422の項目エラー処理は続ける。通信切断・5xxは同key／元bodyを保持する。
+- **Goalフォームの失敗表示（#185）**：正常な同owner確認でも私的なフォームはunmountするが、親が入力・旧baseline・項目エラー・失敗案内をメモリで保持する。採用条件は確定成功と同じownerの連続性・訪問token・URLで、確認中は復元しない。確認失敗・owner変更・認証通知・画面離脱は破棄する。最新GETに失敗した場合は入力保全を案内して再取得を待ち、古いGoalでフォームを開かない。409は新しいGoalを取得しても旧baselineと入力を保持し、項目制約によるerrorがあっても明示reloadを残す。復元後のretainedErrorも失敗状態として扱い、通常draftへ同じ入力を退避しない。保存開始前のstorage準備失敗と422操作終了時のstorage失敗はprepareErrorとして別保持し、再確認後も案内・保存禁止状態を保つ。同batchの子unmountに先立ち失敗receiptを親へ渡す。これらの失敗入力も通常draftへ退避せず、操作原文の照合条件を維持する。失敗receiptの訪問が失効した後に入力だけが戻る経路を作らない。全422項目の訂正・明示latestGET成功・新しい明示保存で失敗snapshotを終了し、送信中は引き続き通常draftへ退避しない。mutation・callback・保存成功は復元せず、自動再送もしない。同訪問の確認中に届いた作成422だけは同owner・key・原文一致の終了処理をready後に行う。異なるK2の原文には触れない。理由・検証の限界は[185検証記録](changes/issue-185-failure-preservation.md)を参照する。
+- **確定応答の後始末**：送信操作が保持するowner・キー・保存原文が現sessionStorageと一致するときだけ終了する。APIが拒否したbodyをcleanupで再検証しない（NULを含む422でも訂正可能にする）。初回ロードは厳密なschema検証を維持する。同訪問のメモリで既知の確定422操作だけは、ownerと保存原文の完全一致を条件に、初回loaderが拒否するNUL入力も項目エラーとともに表示できる。終了失敗中は入力・保存を禁止し、現在のready／owner／訪問を再確認する「入力の訂正を再開」の明示操作で該当原文だけを終了する。成功は親receiptへ同期し、入力と422項目エラーを維持する。一般の壊れたraw・別owner／訪問・変更された原文へこの例外を広げず、自動送信はしない。遅延K1の成功／422は異なるK2や同keyの変更原文を消さない。Storageの読取・削除例外では原文と操作を保持して回復エラーを出し、422の項目エラー処理は続ける。通信切断・5xxは同key／元bodyを保持する。
 - **回復が確認できないとき**：壊れたJSON・旧schemaは原文を保持し、初期描画を継続してPOSTを止め、一覧での確認を案内する。409 `IDEMPOTENCY_CONFLICT`は同keyの入力不一致として盲目的な再送を止める。409 `CREATE_OWNER_CHANGED`は作成時のaccountでの再認証と同key/bodyの明示確認へ案内し、通信失敗と区別する。どの場合も自動で回復情報を消したり新keyを作ったりしない。
 - **FEの回復境界**：非queryの409回復GETもAbortSignalを渡し、離脱・owner／境界変更で中断する。反映前には開始時のownerとPrivateEpochの同一性を確認し、A→B→Aの旧応答もcacheへ戻さない。410 `CREATE_RESULT_DELETED`を受けた同owner／keyだけを、利用者の明示操作で終了する。入力を保持し、新keyは次の保存で初めて発行する。通信結果不明では同key再送を保つ。最新unitLockedと編集単位が食い違う場合は、他の入力を残して保存済み単位へ戻す明示操作を出す。
 

@@ -563,6 +563,8 @@ migrationはHTTP listenerを開く前に専用poolで実行します。host開�
 
 確認する範囲と結果を分け、対象HEAD・実行環境・fail/skip/未実行をIssue/PRへ記録します。内部整理の責務は[Architecture](architecture.md#責務と配置を変えるとき)が正本です。
 
+responsive詳細の実Chrome回帰では、起動開始から最初のCDP応答までを一つの有限予算で待ちます。10秒診断・30秒失敗・終了確認の保証と限界は[ArchitectureのTest Strategy](architecture.md#test-strategy)を参照してください。`node --test apps/web/tests/browser-startup.test.mjs`はChromeなしで遅延・停止I/O・異常終了を検査します。実Chromeの既存9シナリオは`npm run test:browser --workspace=@futureroi/web`で他のbrowser回帰と逐次実行され、Application CIの`npm test`にも含まれます。診断の`ready`だけでUIシナリオの完走とは扱わず、subtest結果まで確認します。
+
 | 検証層 | 何を確認し、何を保証しないか |
 | --- | --- |
 | Engine | 固定例・独立オラクル・凍結fixture・型契約。`tests`配下の`*.test.mjs`を再帰収集し、境界監査も入れ子のTSを確認。DB/HTTP/UIの成功は保証しない |
@@ -639,7 +641,7 @@ Goalのmigration 0002は、既存GoalがないDBへ記録開始日を追加し�
 
 業務APIの状態変更は許可originのOriginが必須です。認証API `/api/auth/*` は固定版Better AuthのtrustedOrigins検査を使い、RefererやFetch Metadataのfallbackがあるため「Originなしは常に403」とは扱いません。保護対象はrouterが確定したrouteで判定します。通常のAPI利用でsessionが延長された場合、更新Cookieも返します。
 
-登録・ログイン・ログアウトの通信失敗は画面に表示し、送信ボタンを再利用できます。logoutがAPI errorを返した場合はlogin画面へ遷移しません。ただし固定版Better AuthはDB session削除例外を内部でlogして成功を返すため、DB削除失敗時の保存済み旧Cookie失効は保証しません。この故障時のfail-closed方式・再試行／復旧手順はD-24と#75/#84で判断待ちです。
+登録・ログイン・ログアウトの通信失敗は画面に表示し、送信ボタンを再利用できます。logoutがAPI errorを返した場合はlogin画面へ遷移しません。#215の[ログアウト失敗契約](architecture.md#ログアウトの失敗と明示再試行215)では、session削除の失敗・結果不明時に503 `SIGN_OUT_UNCONFIRMED`を返し、Cookieを保持します。「ログアウトを確認できませんでした」と表示されたら、時間をおいてもう一度ログアウトを押してください。自動再試行は行わず、削除完了を確認した成功時だけCookie消去とlogin画面への遷移を行います。503時点のコピー済み旧Cookieの失効は保証せず、削除前に認証済みの要求も取り消しません。公開HTTPS・本番DB復旧の確認はD-24/#83の残条件です。
 
 `npm run dev:web`（または`WEB_DIST`つきのビルド済みサーバー）の `/` を開くと、公開ホームに登録・ログインの入口が表示されます。「登録してはじめる」でメールアドレスとパスワード（8文字以上）を入れると登録とログインが同時に行われ、Goal一覧へ進みます。0件なら「最初のGoalをつくる」から作成し、一覧のGoalを開くとTodayへ進めます。Goal一覧の上のバーと、各画面の一覧へ戻る操作も確認してください。ログイン済みのホームには「Goal一覧を開く」が表示され、再読み込みしてもログイン状態が続きます。保護画面を未ログインで開いた場合はログインへ送り、登録・ログイン画面を切り替えても元の戻り先を保ちます。戻り先指定がない認証はGoal一覧へ進みます。Goal一覧右上のアカウントボタンから「ログアウト」を押すとログイン画面へ戻ります（ログイン済みで`/login`を開くと戻り先へ移ります）。間違ったパスワードは「メールアドレスまたはパスワードが正しくありません」、同じ接続元から60秒に6回以上の失敗は「しばらく待ってからお試しください」と再開できる時刻を表示し、その時刻を過ぎると再試行できます。APIが止まっている間に保護画面を開くと、ログイン画面ではなく「接続できませんでした」と再読み込みを表示します。未ログインで`curl http://127.0.0.1:3000/api/goals`を実行すると401のJSONが返ります。ログイン後のCookieを付けて同じURLを呼ぶとGoalの一覧（最初は`[]`）が返り、作成・編集・削除の規則は[Architecture](architecture.md#2026-10-06のgoal-api76)に記載しています。
 

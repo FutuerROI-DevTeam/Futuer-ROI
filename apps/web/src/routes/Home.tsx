@@ -21,7 +21,7 @@ export function Home() {
       <section className="fr-welcome" aria-labelledby="welcome-title">
         <div className="fr-welcome__body">
           <p className="fr-welcome__eyebrow">{c.eyebrow}</p>
-          <h1 id="welcome-title" className="fr-welcome__title">{c.titleFirst}<br />{c.titleSecond}</h1>
+          <h1 id="welcome-title" className="fr-welcome__title">{c.titleFirst}<br />{c.titleSecond.map(phrase => <span className="fr-welcome__phrase" key={phrase}>{phrase}</span>)}</h1>
           <p className="fr-auth__lead">{c.lead}</p>
           {session.isPending ? (
             <p className="fr-auth__status" role="status"><Spinner />{c.checking}</p>

@@ -10,6 +10,12 @@ import { setup, signedInClient } from './helpers/stack.ts';
 
 const validGoal = { title: '英語 30分', unit: 'minutes', totalRequired: 100, sessionAmount: 10, timezone: 'Asia/Tokyo' } as const;
 const tokyo = (day: number, hour = 15, minute = 30) => new Date(Date.UTC(2026, 9, day, hour, minute)); // 15:30Z = 翌日00:30 JST
+// 内部computationは公開契約に含めず、日数・観測・設定などの全値を比較する。
+function publicPrediction(result: ReturnType<typeof predict>) {
+  if (result.completion.status !== 'available') return result;
+  const { computation: _internal, ...completion } = result.completion;
+  return { ...result, completion };
+}
 
 test('契約のPredictionResult schemaとEngineの型は双方向に互換（型検査の固定）', () => {
   assert.deepEqual(predictionResultSchemaMatchesEngine, [true, true]);
@@ -32,8 +38,8 @@ test('新規Goal: todayLogはnull、開始日が今日ならyesterdayMissingはf
   assert.equal(today.prediction.completion.status, 'insufficient');
   assert.equal(today.prediction.modelVersion, DEFAULT_CONFIG.modelVersion);
   assert.deepEqual(today.prediction.config, { prior: 2, samples: 200, horizonDays: 1095, seed: 20261012 });
-  // 直接Engineを呼んだ結果と完全に一致する（#77の完了条件）
-  assert.deepEqual(today.prediction, predict({ goal: { totalRequired: 100, initialProgress: 0, sessionAmount: 10 }, logs: [], today: '2026-10-06' }));
+  // 直接Engineを呼んだ結果の公開値と完全に一致する（#77の完了条件）
+  assert.deepEqual(today.prediction, publicPrediction(predict({ goal: { totalRequired: 100, initialProgress: 0, sessionAmount: 10 }, logs: [], today: '2026-10-06' })));
 });
 
 test('記録を重ねると/todayが再計算され、yesterdayMissingは昨日の記録の有無で変わる', async (t) => {
@@ -58,7 +64,7 @@ test('記録を重ねると/todayが再計算され、yesterdayMissingは昨日�
   assert.equal(today.prediction.completion.status, 'available');
   if (today.prediction.completion.status === 'available') assert.equal(today.prediction.completion.scenario, 'TODAY_DONE');
   const logs = plan.map(([day, status]) => ({ localDate: `2026-10-0${day}`, status, amount: status === 'DONE' ? 10 : null }));
-  assert.deepEqual(today.prediction, predict({ goal: { totalRequired: 100, initialProgress: 20, sessionAmount: 10 }, logs, today: '2026-10-07' }));
+  assert.deepEqual(today.prediction, publicPrediction(predict({ goal: { totalRequired: 100, initialProgress: 20, sessionAmount: 10 }, logs, today: '2026-10-07' })));
 
   // 今日を記録すると中心指標はnot_applicable、完了はCURRENT_STATE、todayLogが入る
   assert.equal((await a.call('PUT', `/api/goals/${goal.id}/logs/2026-10-07`, { status: 'DONE', amount: 7 })).status, 200);

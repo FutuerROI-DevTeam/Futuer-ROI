@@ -30,9 +30,18 @@ export class PredictionFailed extends Error {
   }
 }
 
+// 実方式は純粋Engineの診断に保持する。既存strict HTTP DTO／union選択へ
+// 余分なfieldを渡さず、公開p50/p80と要求configは変更しない。
+export function toPublicCompletion(completion: PredictionResult['completion']): PredictionResult['completion'] {
+  if (completion.status !== 'available') return completion;
+  const { computation: _computation, ...publicCompletion } = completion;
+  return publicCompletion;
+}
+
 export function runPrediction(input: PredictionInput): PredictionResult {
   try {
-    return predict(input);
+    const result = predict(input);
+    return { ...result, completion: toPublicCompletion(result.completion) };
   } catch (error) {
     // 保存済みデータから組み立てた入力の不正（未来日付・重複等）は利用者が直せないため、原因を記録して500にする。
     if (error instanceof PredictionInputError || error instanceof PredictionConfigError) throw new PredictionFailed(error);
@@ -42,7 +51,8 @@ export function runPrediction(input: PredictionInput): PredictionResult {
 
 export function runQuestionPrediction(input: QuestionPriorPredictionInput): QuestionPriorEvaluation {
   try {
-    return predictWithQuestionPrior(input);
+    const result = predictWithQuestionPrior(input);
+    return { ...result, prediction: { ...result.prediction, completion: toPublicCompletion(result.prediction.completion) } };
   } catch (error) {
     if (error instanceof PredictionInputError || error instanceof PredictionConfigError || error instanceof QuestionPriorError) throw new PredictionFailed(error);
     throw error;

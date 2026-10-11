@@ -1,7 +1,48 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FastifyInstance } from 'fastify';
+import { buildApp } from '../src/app.ts';
 import { Client, cookieShape, credentials, setup, startStack } from './helpers/stack.ts';
+
+test('PostgreSQL session: DELETE故障の503はno-store、Cookie保持、明示再試行後に旧Cookie401', async (t) => {
+  let failing = false;
+  let deletes = 0;
+  const { db, stack } = await setup(t, {}, {
+    startStack: (database, options) => startStack(database, options, {
+      buildApp: async (appOptions) => {
+        const context = await appOptions.auth!.instance.$context;
+        const remove = context.adapter.delete.bind(context.adapter);
+        // PostgreSQLと実createAuth/bridge/guard/appを使用し、DELETE故障だけを合成する。
+        context.adapter.delete = async (input) => {
+          if (input.model === 'session') {
+            deletes++;
+            if (failing) throw new Error('synthetic session DELETE failure');
+          }
+          return remove(input);
+        };
+        return buildApp(appOptions);
+      },
+    }),
+  });
+  const a = new Client(stack.app, 'http://127.0.0.1:3000');
+  assert.equal((await a.call('POST', '/api/auth/sign-up/email', credentials('logout-failure'))).status, 200);
+  const cookie = a.cookieHeader();
+  failing = true;
+  const failure = await a.call('POST', '/api/auth/sign-out', {});
+  assert.equal(failure.status, 503);
+  assert.equal(failure.json?.code, 'SIGN_OUT_UNCONFIRMED');
+  assert.equal(failure.headers['cache-control'], 'no-store');
+  assert.deepEqual(failure.setCookie, []);
+  assert.equal(a.cookieHeader(), cookie);
+  assert.equal((await db.pool.query('select id from session')).rowCount, 1);
+  assert.equal((await stack.app.inject({ method: 'GET', url: '/api/goals', headers: { cookie } })).statusCode, 200);
+  failing = false;
+  assert.equal((await a.call('POST', '/api/auth/sign-out', {})).status, 200);
+  assert.equal(a.cookies.size, 0);
+  assert.equal((await db.pool.query('select id from session')).rowCount, 0);
+  assert.equal((await stack.app.inject({ method: 'GET', url: '/api/goals', headers: { cookie } })).statusCode, 401);
+  assert.equal(deletes, 2);
+});
 
 test('未ログインでは /api/goals を含む /api/* が401、/api/health だけ公開', async (t) => {
   const { stack } = await setup(t);

@@ -25,10 +25,12 @@ export function useConfirmedGoalSave(current: PrivateEpoch, generation: number, 
     if (pathChanged) visit.current = { ...visit.current, token: {}, generation: visit.current.generation + 1 };
   }), [router]);
   const owner = current.owner;
+  // 成功と失敗表示の受理に同じ訪問境界を使う。通常session確認中も連続ownerだけを受け入れる。
+  const acceptsVisit = useCallback(() => mounted.current && visit.current.token === token && typeof owner === 'string' &&
+    activeScope.current === scope && window.location.pathname === scope && isDraftOwner(owner, generation), [owner, generation, scope, token]);
   const onSaved = useCallback((complete?: () => boolean) => {
-    if (mounted.current && visit.current.token === token && typeof owner === 'string' && activeScope.current === scope && window.location.pathname === scope && isDraftOwner(owner, generation))
-      setSaved({ owner, generation, scope, token, ...(complete ? { complete } : {}) });
-  }, [owner, generation, scope, token]);
+    if (typeof owner === 'string' && acceptsVisit()) setSaved({ owner, generation, scope, token, ...(complete ? { complete } : {}) });
+  }, [owner, generation, scope, token, acceptsVisit]);
   const confirmed = saved !== undefined && saved.token === visit.current.token && saved.scope === scope && window.location.pathname === scope && saved.generation === generation &&
     isDraftOwner(saved.owner, saved.generation) && current.owner === saved.owner && privateDataReady(current);
   const error = confirmed && failedCompletion?.receipt === saved ? failedCompletion.error : null;
@@ -43,5 +45,5 @@ export function useConfirmedGoalSave(current: PrivateEpoch, generation: number, 
       void navigate({ to: '/goals' });
     }
   }, [confirmed, error, saved, scope, navigate]);
-  return { onSaved, confirmed, error, operationVisit: [instance, visit.current.generation] as const };
+  return { onSaved, confirmed, error, acceptsVisit, operationVisit: [instance, visit.current.generation] as const };
 }

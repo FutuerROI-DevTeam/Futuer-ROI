@@ -2,10 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as publicEngine from '../dist/src/index.js';
-import { evaluateQuestionPriorAdapterCandidate, QuestionPriorAdapterCandidateError } from '../dist/src/question-prior-adapter-candidate.js';
+import { evaluateQuestionPriorAdapterCandidate as rawEvaluateQuestionPriorAdapterCandidate, QuestionPriorAdapterCandidateError } from '../dist/src/question-prior-adapter-candidate.js';
 import { evaluateGoalPriorCandidate } from '../dist/src/goal-prior-candidate.js';
 
 const fixtures = JSON.parse(readFileSync(new URL('./fixtures-pr118.json', import.meta.url), 'utf8'));
+// PR118の固定seed数値を保持する比較経路。autoは別の独立oracleで検証する。
+const evaluateQuestionPriorAdapterCandidate = (input, config = publicEngine.DEFAULT_CONFIG) =>
+  rawEvaluateQuestionPriorAdapterCandidate(input, { ...config, completionMethod: 'sampled' });
 const mapping = { version: fixtures.mappingCandidate.version, values: fixtures.mappingCandidate.values };
 const request = fixture => ({ prediction: structuredClone(fixture.input), answers: structuredClone(fixture.answers), mapping: structuredClone(mapping) });
 const evaluate = fixture => evaluateQuestionPriorAdapterCandidate(request(fixture), fixture.config);
@@ -45,11 +48,11 @@ test('adapter candidate: 13 previously different gates have concrete center and 
   };
   for (const [id, expected] of Object.entries(target)) {
     const result = evaluate(byId(id));
-    assert.deepEqual([result.coreMetric, result.completion], expected, id);
-    const baseline = evaluateGoalPriorCandidate(byId(id).input, result.priorSnapshot, byId(id).config);
-    assert.notDeepEqual([baseline.coreMetric, baseline.completion], expected, `${id} must retain the old independent entry`);
+    assert.deepEqual([result.coreMetric, completionValues(result.completion)], expected, id);
+    const baseline = evaluateGoalPriorCandidate(byId(id).input, result.priorSnapshot, { ...byId(id).config, completionMethod: 'sampled' });
+    assert.notDeepEqual([baseline.coreMetric, completionValues(baseline.completion)], expected, `${id} must retain the old independent entry`);
   }
-  assert.deepEqual(evaluate(byId('F13')).completion, done(4, 5));
+  assert.deepEqual(completionValues(evaluate(byId('F13')).completion), done(4, 5));
 });
 
 test('adapter candidate: missing/UNKNOWN are not MID; material is determined per actual origin', () => {
@@ -67,7 +70,7 @@ test('adapter candidate: missing/UNKNOWN are not MID; material is determined per
   for (const fixture of fixtures.calculationExamples) for (const raw of [null, 'UNKNOWN']) {
     const input = request(fixture); input.answers = { a: raw, b: raw };
     const candidate = evaluateQuestionPriorAdapterCandidate(input, fixture.config);
-    const legacy = publicEngine.predict(input.prediction, fixture.config);
+    const legacy = publicEngine.predict(input.prediction, { ...fixture.config, completionMethod: 'sampled' });
     for (const field of ['progress', 'todayStatus', 'observations', 'posterior', 'coreMetric', 'completion']) {
       assert.deepEqual(candidate[field], legacy[field], `${fixture.id} ${raw} ${field}`);
     }
@@ -121,7 +124,7 @@ test('adapter candidate: raw/mapping/real-log failures are classified without su
 test('adapter candidate: correction, clear, frozen input, output mutation and seed replay do not retain state', () => {
   const original = request(byId('F09')), corrected = { ...structuredClone(original), answers: { a: 'HIGH', b: 'HIGH' } };
   const first = evaluateQuestionPriorAdapterCandidate(original);
-  assert.deepEqual(evaluateQuestionPriorAdapterCandidate(corrected).completion, { status: 'available', scenario: 'TODAY_DONE', p50Days: 2, p80Days: 3 });
+  assert.deepEqual(completionValues(evaluateQuestionPriorAdapterCandidate(corrected).completion), { status: 'available', scenario: 'TODAY_DONE', p50Days: 2, p80Days: 3 });
   assert.deepEqual(evaluateQuestionPriorAdapterCandidate(original), first);
   const clear = { ...structuredClone(original), answers: { a: null, b: null } };
   const cleared = evaluateQuestionPriorAdapterCandidate(clear);
@@ -140,3 +143,6 @@ test('adapter candidate: correction, clear, frozen input, output mutation and se
     assert.deepEqual(evaluateQuestionPriorAdapterCandidate(original, config), cold);
   }
 });
+
+// 新しい方式metadataは専用契約テストで検査し、既存の日数・状態の期待値を保持する。
+function completionValues({ computation, ...values }) { return values; }

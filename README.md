@@ -10,8 +10,8 @@
 | 確定 | 大会：JOGI HACK 2026 / 対象：Webアプリケーション / チーム：3人 |
 | 確定 | 開発期間：2026-09-19 ～ 2026-10-12 / コードフリーズ：2026-10-12 |
 | DECIDED | 2026-09-29に音楽探索案を廃止した。旧案の要件・Scopeは現行計画ではない。[Product Spec P-10](docs/product-spec.md#p-10-音楽探索案の廃止) |
-| DECIDED | 2026-09-30にProductを「Future ROI」に決定し、要件・MVP Scopeを確定した。[Product Spec](docs/product-spec.md#現行状態2026-09-30) |
-| Kaito-Iwase判断・レビュー中 | #199／PR #202で全体UXを改善中。g50は休んだ後の再開待ち中央値、完了日は設定量で続ける仮定の別の見込み。旧コピーの履歴と現行表示・未確認のチーム合意／製品受入は[Product Spec P-21](docs/product-spec.md#p-21-todayの朝焼け山並み案)へ。main反映済みとは扱わない |
+| DECIDED | 2026-09-30にProductを「Future ROI（今日サボると、ゴールは何日遠ざかる？）」に決定し、要件・MVP Scopeを確定した。[Product Spec](docs/product-spec.md#現行状態2026-09-30) |
+| Kaito-Iwase判断・レビュー中 | #199／PR #202で全体UXを改善中。旧Hero/Coreコピーを保持。g50は再開待ちであり、同じ継続傾向・設定量と再開後経路共有のモデル上の追加遅れ中央値とも解釈できる（完了日のP50差・因果効果とは別）。訂正理由・未確認の製品受入は[Product Spec P-21](docs/product-spec.md#p-21-todayの朝焼け山並み案)へ。main反映済みとは扱わない |
 | DECIDED（Scope・分担） | 2026-10-05、[R-11のMust追加と責任分界をチーム採択](docs/product-spec.md#p-15-質問由来の見通しのmust追加方針)。MustはR-01〜R-11。2026-10-07の依頼者承認範囲の回答保存・公開Engine／GETは#133、質問入力・回答版の競合復旧とTodayの出所別表示は#137・#81でmainへ接続済み。[D-26](docs/architecture.md#d-26)の当時のOPEN履歴と現契約を区別し、実装を製品受入・実ユーザーでの校正済みとは扱わない |
 | DECIDED | 現行の実績由来の予測モデル（2状態Bayesian Markov、Beta(2,2)、中心指標はBeta-Geometric分布の中央値）、Data Modelと記載済みの業務API規則。契約の未定義部分・解釈の判断待ちは[Architecture](docs/architecture.md#現行状態2026-09-30)から確認する |
 | DECIDED（基本構成） | 2026-10-03のD-23基本構成採用は、FE側のDiscord上の了承についての依頼者報告とBE本人の了承記録に基づく。[採用構成・理由・次の作業](docs/architecture.md#2026-10-03の技術構成合意)。2026-10-05に[npm workspacesと`pg`を追加採択](docs/architecture.md#2026-10-05の追加採択)。当時の合意範囲と、後日の[版固定・API契約](docs/architecture.md#technology-stack)を分けて読む |

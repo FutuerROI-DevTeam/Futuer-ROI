@@ -7,6 +7,7 @@ import { flushSync } from 'react-dom';
 import { ResponsiveDetails } from '../src/features/today/ResponsiveDetails.tsx';
 import { ProgressSummary } from '../src/features/today/ProgressSummary.tsx';
 import { amountFormat } from '../src/copy/amount.ts';
+import { mountYesterdayCorrection, yesterdayCorrectionState } from './yesterday-correction.native.tsx';
 
 // 実コンポーネントをStrictModeで描画。viewport・trusted入力は外側の実Chrome/CDPが担当する。
 // API/予測契約はmockせず、ProgressSummaryには実量だけを渡す。
@@ -52,7 +53,8 @@ function view() {
   const details = host.querySelector('details');
   const content = host.querySelector('[data-testid="details-content"]');
   return {
-    focused: { tag: document.activeElement?.tagName, role: document.activeElement?.getAttribute('role'), name: document.activeElement?.getAttribute('aria-label'), text: document.activeElement?.textContent?.trim() },
+    ...yesterdayCorrectionState(host),
+    focused: { tag: document.activeElement?.tagName, role: document.activeElement?.getAttribute('role'), name: document.activeElement?.getAttribute('aria-label'), text: document.activeElement?.textContent?.trim().slice(0, 300) },
     width: window.innerWidth, desktop: window.matchMedia('(min-width: 960px)').matches,
     // closed detailsは矩形が残り得るため、UAのcontent-visibilityを含む実際の可視性を読む。
     open: details?.open, contentVisible: !!content && content.checkVisibility(),
@@ -65,5 +67,5 @@ function view() {
     ])),
   };
 }
-(globalThis as any).__responsiveFixture = { mountDetails, mountProgress, mountDock, mountYesterday, view };
+(globalThis as any).__responsiveFixture = { mountDetails, mountProgress, mountDock, mountYesterday, mountCorrection: (status: 'DONE' | 'SKIPPED') => mountYesterdayCorrection(root, status), view };
 mountDetails();

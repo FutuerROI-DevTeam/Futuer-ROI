@@ -31,14 +31,27 @@ export type CoreMetric =
 export interface PredictionConfig {
   modelVersion: string;
   prior: number;
+  // sampling経路へ要求する設定。実使用はcompletion.computationで区別する。
   samples: number;
   horizonDays: number;
   seed: number;
+  // 省略はauto。sampledは従来の固定seedによる比較・互換計算を明示する。
+  completionMethod?: 'auto' | 'sampled';
+}
+
+export interface CompletionComputation {
+  method: 'BOUNDARY' | 'BETA_BINOMIAL' | 'POSTERIOR_SAMPLING';
+  samples: number | null;
+  seed: number | null;
+  fallbackReason: 'HORIZON_OUT_OF_RANGE' | 'SHAPE_OUT_OF_RANGE' | 'NUMERICAL_UNCERTAINTY' | null;
 }
 
 export type Completion =
   | { status: 'available'; scenario: 'TODAY_DONE' | 'CURRENT_STATE';
-      p50Days: number | null; p80Days: number | null }
+      p50Days: number | null; p80Days: number | null;
+      // Engine内部の診断情報。HTTP serializerは既存DTOだけを返し、この項目を公開しない。
+      // 旧保存fixtureの読取互換のため任意だが、新しいavailable結果は常に実方式を返す。
+      computation?: CompletionComputation }
   | { status: 'insufficient'; reason: 'NO_DONE_ORIGIN_TRANSITION' | 'NO_SKIP_ORIGIN_TRANSITION' }
   | { status: 'completed' };
 
