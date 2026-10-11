@@ -34,4 +34,6 @@ git diff --check
 
 2026-10-11 に XML/SVG の parse、生成同期、shape のページ境界と縦の文字配置を確認した。別 parser でも4図すべての文字・箱の座標・矢印の一致を検査した。既存 Codex In-app Browser で日本語と矢印を目視し、PC表示（SVG幅480px）と390×844px viewport（余白・scrollbar込みでSVG幅343px）の全図で横方向の文字はみ出し0を確認した。端末フォント・GitHub の表示環境による違いは残る。
 
-GitHub 上の実 README レンダリング、draw.io editor での再保存、実アプリ screenshot は未確認。アプリ・DB・公開環境の試験はこの図の更新では再実行しない。
+再レビューでは、完了予測の説明を実装の `TODAY_DONE` / `CURRENT_STATE` 分岐へ修正した。別の一時コピーで XML serializer の読込・再保存と SVG 再生成後の文字・座標・矢印の意味的一致も確認した。これは editor での再保存確認ではない。
+
+GitHub 上の実 README レンダリング、draw.io editor での再保存、実アプリ screenshot は未確認。ローカル editor が見つからず、外部サービスへのアップロードは行っていない。アプリ・DB・公開環境の試験はこの図の更新では再実行しない。

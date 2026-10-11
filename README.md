@@ -30,7 +30,7 @@
 
 1. 登録・ログインして、自分の Goal を作成します。総量、1回の量、開始前に終えた量を設定し、任意で到達予定日を加えます。
 2. 近い行動・量についての2問に任意で答えると、初期の仮定から見通しを始められます。未回答や「分からない」を本人の中間回答として扱いません。
-3. Today で目安を読み、「やった」量または「今日は休む」を保存します。保存後は記録済みの表示に切り替わります。
+3. Today で目安を読み、「やった」量または「今日は休む」を保存します。保存後、再取得が成功すると記録済みの表示に切り替わります。再取得に失敗した場合は、保存済み・更新待ちの状態を表示します。
 4. 昨日が記録開始日以降なら補完・訂正できます。2日以上前の未記録は不明のまま残します。履歴はカレンダーで確認できます。
 
 ![登録、Goal作成、任意回答、Today、今日の保存、履歴、昨日の補完へ進む利用フロー](docs/diagrams/user-flow.svg)
@@ -41,7 +41,7 @@
 
 **中心の g50 は、今日休んだ後、次に再開するまでの待ち日数の中央値です。** 同じ継続傾向・設定量で、再開後の経路を時間シフトして共有するモデルでは、累積量への到達が遅れる日数の中央値とも解釈できます。今日やる場合と休む場合の「完了日中央値どうしの差」ではありません。[Product P-21](docs/product-spec.md#p-21-todayの朝焼け山並み案)
 
-補助の完了予測は、今後も設定量で続ける仮定で、必要回数への到達分布から P50 / P80 の週を示します。P80 はモデル上で累積確率が80%へ届く目安であり、実際の80%達成保証ではありません。約3年の計算範囲で届かない場合は、材料不足と区別して「範囲内の目安なし」と表示します。
+補助の完了予測は、未記録なら「今日、設定量をやる」と仮定し、記録済みなら今日の実状態から計算します。今日の実量を二重に数えず、明日以降は設定量で続ける仮定で、必要回数への到達分布から P50 / P80 の週を示します。P80 はモデル上で累積確率が80%へ届く目安であり、実際の80%達成保証ではありません。約3年の計算範囲で届かない場合は、材料不足と区別して「範囲内の目安なし」と表示します。
 
 ![中心は休んだ後の再開待ち中央値、補助は設定量での完了時期であり、因果効果や実際の達成保証を示さない説明図](docs/diagrams/today-meaning.svg)
 
@@ -82,12 +82,12 @@
 | --- | --- |
 | 型・API/DB・Web・build | [Application CI](.github/workflows/application.yml)。API は実 PostgreSQL で確認し、コンテナの起動・保存・データ保持も smoke する |
 | 数値の整合性 | [Engine CI](.github/workflows/prediction.yml)、[独立オラクルと不変条件](packages/prediction/README.md#ローカル検証)。全経路との照合・境界・UNKNOWN・量の単調性など |
-| 実ブラウザの状態境界 | [Web browser 回帰](apps/web/tests/session-cache.browser-check.mjs)。標準の Web テストとは別入口 |
+| 実ブラウザの状態境界 | [Web browser 回帰](apps/web/tests/session-cache.browser-check.mjs)。ローカルの標準テストでは省略され、実行には Chrome / Edge または `TEST_BROWSER` が必要。CI はブラウザも実行 |
 | 文書・参照・設定 | [Foundation CI](.github/workflows/foundation.yml)、下のローカル check。図の XML/SVG と同期検査は [図の保守手順](docs/diagrams/README.md) |
 
 CI や数値テストの成功は、実ユーザーでの予測精度・需要・行動改善を示しません。測定は入力・環境・実行元 SHA に限定して読みます。[検証の索引](docs/prediction/experiment-history.md)から、成功だけでなく失敗と未確認もたどれます。
 
-- 合成記録は数値・仮定の検証用です。OULAD などの外部 proxy 研究は、製品の実利用データと別に扱います。
+- 合成記録は数値・仮定の検証用です。OULAD などの外部 proxy 研究は、製品の実利用データと別に扱います。main の数理テストは repository から実行できますが、研究記録に含まれる元データ・全 trace は同梱していないため、外部実験全体をこの repository だけで再現することはできません。
 - 回答から置く初期仮定は、質問で真の確率を測れたという証拠ではありません。
 - 現行モデルは一定の継続傾向と1回の設定量を仮定します。標準モデルの事後更新を、自動的なモデル改良・誤差補正の採用と呼びません。
 - 同期計算は同じ API process の他要求を待たせ得ます。単体・ローカル負荷の結果を公開先の性能保証へ換算しません。
@@ -106,7 +106,7 @@ CI や数値テストの成功は、実ユーザーでの予測精度・需要�
 
 ## ライセンス
 
-この基準 main にはリポジトリ全体の LICENSE ファイルはありません。再利用・再配布の許諾条件は未設定です。依存パッケージ・フォントなどのライセンスとは分けて確認してください。
+この基準 main にはリポジトリ全体の LICENSE ファイルはありません。再利用・再配布の許諾条件は未設定です。依存パッケージ・フォントなどのライセンスとは分けて確認してください。研究で参照する [OULAD の公式データ説明・ライセンス](https://research.stem.open.ac.uk/ouanalyse/open-dataset-more/#rights-statement-and-license)は CC BY 4.0 です。この文書更新でデータセットは取得・同梱していません。
 
 <details>
 <summary>現在の判断・実装状況の詳細（開発者向け）</summary>
@@ -148,7 +148,7 @@ Demo Seed（#82）は認証で作成済みのuserIdとtimezoneを明示し、専
 
 GitとPowerShell 7を使います。文書・設定チェックの手順は[開発ガイド](docs/DEVELOPMENT_GUIDE.md#13-初回セットアップ)を参照してください。基本構成の採用と認証・公開先の残条件は[Architecture](docs/architecture.md#technology-stack)で確認します。アプリの起動構成はNode 24.21.0に版固定し、[起動・検証手順](docs/DEVELOPMENT_GUIDE.md#アプリを起動検証する)にまとめています。公開先（staging）への配置は未実施です。
 
-Dockerで一式を起動する場合、初回だけ`.env.example`を`.env`へコピーし、ローカル専用の`LOCAL_DB_PASSWORD`と32文字以上の`BETTER_AUTH_SECRET`を設定します。その後は`docker compose up -d --build`でDB health→認証・アプリmigration→単一NodeのWeb/API配信へ進みます。準備完了を待つには`--wait --wait-timeout 120`を追加し、`http://127.0.0.1:8080`を開きます。hostのNode/miseは不要です。[設定・停止・再起動・失敗時とデータ保持](docs/DEVELOPMENT_GUIDE.md#dockerで一式を起動する)、[hostのホットリロードとの使い分け](docs/DEVELOPMENT_GUIDE.md#dockerとhost開発の使い分け)を参照してください。
+Dockerで一式を起動する場合、初回だけ`.env.example`を`.env`へコピーし、ローカル専用の`LOCAL_DB_PASSWORD`と32文字以上の`BETTER_AUTH_SECRET`を設定します。その後は`docker compose up -d --build`でDB health→認証・アプリmigration→単一NodeのWeb/API配信へ進みます。準備完了を待つには`--wait --wait-timeout 120`を追加し、既定の `LOCAL_APP_PORT=8080` なら `http://127.0.0.1:8080` を開きます。ポートを変更した場合はアクセス先も合わせます。hostのNode/miseは不要です。[設定・停止・再起動・失敗時とデータ保持](docs/DEVELOPMENT_GUIDE.md#dockerで一式を起動する)、[hostのホットリロードとの使い分け](docs/DEVELOPMENT_GUIDE.md#dockerとhost開発の使い分け)を参照してください。
 
 Docker Engine と Compose が使える環境で、repository root から実行します。初回の `.env` 作成と編集を終えてから起動してください。既存 `.env` は上書きしません。
 
@@ -157,7 +157,9 @@ Docker Engine と Compose が使える環境で、repository root から実行�
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 # 設定を終えた後、DB・migration・Web/APIの準備完了を待つ
 docker compose up -d --build --wait --wait-timeout 120
-# 正常時は status=ok。画面は http://127.0.0.1:8080
+if ($LASTEXITCODE -ne 0) { throw "Compose の起動に失敗しました" }
+# 既定 LOCAL_APP_PORT=8080 の例。変更した場合は URL も変更する
+# 正常時は status=ok
 Invoke-RestMethod http://127.0.0.1:8080/api/health
 ```
 
@@ -167,13 +169,13 @@ Invoke-RestMethod http://127.0.0.1:8080/api/health
 miseがない場合は、PowerShell 7で `pwsh -NoProfile -File scripts/check-foundation.ps1` を実行すると同じ検証ができます。
 Hook（コミット前に走る処理）の導入はローカル設定を変更するため、[初回セットアップ](docs/DEVELOPMENT_GUIDE.md#13-初回セットアップ)を読んで別に行います。
 
-アプリ全体は `npm ci` → `npm run typecheck` → `npm test` → `npm run build` で検証します（Node 24.21.0。miseなら `mise install` の後に `mise run test` 等）。APIテストはPostgreSQLを使い、`DATABASE_URL`がなければ開発依存の`embedded-postgres`でローカルクラスタを自動起動します。[Application CI](.github/workflows/application.yml)は同じ4段階とコンテナのsmoke testを実行します。
+アプリ全体は `npm ci` → `npm run typecheck` → `npm test` → `npm run build` で検証します（Node 24.21.0 / npm 11.19.0、開発依存もインストール。miseなら `mise install` の後に `mise run test` 等）。APIテストはPostgreSQLを使い、shell の `DATABASE_URL` がなければ開発依存の `embedded-postgres` でテスト用クラスタを一時起動します。テストは root の `.env` を自動では読みません。`DATABASE_URL` を設定する場合はテスト専用の接続先を使い、ランダム名のテスト DB を作成・削除できる権限が必要です。手順・実ブラウザの実行条件は [開発ガイド](docs/DEVELOPMENT_GUIDE.md#アプリを起動検証する) を参照してください。[Application CI](.github/workflows/application.yml)は同じ4段階とコンテナのsmoke testを実行します。
 
 Prediction単体は[Docker検証手順](packages/prediction/DOCKER.md)で、hostにNodeを追加せず型検査・テスト・接続例・T-14を実行できます。Secret・DBは不要です。製品全体の起動構成やruntimeの採択とは分けます。
 
 `check`は文書・設定の検証です。Secret・DB・アプリRuntimeは不要です。
 
-本人向けの予測保存・実績照合（#225）は**既定OFF**の追加機能です。[仕様と状態](docs/product-spec.md#本人向けの予測保存実績照合r-12既定off)、[設定・再検証・削除運用の残条件](docs/changes/issue-225-evaluation-verification.md)を参照してください。実データでの有効化や既存DBへのmigration適用はこのPRの承認に含みません。
+本人向けの予測保存・実績照合（#225）は**既定OFF**の追加機能です。[仕様と状態](docs/product-spec.md#本人向けの予測保存実績照合r-12既定off)、[設定・再検証・削除運用の残条件](docs/changes/issue-225-evaluation-verification.md)を参照してください。実データでの有効化や共有DBへの migration 適用は別途判断が必要です。
 
 ## 最初に読む順番
 

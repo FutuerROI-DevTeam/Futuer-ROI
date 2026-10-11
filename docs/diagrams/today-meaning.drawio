@@ -32,7 +32,7 @@
         <mxCell id="title" value="Today の2つの目安" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=24;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
           <mxGeometry x="20" y="12" width="440" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="condition" value="今日が未記録・Goal 未達成&#10;材料があるときの表示" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#eef5fb;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+        <mxCell id="condition" value="未達成・材料ありの目安&#10;中心は今日未記録時に表示" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#eef5fb;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
           <mxGeometry x="40" y="76" width="400" height="94" as="geometry" />
         </mxCell>
         <mxCell id="core" value="中心：今日休んだ後の再開待ち&#10;G = 次の「やった」までの日数&#10;g50 = G の中央値" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff4e9;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
@@ -44,7 +44,7 @@
         <mxCell id="distinction" value="g50 と完了日の P50 差は別&#10;実際の因果効果・将来の保証は&#10;示さない" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
           <mxGeometry x="40" y="584" width="400" height="114" as="geometry" />
         </mxCell>
-        <mxCell id="completion" value="補助：設定量で続ける完了時期&#10;今日やる / 休む各条件から&#10;必要回数への到達分布を計算&#10;P50 / P80 の週を表示" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f4ed;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+        <mxCell id="completion" value="補助：設定量で続ける完了時期&#10;未記録：今日やると仮定&#10;記録済み：今日の実状態から計算&#10;P50 / P80 の週を表示" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f4ed;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
           <mxGeometry x="40" y="746" width="400" height="146" as="geometry" />
         </mxCell>
         <mxCell id="limit" value="約3年の計算範囲に届かない値は&#10;「範囲内の目安なし」&#10;材料不足・完了不能とは区別" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">

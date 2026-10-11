@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="1150" viewBox="0 0 480 1150" role="img" aria-labelledby="today-meaning-title" data-source-sha256="891636dfd0a6bc6bc0967ac4eaab79bc6fd5b9c316f974b7d3d788b282d0dcfc">
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="1150" viewBox="0 0 480 1150" role="img" aria-labelledby="today-meaning-title" data-source-sha256="dd802ffd61f69051e456101cd07b1271c79573ed881f3b8dee74c107f9607e3b">
 <title id="today-meaning-title">Today の2つの目安</title>
 <desc>Future ROI main の説明図。編集元は同名 draw.io ファイル。</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#526976"/></marker></defs>
@@ -16,8 +16,8 @@
 </g>
 <g data-cell-id="condition"><rect x="40" y="76" width="400" height="94" rx="12" fill="#eef5fb" stroke="#9aaab3"/>
 <text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="109">今日が未記録・Goal 未達成</tspan>
-<tspan x="240" y="137">材料があるときの表示</tspan>
+<tspan x="240" y="109">未達成・材料ありの目安</tspan>
+<tspan x="240" y="137">中心は今日未記録時に表示</tspan>
 </text>
 </g>
 <g data-cell-id="core"><rect x="40" y="220" width="400" height="122" rx="12" fill="#fff4e9" stroke="#9aaab3"/>
@@ -45,8 +45,8 @@
 <g data-cell-id="completion"><rect x="40" y="746" width="400" height="146" rx="12" fill="#e9f4ed" stroke="#9aaab3"/>
 <text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
 <tspan x="240" y="777">補助：設定量で続ける完了時期</tspan>
-<tspan x="240" y="805">今日やる / 休む各条件から</tspan>
-<tspan x="240" y="833">必要回数への到達分布を計算</tspan>
+<tspan x="240" y="805">未記録：今日やると仮定</tspan>
+<tspan x="240" y="833">記録済み：今日の実状態から計算</tspan>
 <tspan x="240" y="861">P50 / P80 の週を表示</tspan>
 </text>
 </g>
