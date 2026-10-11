@@ -143,9 +143,10 @@
   display: flex;
   flex-direction: column;
   gap: 28px;
-  padding: 32px max(var(--fr-gutter), calc((100% - 1120px) / 2)) 200px;
-  /* 原画（1170×990）は上が空・下が山並み。幅に合わせて下にそろえ、上は原画の上端と同じ空の色で埋める（Todayの --dawn-sky-top と同じ値） */
-  background: url('../features/today/assets/dawn-landscape.webp') center bottom / 100% auto no-repeat, #f7d9c4;
+  /* 下の余白は山並み（幅の約19%の高さ）＋32px。%は幅に対する値なので、山の高さに合わせて伸び縮みする */
+  padding: 32px max(var(--fr-gutter), calc((100% - 1120px) / 2)) calc(19.1% + 32px);
+  /* 空は上端から山並みの手前まで途切れずに変わる青空（Todayの --dawn-sky-top／--dawn-sky-bottom と同じ値、#221） */
+  background: url('../features/today/assets/dawn-ridge.png') center bottom / 100% auto no-repeat, linear-gradient(#c4e4f6, #eef8fb);
 }
 .fr-auth--home .fr-auth__name { font-size: 24px; }
 .fr-welcome { display: grid; gap: 24px; }
@@ -168,7 +169,7 @@
 @media (min-width: 960px) {
   .fr-auth { padding-top: 56px; }
   .fr-auth--home { gap: 40px; padding-top: 0; }
-  .fr-welcome-hero { gap: 40px; padding-top: 56px; padding-bottom: 260px; }
+  .fr-welcome-hero { gap: 40px; padding-top: 56px; }
   .fr-welcome { max-width: 600px; }
   .fr-welcome__body { padding-block: 16px; }
   .fr-welcome__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }

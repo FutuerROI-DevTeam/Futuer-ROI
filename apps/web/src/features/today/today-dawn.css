@@ -32,7 +32,9 @@
   --dawn-forest: #3b5e4f;
   --dawn-on-forest: #eef3f5;
   --dawn-forest-muted: #dce8e2;
-  --dawn-sky-top: #f7d9c4;
+  /* 空は青空（案B、2026-10-11依頼者判断、#221）。上端から山並みの手前までCSSのグラデーションで途切れずに変える。下端はページ背景 --fr-bg と同じ値 */
+  --dawn-sky-top: #c4e4f6;
+  --dawn-sky-bottom: #eef8fb;
   color-scheme: light;
   isolation: isolate;
 }
@@ -49,12 +51,12 @@ body:has(.fr-page--today) { background: #eef3f5; }
   display: flex;
   flex-direction: column;
   gap: 6px;
-  /* 提供されたsky/ridge原画。上56pxのAppBar分を除いた位置から使う。 */
+  /* 空はグラデーション、山並みは下の帯（::after）。どちらも原画から作った dawn-ridge.png（assets/README.md）と同じ色でつなぐ */
   position: relative;
   isolation: isolate;
-  background: url('./assets/dawn-landscape.webp') center top / 100% auto no-repeat;
+  background: linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom));
 }
-.fr-page--today .fr-today__hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24px; z-index: -1; pointer-events: none; background: url('./assets/dawn-landscape.webp') center bottom / 100% 100px no-repeat; }
+.fr-page--today .fr-today__hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24px; z-index: -1; pointer-events: none; background: url('./assets/dawn-ridge.png') center bottom / 100% 100% no-repeat; }
 .fr-page--today .fr-today__question { font-size: 22px; font-weight: 900; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
 .fr-page--today .fr-core { gap: 6px; }
 .fr-page--today .fr-core__label { font-size: 13px; }
@@ -130,7 +132,7 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-choice { border-width: 2px; border-radius: 20px; font-size: 18px; }
 .fr-page--today .fr-choice[aria-pressed='true'] { box-shadow: inset 0 0 0 2px var(--fr-surface); border-color: var(--fr-dot); }
 /* 記録済み・選び直し中の上部。内容が短いので空白を詰める（#221） */
-.fr-page--today .fr-today__top:not(:has(.fr-today__hero)) { min-height: 200px; padding: 24px 22px 72px; gap: 16px; background: url('./assets/dawn-landscape.webp') center bottom / 100% 100% no-repeat; }
+.fr-page--today .fr-today__top:not(:has(.fr-today__hero)) { min-height: 200px; padding: 24px 22px 72px; gap: 16px; background: url('./assets/dawn-ridge.png') center bottom / 100% auto no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom)); }
 .fr-page--today .fr-achieved .fr-today__summary { color: var(--fr-ink); }
 .fr-page--today .fr-chart-box { min-width: 0; }
 .fr-page--today .fr-today__detail { font-size: 13px; color: var(--fr-ink-2); }
@@ -156,7 +158,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
   .fr-page--today .fr-today__scroll { display: contents; }
   .fr-page--today .fr-today__scroll > * { grid-column: 1; }
   .fr-page--today .fr-today__scroll > .fr-today__top { grid-row: 1; border-radius: 24px; overflow: hidden; }
-  .fr-page--today .fr-today__hero { padding: 24px 28px 80px; background-size: 100% 100%; background-position: center bottom; }
+  /* PCの枠では山並みを以前の原画と同じく枠の高さの約1/4に収め、数字に重ねない */
+  .fr-page--today .fr-today__hero { padding: 24px 28px 80px; background: url('./assets/dawn-ridge.png') center bottom / 100% 24% no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom)); }
   .fr-page--today .fr-today__hero::after { display: none; }
   .fr-page--today .fr-today__basis { padding: 12px 28px 20px; }
   .fr-page--today .fr-today__records { grid-row: 2; margin: 0; }
