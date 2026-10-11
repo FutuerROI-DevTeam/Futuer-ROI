@@ -68,7 +68,6 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-today__basis .fr-why { border-color: rgba(238, 243, 245, .35); border-bottom: 0; }
 .fr-page--today .fr-today__basis .fr-why summary { min-height: 32px; font-size: 14px; }
 .fr-page--today .fr-today__basis .fr-link { color: var(--dawn-on-forest); }
-.fr-page--today .fr-today__basis .fr-source { background: transparent; color: var(--dawn-on-forest); border-color: var(--dawn-forest-muted); }
 .fr-page--today .fr-today__basis :focus-visible { outline-color: var(--dawn-on-forest); }
 .fr-page--today .fr-today__records { margin: 0 16px; padding: 18px; background: var(--fr-surface); border-radius: 24px; }
 .fr-page--today .fr-recent { padding: 0 0 8px; gap: 2px; }
@@ -131,7 +130,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-savefail__actions .fr-btn { white-space: normal; overflow-wrap: anywhere; }
 .fr-page--today .fr-choice { border-width: 2px; border-radius: 20px; font-size: 18px; }
 .fr-page--today .fr-choice[aria-pressed='true'] { box-shadow: inset 0 0 0 2px var(--fr-surface); border-color: var(--fr-dot); }
-.fr-page--today .fr-today__top:not(:has(.fr-today__hero)) { min-height: 280px; padding: 24px 22px 80px; gap: 16px; background: url('./assets/dawn-landscape.webp') center bottom / 100% 100% no-repeat; }
+/* 記録済み・選び直し中の上部。内容が短いので空白を詰める（#221） */
+.fr-page--today .fr-today__top:not(:has(.fr-today__hero)) { min-height: 200px; padding: 24px 22px 72px; gap: 16px; background: url('./assets/dawn-landscape.webp') center bottom / 100% 100% no-repeat; }
 .fr-page--today .fr-achieved .fr-today__summary { color: var(--fr-ink); }
 .fr-page--today .fr-chart-box { min-width: 0; }
 .fr-page--today .fr-today__detail { font-size: 13px; color: var(--fr-ink-2); }
@@ -172,7 +172,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
   .fr-page--today .fr-today__right .fr-progress__percent { font-size: 40px; }
   .fr-page--today .fr-today__right .fr-section-label { font-size: 18px; font-weight: 900; color: var(--fr-ink); }
   .fr-page--today .fr-today__detail > summary { font-size: 14px; padding-block: 6px; border-bottom: 1px solid var(--fr-line); }
-  .fr-page--today .fr-today-layout > .fr-today__dock { max-height: none; grid-row: 3; position: sticky; top: 18px; margin: 0; border-radius: 24px; box-shadow: none; }
+  /* 今日の記録は左の列の下端まで場所を取り、右の列をスクロールしても画面に残す（#221） */
+  .fr-page--today .fr-today-layout > .fr-today__dock { max-height: none; grid-row: 3 / -1; align-self: start; position: sticky; top: 18px; margin: 0; border-radius: 24px; box-shadow: none; }
   .fr-page--today .fr-today__record-day { padding: 12px 18px 0; }
   .fr-page--today .fr-actionbar { overflow: visible; padding: 4px 18px 18px; border-radius: 0 0 24px 24px; }
   .fr-page--today .fr-core__value { font-size: 32px; }

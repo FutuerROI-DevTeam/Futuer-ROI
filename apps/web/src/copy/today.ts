@@ -168,10 +168,7 @@ export const todayCopy = {
   planSessions: (n: number) => `あと${n.toLocaleString('ja-JP')}回分`,
   planNote: (remaining: string, session: string, last: string) =>
     `残り${remaining}。1回${session}の設定量で行う場合。最後に必要な量は${last}です。これは日数の予測ではありません。`,
-  sourcesTitle: '見通しの材料',
-  sourceA: '取り組めた日の翌日',
-  sourceB: '休んだ日の翌日',
-  questionAssumption: '初期の回答は仮定です。',
+  sourcesQuestionNote: '最初の質問の回答（仮定）を含めて計算した見通しです。',
   whyQuestion: '最初の質問の回答を、弱い初期の仮定として使っています。回答は実績や記録には加えず、記録がたまるほど回答の影響は小さくなります。',
   answerQuestions: '質問に答えて、最初の見通しを調整する（任意）',
   inconsistentTitle: '表示をそろえられませんでした',

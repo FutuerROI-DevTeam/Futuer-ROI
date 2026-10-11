@@ -177,7 +177,8 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
       >
         <summary className="fr-goalform__prior-summary">
           <h2 id="fr-goalform-prior-title" className="fr-goalform__prior-title">
-            {f.priorTitle}
+            {f.priorTitleLead}
+            <span className="fr-goalform__nowrap">{f.priorTitleTail}</span>
           </h2>
           <Icon name="chevronDown" size={20} />
         </summary>

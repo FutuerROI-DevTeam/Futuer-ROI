@@ -8,7 +8,6 @@ import { DEFAULT_CHART_WIDTH, outlookAxis } from './chart-geometry.ts';
 import { shortDate, fullDate, parseLocalDate } from '../../copy/date.ts';
 import { Icon } from '../../ui/components/Icon.tsx';
 import { daysUntil, targetGap, targetGapText } from './target-gap.ts';
-import { sourceLabel } from '../prior/PriorForecast.tsx';
 import type { CompletionPresentation, Plan } from '../prior/presentation-types.ts';
 
 /** スマホの進捗近くへ置く同じ予測の要約。未保存量で再計算せず、日付の欠如も保持する。 */
@@ -138,26 +137,15 @@ function EstimateNote({ completion }: { completion: Extract<CompletionPresentati
   return note ? <p className="fr-note">{note}</p> : null;
 }
 
-/** a／b 別の出所（R-11）。どちらも記録だけなら出さない（記録だけのモードの表示を変えない）。 */
+/**
+ * 回答を使った見通しであること（R-11「回答由来と仮の値を明示する」）。どちらも記録だけなら出さない（記録だけのモードの表示を変えない）。
+ * a／b 別の出所の2行は利用者に意味が伝わらなかったため、1文にまとめた（#221）。材料ごとの説明は「完了予測の根拠」に残る。
+ */
 function SourceRows({ sources }: { sources: Extract<CompletionPresentation, { kind: 'estimate' }>['sources'] }) {
   if (sources.a === 'RECORDS' && sources.b === 'RECORDS') return null;
   return (
     <div className="fr-sources">
-      <dl className="fr-sources__list" aria-label={todayCopy.sourcesTitle}>
-        <div>
-          <dt>{todayCopy.sourceA}</dt>
-          <dd>
-            <span className="fr-source">{sourceLabel(sources.a)}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>{todayCopy.sourceB}</dt>
-          <dd>
-            <span className="fr-source">{sourceLabel(sources.b)}</span>
-          </dd>
-        </div>
-      </dl>
-      <p className="fr-note">{todayCopy.questionAssumption}</p>
+      <p className="fr-note">{todayCopy.sourcesQuestionNote}</p>
     </div>
   );
 }

@@ -89,21 +89,11 @@ export function AchievedFacts({
   );
 }
 
-/** 今日の記録を選び直している間の上部（デザイン D5-change）。いまの記録を見せ、「変更をやめる」で元に戻す。 */
-export function ChangeHeader({
-  log,
-  sessionAmount,
-  fmt,
-  cancelDisabled,
-  onCancel,
-}: {
-  log: Log;
-  sessionAmount: number;
-  fmt: AmountFormat;
-  /** 今日の保存中は押せない（保存の結果・失敗を見失わないため）。 */
-  cancelDisabled: boolean;
-  onCancel: () => void;
-}) {
+/**
+ * 今日の記録を選び直している間の上部（デザイン D5-change）。いまの記録を見せる。
+ * 「変更をやめる」はスクロールしても押せるよう、下の記録の欄（RecordChoiceBar）に置く（#221）。
+ */
+export function ChangeHeader({ log, sessionAmount, fmt }: { log: Log; sessionAmount: number; fmt: AmountFormat }) {
   const record = describeChoice(choiceFromLog(log), sessionAmount, fmt.record, todayCopy.recordedRest);
   // 「記録を変更」を押すとそのボタンが消えるので、この見出しへフォーカスを移す
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -114,9 +104,6 @@ export function ChangeHeader({
         {todayCopy.changeTitle}
       </h1>
       <p className="fr-today__summary">{todayCopy.changeCurrent(record)}</p>
-      <Button variant="text" disabled={cancelDisabled} onClick={onCancel}>
-        {todayCopy.cancelChange}
-      </Button>
     </section>
   );
 }

@@ -31,10 +31,11 @@ const enter = async (text: string) => act(async () => {
 });
 const key = async (key: string, init: KeyboardEventInit = {}) => act(async () => { input().dispatchEvent(new KeyboardEvent('keydown', {key, bubbles: true, ...init})); await tick(); });
 const editor = (initial = 20, busy = false, unit: 'minutes' | 'sessions' = 'minutes', sessionAmount = 20) => <AmountEditor label="量のテスト" initial={initial} sessionAmount={sessionAmount} fmt={amountFormat({unit})} busy={busy} onSubmit={amount => writes.push({amount})} onCancel={() => { cancels++; }} />;
-const saver = (busy = false) => ({isSaving: busy, saving: busy ? {choice: {status: 'DONE'}} : null, failure: null, isStaleDate: () => false, save: (vars: unknown) => writes.push(vars)} as any);
-function Dock({initial = 20, amount = null, busy = false, locked = false}: {initial?: number; amount?: number | null; busy?: boolean; locked?: boolean}) {
+const failure = {vars: {localDate: '2026-10-10', unit: 'minutes', choice: {status: 'DONE', amount: 20}}, error: new Error('network')};
+const saver = (busy = false, failed = false) => ({isSaving: busy, saving: busy ? {choice: {status: 'DONE'}} : null, failure: failed ? failure : null, settingsReady: true, meaningChanged: false, reloadingSettings: false, settingsReloadFailed: false, reloadSettings: () => {}, retry: () => {}, reset: () => {}, isStaleDate: () => false, save: (vars: unknown) => writes.push(vars)} as any);
+function Dock({initial = 20, amount = null, busy = false, locked = false, failed = false, onCancel}: {initial?: number; amount?: number | null; busy?: boolean; locked?: boolean; failed?: boolean; onCancel?: () => void}) {
   const [editing, setEditing] = useState(false);
-  return <RecordChoiceBar today="2026-10-10" sessionAmount={initial} fmt={amountFormat({unit: 'minutes'})} current={amount === null ? null : {localDate: '2026-10-10', status: 'DONE', amount}} saver={saver(busy)} locked={locked} editingAmount={editing} onEditingAmountChange={setEditing} onRefresh={() => {}} />;
+  return <RecordChoiceBar today="2026-10-10" sessionAmount={initial} fmt={amountFormat({unit: 'minutes'})} current={amount === null ? null : {localDate: '2026-10-10', status: 'DONE', amount}} saver={saver(busy, failed)} locked={locked} editingAmount={editing} onEditingAmountChange={setEditing} onRefresh={() => {}} {...(onCancel ? {onCancelChange: onCancel} : {})} />;
 }
 
 async function run() {
@@ -125,6 +126,18 @@ async function run() {
   await click(rest); ensure(writes.length === 1 && writes[0].choice.status === 'SKIPPED' && writes[0].choice.amount === null, 'rest contract altered');
   results.push('rest remains SKIPPED/null with no zero amount');
   ensure(host.textContent?.includes(todayCopy.choiceRest), 'rest label lost');
+
+  // 選び直し中の「変更をやめる」は下の欄にあり、保存失敗後・昨日の訂正中もやめられる。保存中は押せない（#221）
+  let cancelled = 0;
+  const onCancel = () => { cancelled++; };
+  const cancelButton = () => button(todayCopy.cancelChange);
+  await render(<Dock onCancel={onCancel} />); ensure(!cancelButton(), 'cancel shown outside change mode');
+  await render(<Dock amount={20} onCancel={onCancel} />); await click(cancelButton()); ensure(cancelled === 1, 'cancel in the dock did not stop the change');
+  await render(<Dock amount={20} locked onCancel={onCancel} />); await click(cancelButton()); ensure(cancelled === 2, 'cancel absent while yesterday is being corrected');
+  await render(<Dock amount={20} failed onCancel={onCancel} />); await click(cancelButton()); ensure(cancelled === 3, 'cancel absent after a failed save');
+  // 保存中は欄が「保存中」の案内だけになり、やめる入口を出さない（押して保存の状態を消さない）
+  await render(<Dock amount={20} busy onCancel={onCancel} />); ensure(!cancelButton() && cancelled === 3, 'cancel offered while saving');
+  results.push('change-mode cancel lives in the dock, survives locked/failed states and is not offered while saving');
   document.getElementById('result')!.textContent = JSON.stringify({ok: true, results, writes});
 }
 run().catch(error => { document.getElementById('result')!.textContent = JSON.stringify({ok: false, error: String(error), results, writes}); });

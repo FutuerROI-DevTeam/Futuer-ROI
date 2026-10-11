@@ -92,6 +92,15 @@ export function RecordChoiceBar({
   const saving = saver.saving?.choice;
 
   // 失敗した保存の再試行は、その variables の日付も検査する（表示が翌日へ更新された後も）。
+  // 選び直しをやめる入口。スクロールしても押せるよう、上部ではなくこの欄に置く（#221）。
+  // 保存失敗後や昨日の訂正中も、以前の上部の入口と同じくやめられるようにする。保存中は押せない（結果・失敗を見失わないため）
+  const cancelButton =
+    current && onCancelChange ? (
+      <Button variant="text" disabled={saver.isSaving} onClick={onCancelChange}>
+        {todayCopy.cancelChange}
+      </Button>
+    ) : null;
+
   const staleDate = saver.isStaleDate(today) ? today
     : saver.failure?.vars && saver.isStaleDate(saver.failure.vars.localDate) ? saver.failure.vars.localDate : undefined;
   if (staleDate && !saver.isSaving) {
@@ -123,6 +132,7 @@ export function RecordChoiceBar({
             onRefresh();
           }}
         />
+        {cancelButton}
       </StickyActionBar>
     );
   }
@@ -146,7 +156,10 @@ export function RecordChoiceBar({
   const note = saver.isSaving ? (
     todayCopy.savingNote
   ) : locked ? (
-    todayCopy.otherEditing
+    <span className="fr-record__note">
+      <span>{todayCopy.otherEditing}</span>
+      {cancelButton}
+    </span>
   ) : (
     <span className="fr-record__note">
       {current ? <span>{todayCopy.changeNote}</span> : null}
@@ -167,11 +180,7 @@ export function RecordChoiceBar({
           {todayCopy.amountPredictionNote(label(sessionAmount))}
         </span>
       ) : null}
-      {current && onCancelChange ? (
-        <Button variant="text" onClick={onCancelChange}>
-          {todayCopy.cancelChange}
-        </Button>
-      ) : null}
+      {cancelButton}
     </span>
   );
 
