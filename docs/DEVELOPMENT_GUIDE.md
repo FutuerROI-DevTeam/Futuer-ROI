@@ -563,6 +563,8 @@ migrationはHTTP listenerを開く前に専用poolで実行します。host開�
 
 確認する範囲と結果を分け、対象HEAD・実行環境・fail/skip/未実行をIssue/PRへ記録します。内部整理の責務は[Architecture](architecture.md#責務と配置を変えるとき)が正本です。
 
+responsive詳細の実Chrome回帰では、起動開始から最初のCDP応答までを一つの有限予算で待ちます。10秒診断・30秒失敗・終了確認の保証と限界は[ArchitectureのTest Strategy](architecture.md#test-strategy)を参照してください。`node --test apps/web/tests/browser-startup.test.mjs`はChromeなしで遅延・停止I/O・異常終了を検査します。実Chromeの既存9シナリオは`npm run test:browser --workspace=@futureroi/web`で他のbrowser回帰と逐次実行され、Application CIの`npm test`にも含まれます。診断の`ready`だけでUIシナリオの完走とは扱わず、subtest結果まで確認します。
+
 | 検証層 | 何を確認し、何を保証しないか |
 | --- | --- |
 | Engine | 固定例・独立オラクル・凍結fixture・型契約。`tests`配下の`*.test.mjs`を再帰収集し、境界監査も入れ子のTSを確認。DB/HTTP/UIの成功は保証しない |

@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { availableParallelism, freemem, loadavg, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { build } from 'vite';
 import react from '@vitejs/plugin-react';
-import { parseDevToolsEndpoint, parseDevToolsActivePort } from './browser-debug-endpoint.mjs';
+import { launchBrowser } from './browser-startup.mjs';
 
 // 既存Vite/React + Node24標準WebSocketのみ。実viewport/native入力を使い、matchMediaやclickをmockしない。
 async function browserPath() {
@@ -28,41 +27,15 @@ async function until(read, accept, message, timeout = 10000) {
   while (Date.now() < deadline) { value = await read(); if (accept(value)) return value; await delay(20); }
   throw new Error(message + ': ' + JSON.stringify(value));
 }
-async function connect(url) {
-  const socket = new WebSocket(url);
-  await new Promise((resolve, reject) => {
-    socket.addEventListener('open', resolve, { once: true }); socket.addEventListener('error', reject, { once: true });
-  });
-  const pending = new Map();
-  let id = 0;
-  socket.addEventListener('message', event => {
-    const message = JSON.parse(String(event.data)), command = pending.get(message.id);
-    if (!command) return;
-    pending.delete(message.id); clearTimeout(command.timer);
-    if (message.error) command.reject(new Error(JSON.stringify(message.error))); else command.resolve(message.result);
-  });
-  socket.addEventListener('close', () => {
-    for (const command of pending.values()) { clearTimeout(command.timer); command.reject(new Error('CDP socket closed')); }
-    pending.clear();
-  });
-  return { socket, send(method, params = {}) {
-    return new Promise((resolve, reject) => {
-      const commandId = ++id;
-      const timer = setTimeout(() => { pending.delete(commandId); reject(new Error('CDP timeout: ' + method)); }, 10000);
-      pending.set(commandId, { resolve, reject, timer });
-      socket.send(JSON.stringify({ id: commandId, method, params }));
-    });
-  } };
-}
-
 test('Today responsive details: real viewport, native keyboard and preserved user choice', { timeout: 180000 }, async (t) => {
   const browser = await browserPath(), dir = await mkdtemp(join(tmpdir(), 'futureroi-responsive-details-'));
-  let server, child, cdp, exited;
+  let server, session, cdp;
   t.after(async () => {
-    if (cdp) { await cdp.send('Browser.close').catch(() => {}); cdp.socket.close(); }
-    if (child && child.exitCode === null && child.signalCode === null) child.kill();
-    if (exited) await exited;
-    if (server) await new Promise(resolve => { server.closeAllConnections(); server.close(resolve); });
+    let cleanupError;
+    try { if (session) await session.stop(); } catch (error) { cleanupError = error; }
+    finally { if (server) await new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }); }
+    // 終了確認できないprofileは残す。cleanup失敗を元のtest結果とともに報告する。
+    if (cleanupError) throw cleanupError;
     if (!dir.startsWith(join(tmpdir(), 'futureroi-responsive-details-'))) throw new Error('refusing cleanup outside test temp directory');
     await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   });
@@ -79,6 +52,8 @@ test('Today responsive details: real viewport, native keyboard and preserved use
       entry: fileURLToPath(new URL('./responsive-details.browser.tsx', import.meta.url)), formats: ['iife'], name: 'ResponsiveDetailsTests',
     } },
   });
+  // build中のtimeoutではafterが先行する。終了済みtestの継続からHTTP/Chromeを起動しない。
+  t.signal.throwIfAborted();
   const code = (Array.isArray(bundle) ? bundle : [bundle]).flatMap(b => b.output)
     .filter(out => out.type === 'chunk').map(out => out.code).join('\n');
   const html = '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><div id="app"></div><script>'
@@ -87,52 +62,13 @@ test('Today responsive details: real viewport, native keyboard and preserved use
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
   const url = 'http://127.0.0.1:' + server.address().port + '/';
   // loopback fixtureに不要なChrome自身の背景通信を抑える（Puppeteer標準起動と同じflag）。
-  // sandbox/権限/描画/実入力/assert、起動待ち10秒は保持する。
-  const launchStarted = performance.now();
+  // sandbox/権限/描画/実入力/assertを保持。単一起動の10秒診断と30秒hard deadlineを分ける。
   const launchArgs = ['--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--disable-background-networking',
     '--remote-debugging-port=0', '--user-data-dir=' + join(dir, 'profile'), 'about:blank'];
-  child = spawn(browser, launchArgs,
-    { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
-  let stderr = '', stderrEndpoint = null, endpointSource = null, activePortError = null, launchError = null;
-  const diagnostics = () => JSON.stringify({ browser, args: launchArgs, profile: join(dir, 'profile'),
-    elapsedMs: Math.round(performance.now() - launchStarted), pid: child.pid,
-    host: { parallelism: availableParallelism(), load: loadavg(), freeMemoryBytes: freemem() },
-    exitCode: child.exitCode, signalCode: child.signalCode, launchError,
-    activePortReadError: activePortError, stderr });
-  child.stderr.on('data', chunk => {
-    const combined = stderr + chunk;
-    stderrEndpoint ??= parseDevToolsEndpoint(combined);
-    stderr = combined.slice(-4000);
-  });
-  exited = new Promise(resolve => {
-    child.once('exit', resolve);
-    child.once('error', error => { launchError = { code: error.code, message: error.message.slice(0, 400) }; resolve(); });
-  });
-  let endpoint;
-  try {
-    endpoint = await until(async () => {
-      if (launchError || child.exitCode !== null || child.signalCode !== null) throw new Error('Chrome exited: ' + diagnostics());
-      // Chrome自身がstderrへ報告するendpointは、launcherのprofile namespaceに依存しない。
-      if (stderrEndpoint) { endpointSource = 'stderr'; return stderrEndpoint; }
-      try {
-        const contents = await readFile(join(dir, 'profile', 'DevToolsActivePort'), 'utf8');
-        const fromProfile = parseDevToolsActivePort(contents);
-        if (fromProfile) { endpointSource = 'profile'; return fromProfile; }
-        activePortError = { code: 'INVALID_CONTENT', message: contents.slice(0, 256) };
-      } catch (error) { activePortError = { code: error.code, message: error.message.slice(0, 400) }; }
-      return null;
-    }, value => !!value, 'Chrome debug endpoint unavailable');
-  } catch (error) { throw new Error('Chrome debug endpoint unavailable: ' + diagnostics(), { cause: error }); }
-  const debugOrigin = new URL(endpoint);
-  debugOrigin.protocol = 'http:';
-  const target = await until(async () => (await (await fetch(new URL('/json/list', debugOrigin))).json())
-    .find(page => page.type === 'page'), value => !!value?.webSocketDebuggerUrl, 'Chrome page unavailable');
-  cdp = await connect(target.webSocketDebuggerUrl);
-  const browserVersion = await cdp.send('Browser.getVersion');
-  t.diagnostic(JSON.stringify({ browserLaunch: { endpointSource, elapsedMs: Math.round(performance.now() - launchStarted),
-    product: browserVersion.product, protocolVersion: browserVersion.protocolVersion,
-    host: { parallelism: availableParallelism(), load: loadavg(), freeMemoryBytes: freemem() } } }));
+  session = launchBrowser({ browser, args: launchArgs, profile: join(dir, 'profile'), signal: t.signal,
+    diagnostic: value => t.diagnostic(JSON.stringify(value)) });
+  cdp = await session.ready();
   const evaluate = async expression => {
     const result = await cdp.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
     if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
@@ -269,5 +205,5 @@ test('Today responsive details: real viewport, native keyboard and preserved use
       evidence.push({ scenario: 'actual Today native yesterday cancel', status, ...value });
     }
   });
-  t.diagnostic(JSON.stringify({ browserEndpointSource: endpointSource, results: evidence }));
+  t.diagnostic(JSON.stringify({ browserEndpointSource: session.diagnostics().endpointSource, results: evidence }));
 });
