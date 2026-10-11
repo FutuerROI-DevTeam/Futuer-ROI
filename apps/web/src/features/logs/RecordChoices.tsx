@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { RECORD_AMOUNT_MAX, stepRecordAmount, type AmountFormat } from '../../copy/amount.ts';
 import { todayCopy } from '../../copy/today.ts';
 import { Button, IconButton } from '../../ui/components/Button.tsx';
@@ -70,6 +70,11 @@ export function useRecordAmount({
       if (blocked) return;
       setDraftAmount(stepRecordAmount(shownAmount, stepSize, direction));
     },
+    // 押した側が次の量で押せなくなるか（押せなくなるボタンにフォーカスを残すと、フォーカスが画面から外れる）
+    reachesLimit: (direction: -1 | 1) => {
+      const next = stepRecordAmount(shownAmount, stepSize, direction);
+      return direction === -1 ? stepRecordAmount(next, stepSize, -1) === next : next >= RECORD_AMOUNT_MAX;
+    },
     closeAmount: () => {
       returnFocus.current = true;
       setSteppedInitial(null);
@@ -79,6 +84,15 @@ export function useRecordAmount({
 }
 
 export type RecordAmount = ReturnType<typeof useRecordAmount>;
+
+/**
+ * −／＋を押す。押した側が下限・上限で押せなくなるときは、先に反対側のボタンへフォーカスを移す（#221）。
+ * 押せなくなったボタンにフォーカスが残ると、キーボード・読み上げで今いる場所を見失うため。
+ */
+export function stepWithFocus(amount: RecordAmount, direction: -1 | 1, opposite: RefObject<HTMLButtonElement | null>) {
+  if (amount.reachesLimit(direction)) opposite.current?.focus();
+  amount.stepAmount(direction);
+}
 
 /** 選び直しをやめる入口。スクロールしても押せるよう、上部ではなく記録の欄に置く（#221）。保存中は押せない。 */
 export function CancelChangeButton({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
@@ -128,6 +142,8 @@ export function RecordChoices({
 }) {
   const label = fmt.record;
   const predictionNoteId = useId();
+  const minusRef = useRef<HTMLButtonElement>(null);
+  const plusRef = useRef<HTMLButtonElement>(null);
   const cancelButton = current && onCancelChange ? <CancelChangeButton disabled={isSaving} onClick={onCancelChange} /> : null;
 
   let note: ReactNode;
@@ -149,8 +165,8 @@ export function RecordChoices({
             {/* 「今日記録する量：3回」。数と単位の間では折り返さない */}
             {amountLabel}：<span className="fr-record__amount-value">{label(amount.shownAmount)}</span>
           </span>
-          <IconButton icon="minus" label={`${todayCopy.amountDecrease}（${label(amount.stepSize)}ずつ）`} disabled={!amount.canDecrease} onClick={() => amount.stepAmount(-1)} />
-          <IconButton icon="plus" label={`${todayCopy.amountIncrease}（${label(amount.stepSize)}ずつ）`} disabled={!amount.canIncrease} onClick={() => amount.stepAmount(1)} />
+          <IconButton ref={minusRef} icon="minus" label={`${todayCopy.amountDecrease}（${label(amount.stepSize)}ずつ）`} disabled={!amount.canDecrease} onClick={() => stepWithFocus(amount, -1, plusRef)} />
+          <IconButton ref={plusRef} icon="plus" label={`${todayCopy.amountIncrease}（${label(amount.stepSize)}ずつ）`} disabled={!amount.canIncrease} onClick={() => stepWithFocus(amount, 1, minusRef)} />
           <Button ref={amount.amountLink} variant="text" onClick={() => amount.openAmount()}>
             {todayCopy.changeAmount}
           </Button>

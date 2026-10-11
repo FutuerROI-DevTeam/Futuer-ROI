@@ -112,6 +112,8 @@ export function RecordChoiceBar({
           onSubmit={(value) => save({ status: 'DONE', amount: value })}
           onCancel={amount.closeAmount}
         />
+        {/* 量の入力を開いていても、選び直しそのものをやめられる（以前の上部の入口と同じ、#221） */}
+        {cancelButton}
       </StickyActionBar>
     );
   }

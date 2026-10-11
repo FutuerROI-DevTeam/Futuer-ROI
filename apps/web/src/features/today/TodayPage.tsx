@@ -294,6 +294,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
             today={snapshot.today}
             logs={snapshot.logs}
             changing={changing}
+            changeDisabled={!!yesterdayEdit}
             onChange={startTodayChange}
           />
         </ForecastBoundary>
@@ -323,6 +324,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
             today={snapshot.today}
             logs={snapshot.logs}
             changing={changing}
+            changeDisabled={!!yesterdayEdit}
             onChange={startTodayChange}
           />
         </ForecastBoundary>
@@ -373,6 +375,7 @@ function TodayContent({
   today,
   logs,
   changing,
+  changeDisabled,
   onChange,
 }: {
   area: 'primary' | 'details';
@@ -381,6 +384,8 @@ function TodayContent({
   logs: Log[];
   /** 今日の記録を選び直している（上部を「今日の記録を変更」に切り替える、デザイン D5-change）。 */
   changing: boolean;
+  /** 昨日を訂正している間は「記録を変更」を押せない（startTodayChange も同じ条件で何もしない）。 */
+  changeDisabled: boolean;
   onChange: () => void;
 }) {
   // 変換と検査は Boundary の内側で行う（失敗しても記録の2択は残る）
@@ -407,7 +412,7 @@ function TodayContent({
       return area === 'primary' ? <>
         {changeHeader ?? <AchievedPanel done={view.progress.done} total={view.progress.total} fmt={fmt} />}
         {/* 達成後も今日の誤記録を訂正できる（R-03 / R-08）。 */}
-        {today.todayLog && !changeHeader ? <TodayRecordLine log={today.todayLog} today={today.today} sessionAmount={goal.sessionAmount} fmt={fmt} onChange={onChange} /> : null}
+        {today.todayLog && !changeHeader ? <TodayRecordLine log={today.todayLog} today={today.today} sessionAmount={goal.sessionAmount} fmt={fmt} onChange={onChange} changeDisabled={changeDisabled} /> : null}
       </> : <div className="fr-today__right">
         {progress}
         <AchievedFacts goalId={goal.id} recordStartDate={goal.recordStartDate} reached={reachedDate(goal.initialProgress, goal.totalRequired, logs)} />
@@ -416,7 +421,7 @@ function TodayContent({
     case 'today-recorded':
     case 'forecast':
       if (area === 'primary') {
-        if (view.kind === 'today-recorded') return changeHeader ?? (today.todayLog ? <RecordedSummary todayLog={today.todayLog} fmt={fmt} onChange={onChange} /> : null);
+        if (view.kind === 'today-recorded') return changeHeader ?? (today.todayLog ? <RecordedSummary todayLog={today.todayLog} fmt={fmt} onChange={onChange} changeDisabled={changeDisabled} /> : null);
         return <section className="fr-today__top" aria-labelledby="fr-question">
           <CoreMetric core={view.core} guidance={view.core.kind === 'insufficient' && !hasAnswers(goal) ? (
             <Link to="/goals/$goalId/edit" params={{ goalId: goal.id }} className="fr-link">{todayCopy.answerQuestions}</Link>

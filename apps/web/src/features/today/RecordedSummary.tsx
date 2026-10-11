@@ -10,7 +10,7 @@ import { fullDate, longDate, parseLocalDate, shortDate } from '../../copy/date.t
 import { choiceFromLog, describeChoice } from '../logs/record-log.ts';
 
 /** 今日は記録済み（R-07）。比較（中心指標）は出さず、記録内容を出す。「記録を変更」で下の2択を選び直せるようにする（#79）。 */
-export function RecordedSummary({ todayLog, fmt, onChange }: { todayLog: Log; fmt: AmountFormat; onChange: () => void }) {
+export function RecordedSummary({ todayLog, fmt, onChange, changeDisabled = false }: { todayLog: Log; fmt: AmountFormat; onChange: () => void; /** 昨日を訂正している間は押せない（今日と昨日を同時に編集しない）。 */ changeDisabled?: boolean }) {
   return (
     <section className="fr-today__top" aria-labelledby="fr-recorded-title">
       <h1 id="fr-recorded-title" className="fr-today__question" tabIndex={-1}>
@@ -25,7 +25,7 @@ export function RecordedSummary({ todayLog, fmt, onChange }: { todayLog: Log; fm
             </span>
           ) : null}
         </div>
-        <Button icon="edit" onClick={onChange}>
+        <Button icon="edit" disabled={changeDisabled} onClick={onChange}>
           {todayCopy.changeRecord}
         </Button>
       </div>
@@ -112,12 +112,12 @@ export function ChangeHeader({ log, sessionAmount, fmt }: { log: Log; sessionAmo
  * 達成済みの画面で、今日の記録を直す入口（R-03・R-08）。誤った量で達成済みになっても、正しい量や「休んだ」へ直せるようにする。
  * 押すと下の記録の2択が選び直しの状態になる。記録済みの昨日の要約行と同じ形にそろえる。
  */
-export function TodayRecordLine({ log, today, sessionAmount, fmt, onChange }: { log: Log; today: string; sessionAmount: number; fmt: AmountFormat; onChange: () => void }) {
+export function TodayRecordLine({ log, today, sessionAmount, fmt, onChange, changeDisabled = false }: { log: Log; today: string; sessionAmount: number; fmt: AmountFormat; onChange: () => void; changeDisabled?: boolean }) {
   const record = describeChoice(choiceFromLog(log), sessionAmount, fmt.record, todayCopy.recordedRest);
   return (
     <section className="fr-yesterday fr-yesterday--summary" aria-label={todayCopy.recordedTitle}>
       <p className="fr-yesterday__summary">{todayCopy.todaySummary(shortDate(parseLocalDate(today)), record)}</p>
-      <Button variant="text" icon="edit" aria-label={todayCopy.todayChangeLabel(longDate(today))} onClick={onChange}>
+      <Button variant="text" icon="edit" aria-label={todayCopy.todayChangeLabel(longDate(today))} disabled={changeDisabled} onClick={onChange}>
         {todayCopy.yesterdayChange}
       </Button>
     </section>

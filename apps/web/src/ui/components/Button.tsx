@@ -37,6 +37,8 @@ type IconButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'
   icon: IconName;
   /** アイコンだけのボタンなので、読み上げる名前を必ず渡す。 */
   label: string;
+  /** 境界で押せなくなる前に、反対側へフォーカスを移すために使う（#221）。 */
+  ref?: Ref<HTMLButtonElement>;
 };
 
 export function IconButton({ icon, label, type = 'button', ...rest }: IconButtonProps) {
