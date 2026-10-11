@@ -85,6 +85,12 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-yesterday { padding: 8px 0 0; border: 0; }
 .fr-page--today .fr-yesterday__head { flex-wrap: wrap; }
 .fr-page--today .fr-yesterday--summary { flex-wrap: wrap; }
+/*
+ * 昨日の2択は、下の今日の2択（幅いっぱい・64px・太い枠）と取り違えないよう、
+ * 文字の幅だけの小さなボタンを左に寄せて並べ、細い枠・小さめの文字にする（タップ領域44pxは保つ）。
+ */
+.fr-page--today .fr-yesterday__pair { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: var(--fr-space-2); }
+.fr-page--today .fr-yesterday__pair .fr-btn { flex: 0 1 auto; min-width: 7.5em; min-height: var(--fr-tap); padding: 0 var(--fr-space-4); font-size: 15px; border-width: 1px; background: transparent; }
 .fr-page--today .fr-first-day { padding: 0; }
 .fr-page--today .fr-today__details { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 24px; background: var(--fr-surface); }
 .fr-page--today .fr-today__right { display: flex; flex-direction: column; gap: 14px; margin: 0 16px; border: 0; border-radius: 0; overflow: visible; }
@@ -102,7 +108,14 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-progress__balance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; padding: 0; }
 .fr-page--today .fr-progress__balance dt { font-size: 12px; color: var(--fr-ink-2); }
 .fr-page--today .fr-progress__balance dd { margin: 2px 0 0; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
-.fr-page--today .fr-record__amount-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
+/*
+ * 量の一行（今日記録する量・−／＋・量を変更）は、320px幅でも1行に収めて下の帯を低く保つ（#199）。
+ * 文字が入りきらないときは「今日記録する量」の文字だけを折り返し、ボタンは折り返さない。
+ */
+.fr-page--today .fr-record__amount-controls { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 4px; width: 100%; }
+.fr-page--today .fr-record__amount-text { flex: 0 1 auto; min-width: 0; font-size: 14px; line-height: 1.4; text-align: left; }
+.fr-page--today .fr-record__amount-value { white-space: nowrap; }
+.fr-page--today .fr-record__amount-controls .fr-btn--text { flex-shrink: 0; padding: 0 var(--fr-space-1); }
 .fr-page--today .fr-record__amount-controls .fr-icon-btn { border: 1px solid var(--fr-line); border-radius: 12px; }
 .fr-page--today .fr-amount__prediction-note { font-size: 12px; line-height: 1.6; color: var(--fr-ink-2); }
 .fr-page--today .fr-outlook__assumption { font-size: 12px; }
@@ -172,3 +185,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-progress__header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
 .fr-page--today .fr-completion-brief { margin: 0; color: var(--fr-ink-2); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 @media (min-width: 960px) { .fr-page--today .fr-completion-brief { display: none; } }
+
+/* 昨日の量の行は2択の上に置き、左寄せの2択と端をそろえる（#199） */
+.fr-page--today .fr-yesterday__amount {
+  text-align: left;
+}

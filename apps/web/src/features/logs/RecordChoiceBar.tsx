@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { longDate } from '../../copy/date.ts';
 import { ErrorPanel } from '../../ui/components/Notice.tsx';
 import type { Log } from '@contracts';
-import { amountFormat, RECORD_AMOUNT_MAX, RECORD_AMOUNT_MIN, stepRecordAmount, type AmountFormat } from '../../copy/amount.ts';
+import { amountFormat, RECORD_AMOUNT_MAX, stepRecordAmount, type AmountFormat } from '../../copy/amount.ts';
 import { todayCopy } from '../../copy/today.ts';
 import { Button, IconButton } from '../../ui/components/Button.tsx';
 import { ChoiceButton } from '../../ui/components/ChoiceButton.tsx';
@@ -16,7 +16,9 @@ import './logs.css';
 /**
  * 今日の記録の2択（R-03、#79）。画面の下に固定し、スクロールに追従する。
  * 予測の表示が失敗しても操作できるよう、予測の Error Boundary の外に置く。
- * 「やった」「今日は休む」は1回押すだけで保存する（やった量は1回の量）。量を変えたいときは「量を変更」から。
+ * 「やった」「今日は休む」は1回押すだけで保存する（やった量は1回の量）。
+ * −／＋は、その場で「今日記録する量」を刻み1つ分変える（保存はしない。「やった」を押したときにその量で保存する、#199）。
+ * 数を直接打ち込みたいときは「量を変更」から。
  * current があるときは記録の変更（D5-change）：今の記録を選択中として出し、選び直すと上書きする。
  * 量の入力を開いているかは親（TodayPage）が持つ。開いている間は昨日の訂正を始められないようにするため。
  */
@@ -48,24 +50,37 @@ export function RecordChoiceBar({
 }) {
   const label = fmt.record;
   const currentAmount = current?.status === 'DONE' && current.amount !== null ? current.amount : sessionAmount;
+  // −／＋で変えた、まだ保存していない量。保存し終えたとき・日付や今の記録が変わったときは捨てる
+  const [draftAmount, setDraftAmount] = useState<number | null>(null);
+  useEffect(() => {
+    setDraftAmount(null);
+  }, [today, current?.status, current?.amount, sessionAmount]);
+  const shownAmount = draftAmount ?? (current ? currentAmount : sessionAmount);
+  const stepSize = fmt.recordStep(sessionAmount);
+  const canDecrease = stepRecordAmount(shownAmount, stepSize, -1) !== shownAmount;
+  const canIncrease = shownAmount < RECORD_AMOUNT_MAX;
+  const predictionNoteId = useId();
+  const hasDifferentAmount = shownAmount !== sessionAmount;
   const [steppedInitial, setSteppedInitial] = useState<number | null>(null);
   const amountLink = useRef<HTMLButtonElement>(null);
-  const amountControls = useRef<HTMLSpanElement>(null);
-  const amountEntry = useRef<-1 | 1 | undefined>(undefined);
   const returnFocus = useRef(false);
   useEffect(() => {
+    // 量の入力を閉じたら、開いた「量を変更」へフォーカスを戻す
     if (!editingAmount && returnFocus.current) {
       returnFocus.current = false;
-      const label = amountEntry.current === 1 ? todayCopy.amountIncrease : amountEntry.current === -1 ? todayCopy.amountDecrease : undefined;
-      const trigger = label ? [...(amountControls.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(button => button.getAttribute('aria-label')?.startsWith(label)) : amountLink.current;
-      (trigger && !trigger.disabled ? trigger : amountLink.current)?.focus();
+      amountLink.current?.focus();
     }
   }, [editingAmount]);
-  const openAmount = (direction?: -1 | 1) => {
+  const openAmount = () => {
     if (saver.isSaving || locked) return;
-    amountEntry.current = direction;
-    setSteppedInitial(direction ? stepRecordAmount(currentAmount, sessionAmount, direction) : null);
+    // 入力欄は、−／＋で変えた量（なければ今の量）から始める
+    setSteppedInitial(draftAmount);
     onEditingAmountChange(true);
+  };
+  // その場で量を変える（保存しない）
+  const stepAmount = (direction: -1 | 1) => {
+    if (saver.isSaving || locked) return;
+    setDraftAmount(stepRecordAmount(shownAmount, stepSize, direction));
   };
   const closeAmount = () => {
     returnFocus.current = true;
@@ -135,19 +150,28 @@ export function RecordChoiceBar({
   ) : (
     <span className="fr-record__note">
       {current ? <span>{todayCopy.changeNote}</span> : null}
-      <span ref={amountControls} className="fr-record__amount-controls">
-        {todayCopy.todayRecordAmount(label(current ? currentAmount : sessionAmount))}
-        <IconButton icon="minus" label={`${todayCopy.amountDecrease}（${label(sessionAmount)}ずつ）`} disabled={saver.isSaving || locked || currentAmount <= RECORD_AMOUNT_MIN} onClick={() => openAmount(-1)} />
-        <IconButton icon="plus" label={`${todayCopy.amountIncrease}（${label(sessionAmount)}ずつ）`} disabled={saver.isSaving || locked || currentAmount >= RECORD_AMOUNT_MAX} onClick={() => openAmount(1)} />
+      <span className="fr-record__amount-controls">
+        <span className="fr-record__amount-text" aria-live="polite">
+          {/* 「今日記録する量：3回」。数と単位の間では折り返さない */}
+          {todayCopy.amountTodayLabel}：<span className="fr-record__amount-value">{label(shownAmount)}</span>
+        </span>
+        <IconButton icon="minus" label={`${todayCopy.amountDecrease}（${label(stepSize)}ずつ）`} disabled={saver.isSaving || locked || !canDecrease} onClick={() => stepAmount(-1)} />
+        <IconButton icon="plus" label={`${todayCopy.amountIncrease}（${label(stepSize)}ずつ）`} disabled={saver.isSaving || locked || !canIncrease} onClick={() => stepAmount(1)} />
         <Button ref={amountLink} variant="text" disabled={saver.isSaving || locked} onClick={() => openAmount()}>
           {todayCopy.changeAmount}
         </Button>
-        {current && onCancelChange ? (
-          <Button variant="text" onClick={onCancelChange}>
-            {todayCopy.cancelChange}
-          </Button>
-        ) : null}
       </span>
+      {/* 1回の量と違う量にしたときだけ、見通しは1回の量で計算していることを添える（AmountEditorと同じ注記） */}
+      {hasDifferentAmount ? (
+        <span id={predictionNoteId} className="fr-amount__prediction-note">
+          {todayCopy.amountPredictionNote(label(sessionAmount))}
+        </span>
+      ) : null}
+      {current && onCancelChange ? (
+        <Button variant="text" onClick={onCancelChange}>
+          {todayCopy.cancelChange}
+        </Button>
+      ) : null}
     </span>
   );
 
@@ -156,12 +180,13 @@ export function RecordChoiceBar({
       <ChoiceButton
         kind="done"
         label={todayCopy.choiceDone}
-        sublabel={label(current ? currentAmount : sessionAmount)}
+        sublabel={label(shownAmount)}
+        aria-describedby={hasDifferentAmount ? predictionNoteId : undefined}
         selected={current?.status === 'DONE'}
         busy={saving?.status === 'DONE'}
         busyLabel={todayCopy.saving}
         disabled={saver.isSaving || locked}
-        onClick={() => save({ status: 'DONE', amount: current ? currentAmount : sessionAmount })}
+        onClick={() => save({ status: 'DONE', amount: shownAmount })}
       />
       <ChoiceButton
         kind="rest"

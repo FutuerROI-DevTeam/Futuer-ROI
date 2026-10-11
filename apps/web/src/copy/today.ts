@@ -130,7 +130,6 @@ export const todayCopy = {
   signedOutSave: '保存されていません。ログインし直してから、もう一度選んでください。',
   changeNote: '選び直すと、今日の記録を上書きします',
   cancelChange: '変更をやめる',
-  todayRecordAmount: (amount: string) => `今日記録する量：${amount}`,
   doneAmount: (amount: string) => `やった量：${amount}`,
   changeAmount: '量を変更',
   amountTodayLabel: '今日記録する量',
