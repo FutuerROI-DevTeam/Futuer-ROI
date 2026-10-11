@@ -13,7 +13,70 @@
 - **合成実表示・操作の部分確認**：[C担当証拠](../changes/issue-171-composite-acceptance/README.md)は撮影当時のmain86b396d＋未merge PR210/214の合成HEAD `f106496`。下表のコード読取とは基準を分け、観測された状態だけを部分受入とする。
 - **原画/基準main単独の実表示未確認**：全行の原画一致・番号割当・両幅の全状態受入は未完。合成の画像を原画IDへ推定割当しない。
 
-[旧B案](https://claude.ai/artifact/Hxs7396eZNtYn8iLYmyMi8)はWeb取得で内容を再取得できなかった。Issue本文・PR147本文・コードコメントで確かめられる対応のみを書く。表にない原画の派生IDが存在しないとは断定しない。元キャンバスのエクスポート/全アートボード一覧を確認するまで「全アートボード対応完了」は保留する。
+[旧B案](https://claude.ai/artifact/Hxs7396eZNtYn8iLYmyMi8)は、2026-10-11にArtifactの読取り（`project/canvas.json`、版 `1791300556-3f22`）で全アートボードの識別子と題名を取得した（下の[原画の一覧](#原画の一覧2026-10-11取得)）。以前の記述（Web取得で再取得できなかった）は、この取得で解消した。題名による1対1の対応はコード読取りで行い、各アートボードの絵と画面の画素一致は確認していない。
+
+## 原画の一覧（2026-10-11取得）
+
+「B案：画面と状態」ページの全56枚（ファイル名から `v2-` と拡張子を除いた識別子と、キャンバス上の題名）。ほかに「トークンと部品」「分布の表し方（比較）」ページの8枚があり、#146の対象外。
+
+| 識別子 | 題名 |
+| --- | --- |
+| A1-login | A1 ログイン：通常 |
+| A1-signup | A1 新規登録：通常 |
+| A2-error | A2 入力エラー |
+| A3-sending | A3 送信中 |
+| A4-wait | A4 試行が多すぎて待ちが必要 |
+| A5-expired | A5 ログインの期限切れ（401） |
+| B-account | B アカウントメニュー（ログアウト） |
+| B-empty | B ホーム：Goalが0件 |
+| B-error | B ホーム：通信失敗 |
+| B-home | B ホーム：通常 |
+| B-loading | B ホーム：読込中 |
+| B-notfound | B Goalが見つからない（404） |
+| C1-create | C Goal作成：通常 |
+| C2-errors | C 項目ごとの入力エラー |
+| C3-saving | C 保存中 |
+| C4-failed | C 保存失敗 |
+| C5-edit | C 編集：記録ありで一部変更不可 |
+| C6-delete | C 削除確認ダイアログ |
+| C7-edit-prior | R6 Goal編集：初期質問の回答を見直す |
+| D1 | D1 未記録・データ十分 |
+| D1-dark | D1 ダークテーマ |
+| D1-sheet | D1 「やった」の量を確認 |
+| D1-slow | D1 再開が遅い例（筋トレ） |
+| D1-why | D1 計算の根拠を開いた状態 |
+| D2-D3 | D2+D3 両方データ不足（読書） |
+| D3-only | D3 完了の目安だけデータ不足 |
+| D4-over3 | D4 目安も余裕をみた日付も3年以上先（例示用Goal） |
+| D4b-p80-over3 | D4b 目安は出るが、余裕をみた日付は3年以上先（例示） |
+| D5-change | D5b 今日の記録を変更 |
+| D5-done | D5 今日は記録済み（やった） |
+| D5-rest | D5 今日は記録済み（休んだ） |
+| D6-achieved | D6 達成済み（筋トレ） |
+| D7-calc | D7 見込みを計算できない（500 PREDICTION_FAILED） |
+| D7-date | D7 記録できない日（422 LOG_DATE_OUT_OF_WINDOW） |
+| D7-failed | D7 保存失敗（再試行） |
+| D7-network | D7 通信エラー（データ不足と区別） |
+| D7-saving | D7 保存中 |
+| D8-zero | D8 完了まで0日（今日やれば届く） |
+| Desk-home | B ホーム デスクトップ幅 |
+| Desk-today | D1 デスクトップ幅 |
+| E1 | E1 昨日が未記録：問いかけ |
+| E2 | E2 昨日「やった」の量を変更 |
+| E3-failed | E3 昨日の保存失敗：再回答 |
+| E3-saving | E3 昨日の記録を保存中 |
+| E4 | E4 今日から記録を始めたGoal |
+| F1-calendar | F 記録履歴カレンダー（任意） |
+| H-A | 見出しA：今日サボると |
+| H-B | 見出しB：今日休むと |
+| P1 | 提案A 直近7日の帯から訂正 |
+| P2 | 提案B 記録ボタンの下に昨日の行 |
+| P3 | 提案C ヘッダーのメニューから訂正 |
+| R1-questions | R1 Goal作成：初期質問を開いた状態 |
+| R2-answer | R2 回答だけの仮の見通し（片方未回答） |
+| R3-mixed | R3 回答＋実績の見通し（出所別） |
+| R4-none | R4 回答も記録もなく材料不足 |
+| R5-review | R5 回答の見直し：保存を確認できない |
 
 ## 対応表
 
@@ -31,25 +94,29 @@
 | B-notfound | 未定義URL | RouteStates.NotFoundPage | 対応コードあり。Goal固有404とは別 |
 | B-account | 一覧のアカウント、desktop共通バーから開く | [AccountMenu](../../apps/web/src/features/account/AccountMenu.tsx) | 対応コードあり。メール、logout、閉じる/失敗。PR216の削除失敗/結果不明は503・Cookie保持・明示再試行（[正本](../architecture.md#ログアウトの失敗と明示再試行215)）。元f106496画像はこの変更を含まない |
 | C1 | /goals/new、任意質問を折り畳んだフォーム | [GoalFormFields](../../apps/web/src/features/goals/form/GoalFormFields.tsx) | 部分対応。C1/R1コメントあり。C1全構成は原画未照合 |
-| C2 | /goals/new または /goals/:id/edit | [GoalFormPage](../../apps/web/src/features/goals/GoalFormPage.tsx) | 個別番号の意味未確認。下記フォーム状態一覧と照合が必要 |
-| C3 | 同上 | GoalFormPage | 同上。番号からエラー/編集等を推定しない |
-| C4 | 同上 | GoalFormPage | 同上 |
-| C5 | 同上 | GoalFormPage | 同上 |
-| C6 | 同上 | GoalFormPage | 同上 |
-| C7 | 同上 | GoalFormPage | 同上 |
+| C2「項目ごとの入力エラー」 | /goals/new・/goals/:id/edit、空欄・範囲外で保存 | [GoalFormPage](../../apps/web/src/features/goals/GoalFormPage.tsx)、[goal-form](../../apps/web/src/features/goals/goal-form.ts) | 対応コードあり。項目ごとのエラーとまとめ、最初の誤りへfocus |
+| C3「保存中」 | 同上、保存の応答待ち | GoalFormPage | 対応コードあり。保存ボタンのbusy、入力停止 |
+| C4「保存失敗」 | 同上、POST/PATCHの失敗 | GoalFormPage.SaveFailure | 対応コードあり。入力を残し明示再試行。409は最新を読み込む |
+| C5「編集：記録ありで一部変更不可」 | /goals/:id/edit、記録が1件以上 | [GoalFormFields](../../apps/web/src/features/goals/form/GoalFormFields.tsx) | 対応コードあり。単位・初期量・timezoneを固定し理由を表示 |
+| C6「削除確認ダイアログ」 | 編集の「このGoalを削除」 | GoalFormPage（deleteOpen） | 対応コードあり。確認・取消・失敗 |
+| C7（題名「R6 Goal編集：初期質問の回答を見直す」） | /goals/:id/edit、任意質問を開く | GoalFormFields、[QuestionPriorFields](../../apps/web/src/features/prior/QuestionPriorFields.tsx) | 対応コードあり。保存済み回答を開いた状態で見直し、単位/1回の量変更時は回答を取り消す案内 |
 | R1 | 作成/編集の任意質問を開く | GoalFormFields、[QuestionPriorFields](../../apps/web/src/features/prior/QuestionPriorFields.tsx) | 部分対応。1画面のdetails。2段階ウィザードではない |
 | R2 | Today、回答由来または条件付き計画の表示条件 | [CoreMetric](../../apps/web/src/features/today/CoreMetric.tsx)、[OutlookPanel](../../apps/web/src/features/today/OutlookPanel.tsx) | 部分対応。コメントでR2を参照。原画の見出し/回答見直し導線は未照合 |
 | R3 | Today、回答＋実績等の出所 | CoreMetric | 部分対応。R2/R3コメントあり。具体fixtureの原画対応未確認 |
 | R4 | Today、completionがplan | OutlookPanel.PlanView | 部分対応。設定量で行う場合の残り、日数予測と区別。原画未照合 |
-| R5 | Todayで回答を見直すdialog | 該当componentなし | 未実装。PR147はD-26未決として対象外扱い。現行はGoal編集へ。Issue146全アートボード条件との差を残す |
+| R5「回答の見直し：保存を確認できない」 | 回答の保存結果が不明（通信の失敗等） | GoalFormPage（編集の保存失敗）、[presentation-types](../../apps/web/src/features/prior/presentation-types.ts) の `save-unknown` | 部分対応。編集の保存失敗は入力を残して明示再試行する。回答専用の「保存を確認できない」表示（`save-unknown`）は型にあるが画面へ未接続 |
 | D1 | /goals/:id、未記録/材料あり | [TodayPage](../../apps/web/src/features/today/TodayPage.tsx)、CoreMetric、[GoalMenu](../../apps/web/src/features/today/GoalMenu.tsx) | 対応コードあり。問い・指標・メニュー・記録。PR202の外観/階層へ更新 |
+| D1-why「計算の根拠を開いた状態」 | Today、中心指標の開閉を開く | CoreMetric.WhyDetails | 対応コードあり。見出しは現行「遅れの目安の根拠」 |
+| D1-slow「再開が遅い例（筋トレ）」 | Today、再開が遅い記録のGoal | CoreMetric | 対応コードあり（同じ部品で数字が大きい例）。原画の例示値は製品へ持ち込まない |
 | D1-sheet | 今日の「量を変更」または± | [AmountEditor](../../apps/web/src/features/logs/AmountEditor.tsx)、[RecordChoiceBar](../../apps/web/src/features/logs/RecordChoiceBar.tsx) | 部分対応。量編集は操作帯内group。native modal sheetではない |
-| D2 | /goals/:idのToday状態 | TodayPage、[forecast-view](../../apps/web/src/features/today/forecast-view.ts) | 番号の具体状態が未確認。材料不足等のコードはあるがD2へ断定対応しない |
-| D3 | 同上 | 同上 | 番号の具体状態が未確認。原画照合が必要 |
-| D4・D4b | completionのP50なし／P80だけなし等 | OutlookPanel.EstimateNote | 対応コードあり。コメントはD4/D4b/D8を群で参照。D4とD4bの個別割当は未確認 |
-| D5 | 今日がDONEまたはSKIPPED | [RecordedSummary](../../apps/web/src/features/today/RecordedSummary.tsx) | 部分対応。記録済みと変更入口は存在。派生原画の一覧未確認 |
+| D2+D3「両方データ不足」 | Today、休んだ翌日の記録がない（中心・完了とも `insufficient`） | CoreMetric、OutlookPanel、[forecast-view](../../apps/web/src/features/today/forecast-view.ts) | 対応コードあり。実表示は[#81の状態確認（PR #228）](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/228)の「休んだ翌日なし」 |
+| D3-only「完了の目安だけデータ不足」 | Today、やった翌日の記録がない（completion `insufficient` NO_DONE_ORIGIN） | OutlookPanel.PlanView | 対応コードあり。実表示は同上の「やった翌日なし」 |
+| D4「目安も余裕をみた日付も3年以上先」・D4b「余裕をみた日付だけ3年以上先」 | completionのP50なし／P80だけなし | OutlookPanel.EstimateNote | 対応コードあり。D4の実表示は同上の「3年より先」。D4b単独の実表示は未撮影 |
+| D5「今日は記録済み（やった）」・D5「同（休んだ）」 | 今日がDONEまたはSKIPPED | [RecordedSummary](../../apps/web/src/features/today/RecordedSummary.tsx) | 対応コードあり。実表示は同上の「今日は記録済み」 |
 | D5-change | 今日の「記録を変更」 | RecordedSummary.ChangeHeader、RecordChoiceBar | 対応コードあり。元内容/選択、取消、上書き保存 |
 | D6 | APIが達成済みを返す | RecordedSummary.AchievedPanel/AchievedFacts、TodayPage | 対応コードあり。予測非表示、累計/総量、履歴/一覧、誤記録訂正 |
+| D7-network「通信エラー（データ不足と区別）」 | Todayの取得が通信失敗 | TodayPage.FetchError | 対応コードあり。データ不足と別の表示 |
+| D7-calc「見込みを計算できない（500 PREDICTION_FAILED）」 | APIが計算失敗を返す | TodayPage.FetchError（`PREDICTION_FAILED`） | 対応コードあり。通信失敗・データ不足と区別 |
 | D7・保存中 | 今日の保存を保留 | RecordChoiceBar | 対応コードあり。保存中・二重送信停止。原画の文言差未確認 |
 | D7-failed | 今日の保存の通信/サーバー失敗 | [SaveFailure](../../apps/web/src/features/logs/SaveFailure.tsx) | 対応コードあり。未保存の内容、再試行/選び直し |
 | D7-date | 保存窓を外れる/旧日の入力 | SaveFailure、RecordChoiceBar | 対応コードあり。対象日を表示し、画面を新しくする |
@@ -71,7 +138,7 @@
 | Dist 0〜5 | 分布表現比較 | — | #146で対象外 |
 | トークンと部品ページ | デザイン比較用ページ | [ui/README](../../apps/web/src/ui/README.md) | ページ再現は#146対象外。実装済み部品/トークンを使う |
 
-C2〜C7の番号との対応が未確定でも、現行フォームの次の状態は[画面設計](../design.md#goal作成編集削除)から追える：新規、編集、入力不正、保存中、初回読込失敗、再取得失敗、単位/初期量/timezone固定、回答撤回/409、作成結果不明/410、削除確認/失敗、401、404。原画を取得したらこれらを照合し、存在しない機能を番号埋めのために追加しない。PR210統合後は正常な同owner・同訪問の再確認後に失敗入力/案内を復元し、確認失敗・owner変更・画面離脱では破棄する。詳細は[D-29](../architecture.md#d-29-量と作成操作の保全148)へ。
+C2〜C7の意味は上の題名で確定した（2026-10-11）。現行フォームはこのほか、初回読込失敗、再取得失敗、回答撤回/409、作成結果不明/410、削除失敗、401、404も扱う（[画面設計](../design.md#goal作成編集削除)）。原画にない機能を番号埋めのために追加しない。PR210統合後は正常な同owner・同訪問の再確認後に失敗入力/案内を復元し、確認失敗・owner変更・画面離脱では破棄する。詳細は[D-29](../architecture.md#d-29-量と作成操作の保全148)へ。
 
 ## 合成環境での部分受入
 
@@ -110,6 +177,6 @@ PR212統合後の遠い到達予定日のcut軸は、[P-19](../product-spec.md#p
 ## #146の残る受入
 
 - [合成環境の部分受入](../changes/issue-171-composite-acceptance/README.md)を記録した。全アートボード/原画一致・基準main単独の全行実表示とは別で、全体の受入は未完。
-- 原画全一覧の取得、C2〜C7/D2/D3等の1対1照合、R5の未実装と採択範囲の整理が残る。
-- 390px・1280px、未ログイン/ログイン済み/通信失敗/404/一般エラー、Tab/Enter/Escape、取消・戻る・再入場を同じ基準commitで確認する。
+- 原画の全一覧は2026-10-11に取得し、題名による1対1の対応をコード読取りで確定した。各アートボードとの画素一致・全状態の両幅撮影は未完。R5は回答専用の表示が未接続（部分対応）。
+- 390px・1280px、未ログイン/ログイン済み/通信失敗/404/一般エラー、Tab/Enter/Escape、取消・戻る・再入場を同じ基準commitで確認する。 ルートの移動と既定の画面（未ログイン・ログイン済み・通信失敗/503・404・一般エラー）は[routes回帰](../../apps/web/tests/routes.browser.tsx)で実router上の回帰テストにした（2026-10-11）。
 - 表示させるためのエラー注入は専用fixtureで行う。認証情報/実利用者のデータをPRへ添付しない。基準commit・fixture・画面幅・結果・証拠リンクを揃えてから、Issueの該当完了条件を更新する。
