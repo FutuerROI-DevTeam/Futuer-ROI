@@ -1,9 +1,115 @@
-# JOGI HACK 2026
+# Future ROI
 
-3人チームで JOGI HACK 2026 に参加するためのWebアプリケーション開発リポジトリです。
-「なぜその技術が必要なのか説明できるプロダクト」を目指します。
+**今日サボると、ゴールは何日遠ざかる？**
+
+毎日取り組みたい学習・読書・運動などの記録から、今日休んだ後の再開待ちと、自分で決めた累積量への到達時期を見える化する Web アプリです。JOGI HACK 2026 に参加する3人チームで開発しています。
+
+[利用の流れ](#利用の流れ) · [予測の読み方](#todayの目安の読み方) · [構成](#システム構成) · [起動](#開発基盤のセットアップと確認) · [検証と限界](#検証と限界)
+
+## 何を解決するか
+
+「今日はやらなくてもいいか」と感じるとき、今日の選択が先の予定にどうつながるかは見えにくい。Future ROI は、単なる達成率に加えて、**休んだ後の再開傾向を日数の目安で示す**ことを目指します。この表示が行動判断に役立つかは、まだ実ユーザーで検証していません。
+
+対象は、毎日1回の実行機会があり、量を「分」または「回」で表せる行動です。たとえば「英語学習を合計3000分、1回30分」。ここでの達成は設定した累積量への到達であり、試験合格・点数・体重の予測ではありません。[問題・対象・意味の範囲](docs/product-spec.md#product-overview)
 
 ## 現在の状態
+
+2026-10-11、main `3e5d9fb` を基準に説明しています。開発期間は 2026-09-19〜2026-10-12、コードフリーズは 2026-10-12 です。
+
+| 区分 | 現在地 |
+| --- | --- |
+| main の実装 | 登録・ログイン・ログアウト、本人の Goal 管理、今日の記録、昨日の補完・訂正、履歴、Today の予測・出所表示 |
+| ローカルで起動できる構成 | Docker Compose の単一 Web/API コンテナ＋PostgreSQL。公開用 bundle のローカル検証入口もある |
+| 公開・製品受入 | 公開 URL、HTTPS・実クラウドの認証/DB/負荷、最終 UX 受入は未完了。[公開前の確認](docs/operations/release-demo.md) |
+| 追加機能 | 本人向け予測保存・実績照合は main にあるが**既定 OFF**。[R-12](docs/product-spec.md#本人向けの予測保存実績照合r-12既定off) |
+| 開発中 | [#244](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/244) の量入力・保存後表示、[#227 / PR #238](https://github.com/jogi-hack-2026-team/jogi-hack-2026/pull/238) の実験的な本人学習比較。基準 main の実装紹介には含めない |
+
+実画面の画像は今回未掲載です。量入力・保存後表示の仕上げ後に、確定した実装を動かして撮影する範囲を残しています。以下の画像は説明図です。
+
+## 利用の流れ
+
+1. 登録・ログインして、自分の Goal を作成します。総量、1回の量、開始前に終えた量を設定し、任意で到達予定日を加えます。
+2. 近い行動・量についての2問に任意で答えると、初期の仮定から見通しを始められます。未回答や「分からない」を本人の中間回答として扱いません。
+3. Today で目安を読み、「やった」量または「今日は休む」を保存します。保存後は記録済みの表示に切り替わります。
+4. 昨日が記録開始日以降なら補完・訂正できます。2日以上前の未記録は不明のまま残します。履歴はカレンダーで確認できます。
+
+![登録、Goal作成、任意回答、Today、今日の保存、履歴、昨日の補完へ進む利用フロー](docs/diagrams/user-flow.svg)
+
+[編集用 draw.io](docs/diagrams/user-flow.drawio) · [画面と状態の仕様](docs/design.md) · [機能からコード・テストをたどる](docs/change-map.md#アプリの仕様と実装)
+
+## Todayの目安の読み方
+
+**中心の g50 は、今日休んだ後、次に再開するまでの待ち日数の中央値です。** 同じ継続傾向・設定量で、再開後の経路を時間シフトして共有するモデルでは、累積量への到達が遅れる日数の中央値とも解釈できます。今日やる場合と休む場合の「完了日中央値どうしの差」ではありません。[Product P-21](docs/product-spec.md#p-21-todayの朝焼け山並み案)
+
+補助の完了予測は、今後も設定量で続ける仮定で、必要回数への到達分布から P50 / P80 の週を示します。P80 はモデル上で累積確率が80%へ届く目安であり、実際の80%達成保証ではありません。約3年の計算範囲で届かない場合は、材料不足と区別して「範囲内の目安なし」と表示します。
+
+![中心は休んだ後の再開待ち中央値、補助は設定量での完了時期であり、因果効果や実際の達成保証を示さない説明図](docs/diagrams/today-meaning.svg)
+
+[編集用 draw.io](docs/diagrams/today-meaning.drawio) · [表示・不足・範囲外の規則](docs/product-spec.md#today-decision画面の表示仕様)
+
+## システム構成
+
+以下は**ローカル Docker の実装構成**です。ブラウザの React SPA と API は同一 origin。Fastify が Web 資産と業務 API を配信し、認証・所有者確認・DB I/O を担当します。予測は API が純粋な TypeScript パッケージを同期で呼びます。
+
+![ローカルではブラウザから同一originのFastify Web/APIへ接続し、APIが純粋Prediction EngineとPostgreSQLをそれぞれ呼ぶ。EngineはDBへ接続しない](docs/diagrams/system-architecture.svg)
+
+[編集用 draw.io](docs/diagrams/system-architecture.drawio) · [正式な構成と判断](docs/architecture.md#system構成)
+
+| 境界・技術 | この構成で担うこと・理由 |
+| --- | --- |
+| React / Vite / TanStack Router・Query | 画面・遷移・取得状態を `apps/web` に置く。API から受けた値の表示と入力を担当する |
+| Fastify / TypeBox / Better Auth | 認証・入力検証・所有者条件・公開 DTO を `apps/api` にまとめる。同一 origin の Cookie と変更要求の Origin 確認を保つ |
+| PostgreSQL / pg | Goal・1日1件の正規記録・回答版を保存。DB 制約と transaction で保存時の整合性を扱う |
+| 純粋 TypeScript Engine | HTTP・DB・時計から分け、同じ入力を独立した数値オラクルと照合できるようにする |
+| 2状態 Bayesian Markov | 「やった翌日」と「休んだ翌日」を分ける、説明可能な最小モデル。連続休みの長さの効果や成果そのものは表さない |
+| npm workspaces / Docker / Node 標準テスト | Web・API・Engine の3 packageを同じ lockfileで管理。既存の Node テストを使い、実行環境と起動順を再現する |
+
+採用理由・比較案・弱点は [Architecture D-23](docs/architecture.md#d-23)、[モデル判断](docs/prediction/decision-log.md)、[同期実行と再検討条件 D-28](docs/architecture.md#d-28)へ。ローカルでは Node 24.21.0、TypeScript 5.9.3 を固定しています。各ライブラリの版は [package-lock.json](package-lock.json) と [版固定の記録](docs/architecture.md#2026-10-06の版固定と起動構成)を参照してください。
+
+**公開は別の計画です。** Vercel Hobby の Web assets / Fastify Function と Neon Free が条件付き第一候補で、Docker コンテナを公開済みという意味ではありません。公開用 entry・bundle はローカル検証済みですが、実アカウント・費用条件・HTTPS・Cookie・DB休止復帰・負荷は未確認です。[Deployment](docs/architecture.md#deployment) · [公開用 bundle 手順](docs/operations/vercel-bundle.md)
+
+## 記録から予測表示まで
+
+保存した DONE の実量を進捗へ加算し、隣接する既知の2日から継続・再開の確率分布を更新します。未記録を「休んだ」に置き換えず、初期量や質問回答を過去の記録へ加算しません。回答の仮定と実績の出所は表示上でも区別します。
+
+![本人の記録とGoalをAPIが読み、Engineが進捗と隣接遷移、初期仮定、再開待ちと完了分布を計算して、出所と状態を伴う表示へ返すデータフロー](docs/diagrams/prediction-data-flow.svg)
+
+[編集用 draw.io](docs/diagrams/prediction-data-flow.drawio) · [短いコード trace](docs/change-map.md#コードを読むための短いtrace) · [Engine の入口とテスト](packages/prediction/README.md)
+
+## 検証と限界
+
+| 確認する範囲 | 再実行・根拠 |
+| --- | --- |
+| 型・API/DB・Web・build | [Application CI](.github/workflows/application.yml)。API は実 PostgreSQL で確認し、コンテナの起動・保存・データ保持も smoke する |
+| 数値の整合性 | [Engine CI](.github/workflows/prediction.yml)、[独立オラクルと不変条件](packages/prediction/README.md#ローカル検証)。全経路との照合・境界・UNKNOWN・量の単調性など |
+| 実ブラウザの状態境界 | [Web browser 回帰](apps/web/tests/session-cache.browser-check.mjs)。標準の Web テストとは別入口 |
+| 文書・参照・設定 | [Foundation CI](.github/workflows/foundation.yml)、下のローカル check。図の XML/SVG と同期検査は [図の保守手順](docs/diagrams/README.md) |
+
+CI や数値テストの成功は、実ユーザーでの予測精度・需要・行動改善を示しません。測定は入力・環境・実行元 SHA に限定して読みます。[検証の索引](docs/prediction/experiment-history.md)から、成功だけでなく失敗と未確認もたどれます。
+
+- 合成記録は数値・仮定の検証用です。OULAD などの外部 proxy 研究は、製品の実利用データと別に扱います。
+- 回答から置く初期仮定は、質問で真の確率を測れたという証拠ではありません。
+- 現行モデルは一定の継続傾向と1回の設定量を仮定します。標準モデルの事後更新を、自動的なモデル改良・誤差補正の採用と呼びません。
+- 同期計算は同じ API process の他要求を待たせ得ます。単体・ローカル負荷の結果を公開先の性能保証へ換算しません。
+- 公開受入、実ユーザーの理解・効果確認、長期の復帰・退会・データ寿命の判断が残ります。[残課題の入口](docs/change-map.md#確認記録と残課題)
+
+## チームの成果と読みどころ
+
+個人の担当・レビュー実績は、各 Issue の Assignee、PR の差分・作者・レビュー記録で確認できます。本 README はチーム成果を紹介し、個人が全体を担当したとは記載しません。
+
+| 成果 | 読みどころ |
+| --- | --- |
+| [Engine #90](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/90) | 説明可能なモデル、純粋関数の責務分離、独立オラクル、完了分布の数値計算 |
+| [API・基盤 #89](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/89) | 所有者境界、量・設定版・再送の保存契約、実 DB 回帰、Docker 起動・終了 |
+| [画面 #88](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/88) | Goal → Today → 記録の導線、材料不足と範囲外の説明、通信・競合・session 状態の回復 |
+| [仕様と実装の対応表](docs/change-map.md) | 要件・判断・実装・テスト・実施結果をつなぐ開発記録 |
+
+## ライセンス
+
+この基準 main にはリポジトリ全体の LICENSE ファイルはありません。再利用・再配布の許諾条件は未設定です。依存パッケージ・フォントなどのライセンスとは分けて確認してください。
+
+<details>
+<summary>現在の判断・実装状況の詳細（開発者向け）</summary>
 
 | 区分 | 内容 |
 | --- | --- |
@@ -36,11 +142,26 @@
 
 Demo Seed（#82）は認証で作成済みのuserIdとtimezoneを明示し、専用2Goalだけを作成・resetします。[実行・再実行・保全の手順](docs/operations/demo-seed.md)を参照してください。公開DBと恒久Demo Accountの作成、Webの通し確認は別途必要です。
 
+</details>
+
 ## 開発基盤のセットアップと確認
 
 GitとPowerShell 7を使います。文書・設定チェックの手順は[開発ガイド](docs/DEVELOPMENT_GUIDE.md#13-初回セットアップ)を参照してください。基本構成の採用と認証・公開先の残条件は[Architecture](docs/architecture.md#technology-stack)で確認します。アプリの起動構成はNode 24.21.0に版固定し、[起動・検証手順](docs/DEVELOPMENT_GUIDE.md#アプリを起動検証する)にまとめています。公開先（staging）への配置は未実施です。
 
 Dockerで一式を起動する場合、初回だけ`.env.example`を`.env`へコピーし、ローカル専用の`LOCAL_DB_PASSWORD`と32文字以上の`BETTER_AUTH_SECRET`を設定します。その後は`docker compose up -d --build`でDB health→認証・アプリmigration→単一NodeのWeb/API配信へ進みます。準備完了を待つには`--wait --wait-timeout 120`を追加し、`http://127.0.0.1:8080`を開きます。hostのNode/miseは不要です。[設定・停止・再起動・失敗時とデータ保持](docs/DEVELOPMENT_GUIDE.md#dockerで一式を起動する)、[hostのホットリロードとの使い分け](docs/DEVELOPMENT_GUIDE.md#dockerとhost開発の使い分け)を参照してください。
+
+Docker Engine と Compose が使える環境で、repository root から実行します。初回の `.env` 作成と編集を終えてから起動してください。既存 `.env` は上書きしません。
+
+```powershell
+# 初回のみ。次に .env のローカル専用2項目を編集する
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+# 設定を終えた後、DB・migration・Web/APIの準備完了を待つ
+docker compose up -d --build --wait --wait-timeout 120
+# 正常時は status=ok。画面は http://127.0.0.1:8080
+Invoke-RestMethod http://127.0.0.1:8080/api/health
+```
+
+起動に失敗したら [失敗時の確認](docs/DEVELOPMENT_GUIDE.md#dockerで一式を起動する)で設定・DB health・migration のどこで止まったかを確認します。停止は `docker compose down`。DB volume を残すため、通常の停止に `-v` を加えません。この文書更新では Docker 起動を再実行していません。
 
 導入済みの環境では、リポジトリのルートで `mise run --skip-tools check` を実行します。文書・設定を検査し、成功時は `PASS:` が表示されます。
 miseがない場合は、PowerShell 7で `pwsh -NoProfile -File scripts/check-foundation.ps1` を実行すると同じ検証ができます。

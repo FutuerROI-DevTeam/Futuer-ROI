@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" version="24.7.17">
+  <diagram id="today-meaning" name="Today の2つの目安">
+    <mxGraphModel grid="1" gridSize="10" page="1" pageWidth="480" pageHeight="1150">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c1" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="170" as="sourcePoint" />
+            <mxPoint x="240" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c2" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="342" as="sourcePoint" />
+            <mxPoint x="240" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c3" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="536" as="sourcePoint" />
+            <mxPoint x="240" y="584" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c4" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="892" as="sourcePoint" />
+            <mxPoint x="240" y="940" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="title" value="Today の2つの目安" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=24;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="440" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="condition" value="今日が未記録・Goal 未達成&#10;材料があるときの表示" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#eef5fb;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="76" width="400" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="core" value="中心：今日休んだ後の再開待ち&#10;G = 次の「やった」までの日数&#10;g50 = G の中央値" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff4e9;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="400" height="122" as="geometry" />
+        </mxCell>
+        <mxCell id="shift" value="同じ継続傾向・設定量で&#10;再開後の経路を時間シフトして共有&#10;→ モデル上の追加遅れの中央値&#10;として解釈できる" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="390" width="400" height="146" as="geometry" />
+        </mxCell>
+        <mxCell id="distinction" value="g50 と完了日の P50 差は別&#10;実際の因果効果・将来の保証は&#10;示さない" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="584" width="400" height="114" as="geometry" />
+        </mxCell>
+        <mxCell id="completion" value="補助：設定量で続ける完了時期&#10;今日やる / 休む各条件から&#10;必要回数への到達分布を計算&#10;P50 / P80 の週を表示" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f4ed;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="746" width="400" height="146" as="geometry" />
+        </mxCell>
+        <mxCell id="limit" value="約3年の計算範囲に届かない値は&#10;「範囲内の目安なし」&#10;材料不足・完了不能とは区別" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="940" width="400" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="done" value="記録済み：中心比較を外す / 達成：予測を外す" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=17;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1080" width="440" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

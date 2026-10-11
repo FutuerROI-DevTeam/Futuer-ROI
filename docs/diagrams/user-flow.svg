@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="1112" viewBox="0 0 480 1112" role="img" aria-labelledby="user-flow-title" data-source-sha256="361feb6098b3b0c7dd1f9654297925f5c8c3d953fdf870af3a987fd9767d4a93">
+<title id="user-flow-title">利用の流れ</title>
+<desc>Future ROI main の説明図。編集元は同名 draw.io ファイル。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#526976"/></marker></defs>
+<rect width="100%" height="100%" rx="16" fill="#fafcfd"/>
+<g font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif">
+
+<polyline data-cell-id="e1" points="240,168 240,214" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="e2" points="240,340 240,386" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="e3" points="240,480 240,526" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="e4" points="240,650 240,696" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="e5" points="240,790 240,836" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="e6" points="240,930 240,976" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<g data-cell-id="title"><rect x="20" y="12" width="440" height="40" rx="12" fill="none" stroke="none"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="32">利用の流れ</tspan>
+</text>
+</g>
+<g data-cell-id="start"><rect x="40" y="76" width="400" height="92" rx="12" fill="#eef5fb" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="108">公開トップ → 登録 / ログイン</tspan>
+<tspan x="240" y="136">自分の Goal 一覧へ</tspan>
+</text>
+</g>
+<g data-cell-id="goal"><rect x="40" y="214" width="400" height="126" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="249">Goal を作る</tspan>
+<tspan x="240" y="277">総量・1回の量・初期量</tspan>
+<tspan x="240" y="305">単位（分 / 回）・任意の予定日</tspan>
+</text>
+</g>
+<g data-cell-id="question"><rect x="40" y="386" width="400" height="94" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="419">任意の2問に回答</tspan>
+<tspan x="240" y="447">初期の仮定を置く / 後で変更可</tspan>
+</text>
+</g>
+<g data-cell-id="today"><rect x="40" y="526" width="400" height="124" rx="12" fill="#fff4e9" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="560">Today を見る</tspan>
+<tspan x="240" y="588">再開待ち / 完了の目安</tspan>
+<tspan x="240" y="616">材料不足・出所も表示</tspan>
+</text>
+</g>
+<g data-cell-id="record"><rect x="40" y="696" width="400" height="94" rx="12" fill="#e9f4ed" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="729">「やった」量 / 「今日は休む」</tspan>
+<tspan x="240" y="757">今日の記録を保存</tspan>
+</text>
+</g>
+<g data-cell-id="history"><rect x="40" y="836" width="400" height="94" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="869">進捗・記録済み表示 / 履歴</tspan>
+<tspan x="240" y="897">次の日も Today へ</tspan>
+</text>
+</g>
+<g data-cell-id="yesterday"><rect x="40" y="976" width="400" height="92" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="1008">昨日が対象期間内なら補完・訂正</tspan>
+<tspan x="240" y="1036">2日以上前の未記録は UNKNOWN</tspan>
+</text>
+</g>
+</g>
+</svg>
