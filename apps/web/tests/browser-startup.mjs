@@ -9,9 +9,15 @@ import { parseDevToolsEndpoint, parseDevToolsActivePort } from './browser-debug-
 function bounded(operation, signal) {
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
-    const abort = () => { signal.removeEventListener('abort', abort); reject(signal.reason); };
+    const abort = () => {
+      signal.removeEventListener('abort', abort);
+      reject(signal.reason);
+    };
     signal.addEventListener('abort', abort, { once: true });
-    Promise.resolve().then(() => { signal.throwIfAborted(); return operation(); }).then(resolve, reject)
+    Promise.resolve().then(() => {
+      signal.throwIfAborted();
+      return operation();
+    }).then(resolve, reject)
       .finally(() => signal.removeEventListener('abort', abort));
   });
 }
@@ -23,8 +29,14 @@ function deadline(ms, message) {
 }
 
 // 起動処理だけを抽出。UIのuntil/assert/180秒test timeoutやChrome sandboxは変えない。
-export function launchBrowser({ browser, args, profile, signal, diagnostic = () => {},
-  startupBudgetMs = 30000, diagnosticAfterMs = 10000, cleanupGraceMs = 2000, adapters = {} }) {
+export function launchBrowser({
+  browser, args, profile, signal,
+  diagnostic = () => {},
+  startupBudgetMs = 30000,
+  diagnosticAfterMs = 10000,
+  cleanupGraceMs = 2000,
+  adapters = {},
+}) {
   const io = { spawn, readFile, fetch: globalThis.fetch, WebSocket: globalThis.WebSocket, ...adapters };
   const started = performance.now(), lifecycle = new AbortController();
   const timings = {}, cleanup = [];
@@ -32,29 +44,38 @@ export function launchBrowser({ browser, args, profile, signal, diagnostic = () 
   let endpointSource = null, activePortReadError = null, launchError = null, terminated = false;
   let cdp, readyPromise, stopPromise;
   const elapsed = () => Math.round(performance.now() - started);
-  const mark = name => { stage = name; timings[name] ??= elapsed(); };
+  const mark = name => {
+    stage = name;
+    timings[name] ??= elapsed();
+  };
   const noteIO = (operation, result) => { lastIO = { operation, result, atMs: elapsed() }; };
   // testのafterが先に済んだ非同期継続から、新しいprocessを所有してはならない。
   signal?.throwIfAborted();
   const child = io.spawn(browser, args, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
   const exited = new Promise(resolve => {
     child.once('exit', (code, exitSignal) => {
-      terminated = true; noteIO('process', 'exit');
+      terminated = true;
+      noteIO('process', 'exit');
       lifecycle.abort(new Error(`Chrome exited before completion (code=${code}, signal=${exitSignal})`));
       resolve();
     });
     child.on('error', error => {
       launchError = { code: error.code, message: error.message.slice(0, 400) };
       // spawn失敗にはexitイベントがない。kill等のerrorだけで生存processを終了済みにしない。
-      if (!child.pid) { terminated = true; resolve(); }
-      noteIO('process', 'error'); lifecycle.abort(new Error('Chrome process error: ' + error.code));
+      if (!child.pid) {
+        terminated = true;
+        resolve();
+      }
+      noteIO('process', 'error');
+      lifecycle.abort(new Error('Chrome process error: ' + error.code));
     });
   });
   child.stderr.on('data', chunk => {
     stderrBytes += chunk.length;
     const combined = stderr + chunk;
     stderrEndpoint ??= parseDevToolsEndpoint(combined);
-    stderr = combined.slice(-4000); noteIO('stderr', 'data');
+    stderr = combined.slice(-4000);
+    noteIO('stderr', 'data');
   });
   const diagnostics = () => ({ stage, elapsedMs: elapsed(), timings: { ...timings }, lastIO,
     endpointSource, activePortReadError, launchError, stderrBytes, stderr,
@@ -84,13 +105,28 @@ export function launchBrowser({ browser, args, profile, signal, diagnostic = () 
       open(openSignal) {
         return bounded(() => new Promise((resolve, reject) => {
           const dispose = () => {
-            socket.removeEventListener('open', opened); socket.removeEventListener('error', failed);
-            socket.removeEventListener('close', closed); openSignal.removeEventListener('abort', aborted);
+            socket.removeEventListener('open', opened);
+            socket.removeEventListener('error', failed);
+            socket.removeEventListener('close', closed);
+            openSignal.removeEventListener('abort', aborted);
           };
-          const opened = () => { dispose(); noteIO('WebSocket', 'open'); resolve(); };
-          const failed = () => { dispose(); reject(new Error('CDP WebSocket open failed')); };
-          const closed = () => { dispose(); reject(new Error('CDP WebSocket closed before open')); };
-          const aborted = () => { dispose(); reject(openSignal.reason); };
+          const opened = () => {
+            dispose();
+            noteIO('WebSocket', 'open');
+            resolve();
+          };
+          const failed = () => {
+            dispose();
+            reject(new Error('CDP WebSocket open failed'));
+          };
+          const closed = () => {
+            dispose();
+            reject(new Error('CDP WebSocket closed before open'));
+          };
+          const aborted = () => {
+            dispose();
+            reject(openSignal.reason);
+          };
           socket.addEventListener('open', opened, { once: true });
           socket.addEventListener('error', failed, { once: true });
           socket.addEventListener('close', closed, { once: true });
@@ -109,10 +145,14 @@ export function launchBrowser({ browser, args, profile, signal, diagnostic = () 
             noteIO('CDP', 'send ' + method);
             socket.send(JSON.stringify({ id: commandId, method, params }));
           }), sendSignal);
-        } finally { limit.dispose(); pending.delete(commandId); }
+        } finally {
+          limit.dispose();
+          pending.delete(commandId);
+        }
       },
       close() {
-        disposed = true; failPending(new Error('CDP connection disposed'));
+        disposed = true;
+        failPending(new Error('CDP connection disposed'));
         socket.close();
       },
     };
@@ -129,7 +169,11 @@ export function launchBrowser({ browser, args, profile, signal, diagnostic = () 
       let endpoint;
       while (!endpoint) {
         startupSignal.throwIfAborted();
-        if (stderrEndpoint) { endpoint = stderrEndpoint; endpointSource = 'stderr'; break; }
+        if (stderrEndpoint) {
+          endpoint = stderrEndpoint;
+          endpointSource = 'stderr';
+          break;
+        }
         try {
           const contents = await bounded(() => io.readFile(join(profile, 'DevToolsActivePort'),
             { encoding: 'utf8', signal: startupSignal }), startupSignal);
@@ -140,12 +184,14 @@ export function launchBrowser({ browser, args, profile, signal, diagnostic = () 
           if (endpoint) endpointSource = 'profile';
         } catch (error) {
           startupSignal.throwIfAborted();
-          activePortReadError = { code: error.code ?? 'READ_ERROR' }; noteIO('DevToolsActivePort', activePortReadError.code);
+          activePortReadError = { code: error.code ?? 'READ_ERROR' };
+          noteIO('DevToolsActivePort', activePortReadError.code);
         }
         if (!endpoint) await delay(20, undefined, { signal: startupSignal });
       }
       mark('http');
-      const origin = new URL(endpoint); origin.protocol = 'http:';
+      const origin = new URL(endpoint);
+      origin.protocol = 'http:';
       let target;
       while (!target) {
         const response = await bounded(() => io.fetch(new URL('/json/list', origin), { signal: startupSignal, redirect: 'error' }), startupSignal);
@@ -162,7 +208,9 @@ export function launchBrowser({ browser, args, profile, signal, diagnostic = () 
         || targetURL.username || targetURL.password || targetURL.search || targetURL.hash) {
         throw new Error('Chrome page endpoint is outside the owned debug endpoint');
       }
-      mark('websocket'); cdp = connection(targetURL.href); await cdp.open(startupSignal);
+      mark('websocket');
+      cdp = connection(targetURL.href);
+      await cdp.open(startupSignal);
       mark('cdp');
       const version = await cdp.send('Browser.getVersion', {}, { signal: startupSignal,
         timeoutMs: Math.max(1, startupBudgetMs - (performance.now() - started)) });
@@ -175,14 +223,21 @@ export function launchBrowser({ browser, args, profile, signal, diagnostic = () 
       const cause = startupSignal.aborted ? startupSignal.reason : error;
       diagnostic({ browserStartup: 'failed', ...diagnostics() });
       throw new Error('Chrome startup failed: ' + cause.message + ': ' + JSON.stringify(diagnostics()), { cause });
-    } finally { budget.dispose(); clearTimeout(slowTimer); }
+    } finally {
+      budget.dispose();
+      clearTimeout(slowTimer);
+    }
   }
 
-  function ready() { readyPromise ??= prepare(); return readyPromise; }
+  function ready() {
+    readyPromise ??= prepare();
+    return readyPromise;
+  }
 
   function stop() {
     stopPromise ??= (async () => {
-      budget.dispose(); clearTimeout(slowTimer);
+      budget.dispose();
+      clearTimeout(slowTimer);
       lifecycle.abort(new Error('Chrome session stopped'));
       try {
         if (cdp) {

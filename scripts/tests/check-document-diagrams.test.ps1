@@ -18,7 +18,9 @@ foreach ($name in @('system-architecture','user-flow')) {
     }
 }
 function Reset-Fixture {
-    foreach ($p in $originalHashes.Keys) { Copy-Item -LiteralPath $p -Destination $diagrams -Force }
+    foreach ($p in $originalHashes.Keys) {
+        Copy-Item -LiteralPath $p -Destination $diagrams -Force
+    }
 }
 function Set-Arrow($cell, [string]$side, [string]$kind) {
     $style=$cell.GetAttribute('style') -replace "(?:^|;)${side}Arrow=[^;]*;?", ';'
@@ -43,8 +45,10 @@ foreach ($case in $cases) {
     Reset-Fixture
     if ($case.mode -ne 'unchanged') {
         $name = if ($case.side -eq 'start') { 'system-architecture' } else { 'user-flow' }
-        $sourcePath=Join-Path $diagrams "$name.drawio"; $svgPath=Join-Path $diagrams "$name.svg"
-        $source=[xml][IO.File]::ReadAllText($sourcePath); $svg=[xml][IO.File]::ReadAllText($svgPath)
+        $sourcePath=Join-Path $diagrams "$name.drawio"
+        $svgPath=Join-Path $diagrams "$name.svg"
+        $source=[xml][IO.File]::ReadAllText($sourcePath)
+        $svg=[xml][IO.File]::ReadAllText($svgPath)
         $cell=$source.SelectNodes('//mxCell[@edge="1"]')[0]
         $edge=$svg.SelectNodes('/*[local-name()="svg"]/*[local-name()="path" and @fill="none"]')[0]
         $marker=$svg.SelectSingleNode('/*[local-name()="svg"]/*[local-name()="defs"]/*[local-name()="marker"]')
@@ -60,19 +64,40 @@ foreach ($case in $cases) {
             'duplicate-definition' { $null=$marker.ParentNode.AppendChild($marker.CloneNode($true)) }
             'wrong-orientation' { $marker.SetAttribute('orient','0') }
             'unfilled-marker' { $marker.FirstChild.SetAttribute('fill','none') }
-            'matching-none' { Set-Arrow $cell $case.side 'none'; $edge.RemoveAttribute($attribute) }
-            'matching-none-attribute' { Set-Arrow $cell $case.side 'none'; $edge.SetAttribute($attribute,'none') }
-            'both-none' { foreach($side in @('start','end')) { Set-Arrow $cell $side 'none'; $edge.RemoveAttribute("marker-$side") } }
+            'matching-none' {
+                Set-Arrow $cell $case.side 'none'
+                $edge.RemoveAttribute($attribute)
+            }
+            'matching-none-attribute' {
+                Set-Arrow $cell $case.side 'none'
+                $edge.SetAttribute($attribute,'none')
+            }
+            'both-none' {
+                foreach($side in @('start','end')) {
+                    Set-Arrow $cell $side 'none'
+                    $edge.RemoveAttribute("marker-$side")
+                }
+            }
         }
-        $source.Save($sourcePath); $svg.Save($svgPath)
+        $source.Save($sourcePath)
+        $svg.Save($svgPath)
     }
-    $passed=$true; $reason=''
-    try { & $checker | Out-Null } catch { $passed=$false; $reason=$_.Exception.Message }
+    $passed=$true
+    $reason=''
+    try {
+        & $checker | Out-Null
+    } catch {
+        $passed=$false
+        $reason=$_.Exception.Message
+    }
     if ($passed -ne $case.pass) { $failures.Add("$($case.name): expected PASS=$($case.pass), got PASS=$passed ($reason)") }
     elseif (-not $passed -and $reason -notmatch 'arrow|marker') { $failures.Add("$($case.name): failed for unrelated reason: $reason") }
 }
 foreach ($p in $originalHashes.Keys) {
     if ((Get-FileHash -LiteralPath $p).Hash -ne $originalHashes[$p]) { throw "Source diagram modified: $p" }
 }
-if ($failures.Count) { $failures | Write-Output; throw "$($failures.Count)/$($cases.Count) diagram arrow regression cases failed" }
+if ($failures.Count) {
+    $failures | Write-Output
+    throw "$($failures.Count)/$($cases.Count) diagram arrow regression cases failed"
+}
 Write-Output "PASS: $($cases.Count) arrow regression cases; source diagrams unchanged."

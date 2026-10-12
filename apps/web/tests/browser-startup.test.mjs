@@ -88,10 +88,16 @@ function fixture(t, options = {}) {
   Object.assign(child, { pid: 12345, exitCode: null, signalCode: null, stderr: new PassThrough() });
   const observations = [], sockets = [], kills = [], timers = new Set();
   let spawns = 0, fetchSignal;
-  const later = (fn, ms = 1) => { const timer = setTimeout(fn, ms); timers.add(timer); return timer; };
+  const later = (fn, ms = 1) => {
+    const timer = setTimeout(fn, ms);
+    timers.add(timer);
+    return timer;
+  };
   const exit = (code, signal) => {
     if (child.exitCode !== null || child.signalCode !== null) return;
-    child.exitCode = code; child.signalCode = signal; child.emit('exit', code, signal);
+    child.exitCode = code;
+    child.signalCode = signal;
+    child.emit('exit', code, signal);
   };
   child.kill = signal => {
     kills.push(signal);
@@ -101,7 +107,11 @@ function fixture(t, options = {}) {
   };
   class Socket extends EventTarget {
     constructor(url) {
-      super(); this.url = url; this.closed = false; this.opened = false; sockets.push(this);
+      super();
+      this.url = url;
+      this.closed = false;
+      this.opened = false;
+      sockets.push(this);
       if (!options.stallSocket) later(() => {
         this.opened = !options.socketError;
         this.dispatchEvent(new Event(options.socketError ? 'error' : 'open'));
@@ -125,7 +135,10 @@ function fixture(t, options = {}) {
     diagnosticAfterMs: options.soft ?? 80, cleanupGraceMs: 40,
     adapters: { spawn: () => {
       spawns++;
-      if (options.spawnError) later(() => { child.pid = undefined; child.emit('error', Object.assign(new Error('synthetic spawn error'), { code: 'ENOENT' })); });
+      if (options.spawnError) later(() => {
+        child.pid = undefined;
+        child.emit('error', Object.assign(new Error('synthetic spawn error'), { code: 'ENOENT' }));
+      });
       else if (options.earlyExit) later(() => exit(7, null));
       else if (!options.noEndpoint && !options.profile) later(() => child.stderr.write('DevTools listening on ' + (options.endpoint ?? endpoint) + '\n'), options.endpointDelay);
       return child;
@@ -228,7 +241,9 @@ test('test abort: commands after readiness reject instead of leaving pending CDP
 
 test('cleanup: stalled Browser.close and ignored SIGTERM escalate only the owned child', async t => {
   const f = fixture(t, { stallClose: true, ignoreTerm: true }); await f.session.ready();
-  const stop = f.session.stop(); assert.equal(f.session.stop(), stop); await stop;
+  const stop = f.session.stop();
+  assert.equal(f.session.stop(), stop);
+  await stop;
   assert.deepEqual(f.kills, ['SIGTERM', 'SIGKILL']); assert.equal(f.child.signalCode, 'SIGKILL');
   assert.match(f.session.diagnostics().cleanup[0].result, /deadline|timeout/);
 });
@@ -259,11 +274,18 @@ test('startup: actual fake process emits a delayed endpoint and exits after clea
     args: ['-e', `setTimeout(() => process.stderr.write('DevTools listening on ${endpoint}\\n'), 1200); setInterval(() => {}, 1000);`],
     profile: '/synthetic/profile', startupBudgetMs: 5000, diagnosticAfterMs: 500, cleanupGraceMs: 1000,
     diagnostic: value => observations.push(value),
-    adapters: { spawn: (...args) => { spawns++; actualChild = spawn(...args); return actualChild; }, readFile: absent,
+    adapters: { spawn: (...args) => {
+      spawns++;
+      actualChild = spawn(...args);
+      return actualChild;
+    }, readFile: absent,
       fetch: async () => Response.json([{ type: 'page', webSocketDebuggerUrl: page }]),
       WebSocket: class extends EventTarget {
         constructor() { super(); setTimeout(() => this.dispatchEvent(new Event('open')), 1); }
-        send(contents) { const { id } = JSON.parse(contents); queueMicrotask(() => this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ id, result: { product: 'Synthetic/1' } }) }))); }
+        send(contents) {
+          const { id } = JSON.parse(contents);
+          queueMicrotask(() => this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ id, result: { product: 'Synthetic/1' } }) })));
+        }
         close() {}
       } },
   });
@@ -284,7 +306,9 @@ for (const stage of ['HTTP', 'WebSocket']) {
     });
     server.on('connection', socket => { connections.add(socket); socket.on('close', () => connections.delete(socket)); });
     server.on('upgrade', (_req, socket) => {
-      lastOperation = 'upgrade'; upgrades.add(socket); socket.on('close', () => upgrades.delete(socket));
+      lastOperation = 'upgrade';
+      upgrades.add(socket);
+      socket.on('close', () => upgrades.delete(socket));
       // upgrade後はHTTP serverがread/FIN処理を引き継がないためfixture自身が受け取る。
       socket.on('end', () => socket.destroy()); socket.resume();
     }); // handshakeを完了しない故障
