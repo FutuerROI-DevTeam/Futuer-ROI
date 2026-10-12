@@ -22,6 +22,7 @@ Supporting Artifact / Not a Source of Truth。2026-10-12 に承認された構�
 ```powershell
 pwsh -NoProfile -File scripts/check-document-diagrams.ps1
 pwsh -NoProfile -File scripts/render-readme-diagrams.ps1 -Check
+pwsh -NoProfile -File scripts/tests/check-document-diagrams.test.ps1
 pwsh -NoProfile -File scripts/check-foundation.ps1
 git diff --check
 ```
@@ -31,6 +32,8 @@ git diff --check
 `render-readme-diagrams.ps1` は現在の2図を自動生成しない。`-Check` で上の検査へ進み、引数なしでは書き換え前に止まる。過去形式の生成処理は `-Archived` で隔離して保持し、承認原本を上書きしない。
 
 ## 確認範囲
+
+矢印検査は始点・終点とも `block` / `none` とSVGのmarker参照・定義を照合する。未指定の始点は `none` とし、終点は明示指定が必要。`block` は現在の塗りつぶした三角形marker形式だけを受け付け、未対応種類や壊れた参照は失敗する。[Issue #272](https://github.com/FutureROI-DevTeam/Future-ROI/issues/272)の回帰は一時コピーで矢印指定とSVGを独立に変更し、不一致の検出と原本不変を確認する。新しいexport形式への対応やnative editor検証の代替ではない。
 
 2026-10-12、承認された ZIP から SVG / draw.io / PNG を取り出して可読性・PNG実画像・ラベルと境界を確認した。repository の SVG / draw.io は承認原本と byte exact。構成図は1000×480、利用フローは1000×520。1000px原寸でのPNGの文字・矢印と、キャンバス端の見切れを確認した。幅の狭い画面では図が縮むため、本文の手順・altと原寸リンクも用意している。
 
