@@ -1,64 +1,78 @@
 <?xml version='1.0' encoding='utf-8'?>
-<mxfile host="app.diagrams.net" version="24.7.17">
-  <diagram id="system-architecture" name="ローカル Docker の構成">
-    <mxGraphModel grid="1" gridSize="10" page="1" pageWidth="480" pageHeight="860">
+<mxfile host="app.diagrams.net">
+  <diagram name="system-architecture" id="system-architecture">
+    <mxGraphModel page="1" pageWidth="1000" pageHeight="480" grid="1" gridSize="10">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="container" value="" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff4e9;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="82" y="244" width="378" height="354" as="geometry" />
+        <mxCell id="docker" value="" style="rounded=0;whiteSpace=wrap;html=0;fillColor=#FFFFFF;strokeColor=#A9B8C4;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=17;dashed=1;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="280" y="25" width="690" height="430" />
         </mxCell>
-        <mxCell id="http-edge" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="270" y="188" as="sourcePoint" />
-            <mxPoint x="270" y="244" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="docker-label" value="Docker Compose（ローカル実装）" style="text;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=16;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="295" y="30" width="350" height="30" />
         </mxCell>
-        <mxCell id="engine-edge" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="270" y="400" as="sourcePoint" />
-            <mxPoint x="270" y="476" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="app" value="" style="rounded=0;whiteSpace=wrap;html=0;fillColor=#FAFCFE;strokeColor=#7A97AD;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=17;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="docker">
+          <mxGeometry as="geometry" x="20" y="55" width="405" height="355" />
         </mxCell>
-        <mxCell id="db-edge" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="100" y="350" as="sourcePoint" />
-            <mxPoint x="100" y="721" as="targetPoint" />
-            <Array as="points">
-              <mxPoint x="42" y="350" />
-              <mxPoint x="42" y="721" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="app-label" value="Web / API コンテナ · 単一 Node.js process" style="text;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=15;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="310" y="86" width="385" height="28" />
         </mxCell>
-        <mxCell id="title" value="ローカル Docker の構成" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=24;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="20" y="12" width="440" height="40" as="geometry" />
+        <mxCell id="web" value="Fastify · Web 資産配信" style="rounded=1;arcSize=8;whiteSpace=wrap;html=0;fillColor=#F0F5FA;strokeColor=#3F6C91;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=17;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="app">
+          <mxGeometry as="geometry" x="25" y="45" width="355" height="60" />
         </mxCell>
-        <mxCell id="browser" value="ブラウザ&#10;React + Vite&#10;Router / Query" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#eef5fb;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="100" y="76" width="340" height="112" as="geometry" />
+        <mxCell id="api" value="Fastify API&#10;Better Auth · 入力検証 · 所有者確認" style="rounded=1;arcSize=8;whiteSpace=wrap;html=0;fillColor=#F6F9FC;strokeColor=#3F6C91;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=16;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="app">
+          <mxGeometry as="geometry" x="25" y="130" width="355" height="70" />
         </mxCell>
-        <mxCell id="container-title" value="app：単一 Node コンテナ" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="90" y="250" width="360" height="32" as="geometry" />
+        <mxCell id="engine" value="Prediction Engine&#10;純粋 TypeScript" style="rounded=1;arcSize=8;whiteSpace=wrap;html=0;fillColor=#F0F8F4;strokeColor=#387E6C;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=16;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="app">
+          <mxGeometry as="geometry" x="85" y="270" width="235" height="55" />
         </mxCell>
-        <mxCell id="api" value="Fastify API / SPA 配信&#10;Better Auth / 所有者確認&#10;入出力検証 / pg" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="100" y="300" width="340" height="100" as="geometry" />
+        <mxCell id="pure" value="HTTP・DB・時計への依存なし" style="text;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#387E6C;fontFamily=Noto Sans CJK JP;fontSize=13;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="365" y="407" width="275" height="22" />
         </mxCell>
-        <mxCell id="engine" value="Prediction Engine&#10;純粋 TypeScript・同期計算&#10;HTTP / DB / 時計を読まない" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f4ed;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="100" y="476" width="340" height="96" as="geometry" />
+        <mxCell id="browser" value="ブラウザ&#10;React / Vite&#10;TanStack Router&#10;TanStack Query" style="rounded=1;arcSize=8;whiteSpace=wrap;html=0;fillColor=#F6F9FC;strokeColor=#3F6C91;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=17;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="30" y="135" width="195" height="160" />
         </mxCell>
-        <mxCell id="db" value="PostgreSQL 18&#10;Goal / 日々の記録 / 回答&#10;認証・session / volume保存" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#eef5fb;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="100" y="666" width="340" height="110" as="geometry" />
+        <mxCell id="db" value="PostgreSQL 18&#10;別コンテナ" style="shape=cylinder3;size=15;whiteSpace=wrap;html=0;fillColor=#F0F8F4;strokeColor=#387E6C;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=17;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="docker">
+          <mxGeometry as="geometry" x="485" y="170" width="170" height="110" />
         </mxCell>
-        <mxCell id="http" value="同一 origin の /api と SPA" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fafcfd;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="20" y="204" width="440" height="30" as="geometry" />
+        <mxCell id="volume" value="永続 volume" style="rounded=1;arcSize=8;whiteSpace=wrap;html=0;fillColor=#FFFFFF;strokeColor=#387E6C;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=16;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="docker">
+          <mxGeometry as="geometry" x="500" y="340" width="140" height="45" />
         </mxCell>
-        <mxCell id="sync" value="同期呼出し → 結果をAPIへ" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff4e9;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="100" y="424" width="340" height="30" as="geometry" />
+        <mxCell id="same-origin" value="同一 origin" style="text;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=12;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="224" y="267" width="100" height="40" />
         </mxCell>
-        <mxCell id="db-note" value="DB I/O は API が担当" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="20" y="614" width="440" height="40" as="geometry" />
+        <mxCell id="io-engine" value="入力 / 予測" style="text;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#24384A;fontFamily=Noto Sans CJK JP;fontSize=13;dashed=0;verticalAlign=middle;align=center;spacing=3;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="390" y="302" width="100" height="28" />
         </mxCell>
-        <mxCell id="scope" value="公開候補の Vercel / Neon は別計画" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
-          <mxGeometry x="20" y="804" width="440" height="40" as="geometry" />
+        <mxCell id="assets" style="edgeStyle=none;html=0;endArrow=block;startArrow=block;strokeColor=#708898;strokeWidth=1.6;dashed=0;exitX=1.0;exitY=0.15625;entryX=0.0;entryY=0.5833333333333334;exitPerimeter=0;entryPerimeter=0;" edge="1" parent="1" source="browser" target="web">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="assets-label" value="HTML / JS" style="text;html=0;fillColor=#FFFFFF;strokeColor=none;fontFamily=Noto Sans CJK JP;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="228" y="130" width="90" height="22" />
+        </mxCell>
+        <mxCell id="api-http" style="edgeStyle=none;html=0;endArrow=block;startArrow=block;strokeColor=#708898;strokeWidth=1.6;dashed=0;exitX=1.0;exitY=0.6875;entryX=0.0;entryY=0.5;exitPerimeter=0;entryPerimeter=0;" edge="1" parent="1" source="browser" target="api">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="api-http-label" value="HTTP / JSON" style="text;html=0;fillColor=#FFFFFF;strokeColor=none;fontFamily=Noto Sans CJK JP;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="228" y="217" width="90" height="22" />
+        </mxCell>
+        <mxCell id="compute" style="edgeStyle=none;html=0;endArrow=block;startArrow=block;strokeColor=#708898;strokeWidth=1.6;dashed=0;exitX=0.5014084507042254;exitY=1.0;entryX=0.502127659574468;entryY=0.0;exitPerimeter=0;entryPerimeter=0;" edge="1" parent="1" source="api" target="engine">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="compute-label" value="同期呼出し" style="text;html=0;fillColor=#FFFFFF;strokeColor=none;fontFamily=Noto Sans CJK JP;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="515" y="295" width="85" height="22" />
+        </mxCell>
+        <mxCell id="sql" style="edgeStyle=none;html=0;endArrow=block;startArrow=block;strokeColor=#708898;strokeWidth=1.6;dashed=0;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.45454545454545453;exitPerimeter=0;entryPerimeter=0;" edge="1" parent="1" source="api" target="db">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="sql-label" value="SQL · pg" style="text;html=0;fillColor=#FFFFFF;strokeColor=none;fontFamily=Noto Sans CJK JP;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="686" y="217" width="72" height="22" />
+        </mxCell>
+        <mxCell id="persist" style="edgeStyle=none;html=0;endArrow=block;startArrow=block;strokeColor=#708898;strokeWidth=1.6;dashed=0;exitX=0.5;exitY=1.0;entryX=0.5;entryY=0.0;exitPerimeter=0;entryPerimeter=0;" edge="1" parent="1" source="db" target="volume">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="persist-label" value="永続化" style="text;html=0;fillColor=#FFFFFF;strokeColor=none;fontFamily=Noto Sans CJK JP;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="860" y="320" width="65" height="22" />
         </mxCell>
       </root>
     </mxGraphModel>

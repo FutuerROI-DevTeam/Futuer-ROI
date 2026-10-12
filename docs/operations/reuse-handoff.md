@@ -16,3 +16,23 @@
 旧案の[最終Gate #66](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/66)から引き継ぐ検証方法は、成立が必須の外部データ・権利・User Flowを代表サンプルで早期に通し、期限内に成立する証拠を確認すること。APIの応答、合成データのテスト、PoCの成功はそれぞれ何を確かめたかを分けて記録する。新案に同種の依存がなければ、この検証を形式だけで追加しない。
 
 ローカルにしかない旧調査ブランチや未push成果は、現時点の共有済み資産に含めない。共有する必要が生じたら対象・Secret・検証結果を確認し、別Issueで扱う。
+
+READMEの旧音楽案への案内を、再利用時の確認をまとめた本書へ全文移した。履歴の再採用は意味しない。
+<!-- readme-music:start -->
+## 廃止した音楽案の履歴
+
+2026-09-29に廃止した音楽探索案（[Product Spec P-10](../product-spec.md#p-10-音楽探索案の廃止)）の記録です。現行Future ROIの仕様・設計・検証ではないため、#200でREADMEの状態表・読む順番・正本一覧からの重複した案内を外し、開発者向けの折りたたみへまとめました。本文と固定履歴は削除していません。
+
+<details>
+<summary>当時の記録の参照方法（開発者向け）</summary>
+
+廃止した音楽案の文書・比較PoC・当時の設定は、[固定commit `77c71a5` のtree](https://github.com/jogi-hack-2026-team/jogi-hack-2026/tree/77c71a5f248a4dce4ce9fb8af6619b41541be9d8/archive/music-exploration)から参照します。#188でtracked file 111件を現在の作業ツリーから外しました。Git履歴と当時の採択・失敗・検証結果は保持し、現行アプリの仕様や起動手順へ自動適用しません。
+
+ローカルで調べる場合は、そのcommitの別checkoutから `archive/music-exploration` を参照してください。現行checkoutの設定やDBへ復元して動かす前に、[再利用時の確認事項](reuse-handoff.md)を確認します。
+
+固定履歴のfile内容だけを読むには、`<path>`を当時のrepository相対pathに置き換えて `git show 77c71a5f248a4dce4ce9fb8af6619b41541be9d8:<path>` を実行します。現在の作業ツリーへ書き戻す操作ではありません。
+
+過去の開発基盤の判断履歴は[開発基盤ADR](https://github.com/jogi-hack-2026-team/jogi-hack-2026/blob/77c71a5f248a4dce4ce9fb8af6619b41541be9d8/archive/music-exploration/docs/decisions/0001-development-foundation.md)です。新規Product設計の正本を増やしません。旧音楽案のML Issue向けCodex Harnessは通常の実行タスクとCIから外しました。再利用前の確認事項は[引き継ぎ](reuse-handoff.md)を参照してください。
+
+</details>
+<!-- readme-music:end -->

@@ -1,14 +1,21 @@
-# Export the small, uncompressed README draw.io diagrams without new dependencies.
+# Validate current document diagrams; retain the old exporter behind -Archived.
 # Supported primitives are plain-text rectangles and explicit-point arrows.
 [CmdletBinding()]
-param([switch]$Check)
+param([switch]$Check, [switch]$Archived)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+# Approved diagrams use a separate source/SVG structural check.
+# Their richer document shapes must never be passed to the old exporter.
+if (-not $Archived) {
+    if (-not $Check) { throw 'Export the approved SVGs from their editable source, then run -Check. No files were changed.' }
+    & (Join-Path $PSScriptRoot 'check-document-diagrams.ps1')
+    exit
+}
 $diagramDirectory = Join-Path (Split-Path $PSScriptRoot -Parent) 'docs/diagrams'
 function Escape-Xml([string]$value) { [System.Security.SecurityElement]::Escape($value) }
 function Number([double]$value) { $value.ToString('0.###', [Globalization.CultureInfo]::InvariantCulture) }
-$sources = @(Get-ChildItem -LiteralPath $diagramDirectory -Filter '*.drawio' | Sort-Object Name)
-if (($sources.BaseName -join ',') -ne 'prediction-data-flow,system-architecture,today-meaning,user-flow') { throw 'Expected the four README diagrams.' }
+$sources = @(Get-ChildItem -LiteralPath $diagramDirectory -Filter '*.drawio' | Where-Object { $_.BaseName -in @('prediction-data-flow','today-meaning') } | Sort-Object Name)
+if (($sources.BaseName -join ',') -ne 'prediction-data-flow,today-meaning') { throw 'Expected the two archived diagrams.' }
 foreach ($source in $sources) {
     $sourceText = [IO.File]::ReadAllText($source.FullName) -replace "`r`n", "`n"
     $xml = [xml]$sourceText

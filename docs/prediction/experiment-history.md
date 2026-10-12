@@ -240,3 +240,19 @@ canonical親peakは **all-meter** 側。通常guard maxとの一般的一致保�
 3. Buffer/GC/native修正の同条件wall比較、異常native peak、旧Linux STOP_NATIVE原因、全入力域、長時間/公開負荷、provider CPU/実利用量は未確認。ローカル成功から無料保証や公開性能を作らない。
 4. 最新RPSの次工程は未宣言。固定best/runner/identityを未使用集団で比較するならprimary contrast、実用差、support/重み、打切り、paired score、区間/多重性、MC精度、人数/停止規則を先固定する。同J13へのfresh streams追加は条件付き数値差の確認で一般化ではない。提案のみ。
 5. 実Userの観測・努力量・Goal到達、P80表示対象、校正と表示率、人間の理解・行動効果は未証明。holdout再調整、人物漏洩、unknownの除外、別legalTでの差、人数不足の成功扱いを禁止し、判断不能を残す。
+
+実験群の配置と保持区分をREADMEから本書へ集約する。以下の表を配置区分の正本とし、採択や精度の判断は既存の本文・正式仕様と区別する。
+<!-- readme-experiments:start -->
+## 比較実験の保存範囲
+
+`experiments` は製品runtimeと分け、現在使う検証と過去の比較を次のように扱います。比較実験の保存範囲はこの表を正本とします。過去の成功・失敗・採択理由を現在の製品受入へ読み替えません。
+
+| 実験群 | 配置と用途 |
+| --- | --- |
+| [question-prior-engine-candidate](../../experiments/question-prior-engine-candidate/README.md)、[question-prior-contract](../../experiments/question-prior-contract/README.md) | 現CIの独立数値オラクル・凍結fixtureを使うため保持 |
+| [api-mixed-load](../../experiments/api-mixed-load/README.md) | 実EngineとAPIの能動的な再測定に使うため保持 |
+| [session-milestone-oracle](../../experiments/session-milestone-oracle/README.md) | #248の有界1係数fitを直接確率の70桁Decimalで照合する。履歴や本試験群は生成しない |
+| question-prior-proposal | [固定commitのtree](https://github.com/jogi-hack-2026-team/jogi-hack-2026/tree/77c71a5f248a4dce4ce9fb8af6619b41541be9d8/experiments/question-prior-proposal)へ。historical・reproduced・provenance・rawを一式で保持し、tracked 57件を作業ツリーから外す |
+| prediction-model-validation | [固定commitのtree](https://github.com/jogi-hack-2026-team/jogi-hack-2026/tree/77c71a5f248a4dce4ce9fb8af6619b41541be9d8/experiments/prediction-model-validation)へ。旧モデル比較・失敗と修正の根拠を一式で保持し、tracked 22件を作業ツリーから外す |
+| question-prior-ui-candidate、architecture-verification | 旧候補UI専用workflowに実行依存があるため今回保持。workflowと必要チェックの確認を含む整理を別途判断する |
+<!-- readme-experiments:end -->
