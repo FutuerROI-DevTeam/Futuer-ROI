@@ -8,6 +8,8 @@
 
 同日の追確認で main は `34d749745a4493541ac1279dfd32921b1ec27c4d` へ進み、#267のREADME／構成図等が統合されています。上記基点とのアプリ・環境変数・SQL・build設定・Product Specの差分はなく、ArchitectureのD-24／D-25も維持されています。これは静的比較で、最新mainの配備・実URL受入を行ったという意味ではありません。
 
+最終の追確認は main `55325dee7570d496d9f35f4a23e17a830dfad6cb`（#270のFE整理を含む）です。基点からAPI・環境変数・SQL・build設定・Product Spec・初期質問の必須判定関数に変更はなく、関連フォーム差分も静的照合しました。FE整理後の実画面・配備は今回確認していません。リリース時はその対象SHAのCIと実URL受入を改めて行います。
+
 [PR #258](https://github.com/FutureROI-DevTeam/Future-ROI/pull/258) のメール再設定は、2026-10-12の再照合時HEAD `e492e55fef072d9fe317c3b6d6f869616813ebf5`、Open・未マージです。GitHub上の競合は解消され、レビュー指摘の再受入は別タスクで確認中です。返信や修正コードの存在をHuman Review完了と扱いません。照合したmainにメール再設定の実装はありません。以下の「#258を含む版」は条件付きの準備であり、PRを配備対象へ混ぜる指示ではありません。リリース当日は最新のレビュー・統合状態を確認し、修正が統合された**対象SHAの受入**を満たすまで、その機能の公開を進めません。当時のPR状態だけで公開可否を決めません。#264／#265の提出後に延期したUXは、この手順の公開停止条件へ追加しません。
 
 ## 読み方と全体の順番
@@ -146,11 +148,13 @@ stagingは公開前の合成データ確認環境、Productionは利用者向け
 1. 運用担当が環境対応表を用意します。記入例は `staging: Vercel future-roi-staging / Neon future-roi-staging`、`本番: Vercel future-roi / Neon future-roi-production`。**安定したURLを持つ2 Projectと別DBを用いる運用案**で、未採択・未作成です。既存環境があるならその分離方式を使い、異なる方式はAPI担当がURL・Cookie・DB・Secretの分離を説明して承認を得ます。
 2. NeonでCreate projectから、承認された名前・region・PostgreSQL版・database／roleを選びます。名前例 `future-roi-staging`、DB名例 `futureroi`。ローカル／CIはPostgreSQL 18系ですが、実Neonの提供版と互換性は作成前に確認します。VercelとNeonのregionの組合せも記録します。Neon Auth／Functions等はこのアプリの設定に追加しません。認証はAPI内のBetter Authです。
 3. VercelでAdd New → Project → Import Git Repositoryから対象リポジトリを選びます。Root Directoryはrepository root（`apps/web`や`apps/api`へ変更しない）、Framework Presetは **Other**。Install Commandは `npm ci --include=dev --ignore-scripts --no-audit --no-fund`、Build Commandは `npm run build:vercel`。`vercel.json`との重複設定が違わないことを確認し、Output Directoryの独自overrideを追加しません。Node.js Versionは24.x、regionは承認値です。
-4. **新Projectで実URLがまだ分からない場合の初期化：** 運用担当が、対象Projectの作成と「Secret・DB接続を渡さない準備用配備」を承認記録に含めます。Importの設定画面のEnvironment Variablesへ実値を入力せず、上記のroot／build設定でDeployを押してProjectを作ります。これは配備開始なので、承認がなければ押しません。Project OverviewのDomains、またはSettings → Domainsで割り当てられた安定したHTTPS originを記録します。起動時は設定不足で失敗する想定で、Readyになってもアプリ動作確認済みではありません。
-5. Settings → Deployment Protectionで、利用できる無料のVercel Authenticationを確認し、**production domainを含む**QA前の閲覧制限を決めます。Project／originとこの制限が準備できて初めて工程4で実設定を保存し、6のDB移行後、7のRedeployへ進みます。初回担当者が判断できなければ「Project名・実origin・設定画面への入口・閲覧制限」を運用担当の必須引渡し成果とし、揃うまで停止します。[公式保護](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication)
+4. **新Projectで実URLがまだ分からない場合の初期化：** 運用担当が、対象Projectの作成と「Secret・DB接続を渡さない準備用配備」を承認記録に含めます。**Deployを押す前に**、新Projectへ適用されるDeployment Protectionのdefaultを、Vercel Authenticationの **All Deployments** とする承認済み設定を確認します。default設定の場所は本人の管理領域のSettings → Deployment Protectionです。設定が見つからない／適用を確認できない場合はDeployを押さず停止します。[公式の初回保護とdefault](https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan)。Import画面へ実値を入力せず、上記のroot／build設定でDeployを押してProjectを作ります。Project OverviewのDomains、またはSettings → Domainsで安定したHTTPS originを記録します。設定不足の起動失敗やReady表示は、アプリ受入成功ではありません。
+5. 作成後、対象ProjectのSecurity／Settings → Deployment Protectionで、Vercel Authenticationが **All Deployments** に保存され、**production domainを含む**ことを再確認します。**Standard Protectionはproduction domainを除外するため代用できません。** 2026-10-12の[公式保護](https://vercel.com/docs/deployment-protection)と[料金表](https://vercel.com/docs/deployment-protection/usage-and-pricing)ではAll DeploymentsはHobbyを含む全プランで追加保護料金なしですが、実アカウントでの利用は未確認です。upgrade／課金が求められる、選べない、保護範囲が不明なら、本番Secret／DBを渡さず停止し、既存Projectは11-AのPauseを維持します。未許可のシークレットウィンドウで**実origin**がVercel認証等に拒否され、許可したQA担当だけが通ることを確認してから工程4・6・7へ進みます。Vercel保護画面はアプリhealthの成功ではありません。
 6. 上の準備用初期化はstagingでも新しい本番Projectでも同じです。実値・本番DBを渡さない状態だけで行い、staging用Projectと本番用Projectを取り違えません。本番の実設定・DB移行・正式配備は、staging受入と工程5の復元試験完了後です。既存Projectなら準備用配備は行わず、実originと設定入口を読むだけにします。任意のPreviewへ本番Secretを配る設定にしません。
 
 **成功の確かめ方：** 環境対応表に実Project／DB／branch／role／region／安定したHTTPS originがあり、staging・Previewと本番のデータ・資格情報が分離されている。**停止条件：** 本番DBの複製を合成データ扱いする、URLや接続先が不明、許可外の権限・課金が必要、QA前の公開を防ぐ方法が不明。初期DeployのReady表示だけで一般公開しません。
+
+QA担当へのVercel閲覧許可も運用担当が準備します。[公式Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication)ではHobbyの外部ユーザー許可は1人/accountで、3人への同時許可を仮定できません。必要なQAアクセスを費用0円内で用意する方法・許可対象・取り消し方が未定なら停止します。保護を外す／アプリのログインだけで代用する／Secretを共有する方法で通しません。保護された非本番URLでの試験は、そのURLに`BETTER_AUTH_URL`等を合わせて行い、本番実originの受入とは別に記録します。
 
 ## 4. 設定を入れる（環境ごとに別々に）
 
@@ -289,7 +293,7 @@ Invoke-ReleaseDbCommand migrate
 
 **操作場所：** Vercel Dashboardの対象Project → Deployments。**担当：** 運用担当。初回は工程3で承認したImport、設定後の再配備は対象deploymentの `… → Redeploy` を使います。[公式配備管理](https://vercel.com/docs/deployments/managing-deployments)
 
-1. 直前に対象Project／Environment／commit SHA、工程6-C、工程5の復旧記録を照合します。初回の空stagingは方式準備と試験承認を前提に配備し、合成データができてから隔離復元を完了します。本番は復元試験完了が前提です。初回はDeploy、本番更新は工程10の公開開始タイミングを確認します。Git接続ではproduction branchへのpush／mergeが**自動本番配備の引金**になり得ます。試験のためにmainへpushしません。
+1. 直前に対象Project／Environment／commit SHA、工程6-C、工程5の復旧記録と、工程3の**実production domainを覆う保護・QAアクセス**を照合します。Standard Protectionだけなら配備／Resumeを進めず停止します。初回の空stagingは方式準備と試験承認を前提に配備し、合成データができてから隔離復元を完了します。本番は復元試験完了が前提です。初回はDeploy、本番更新は工程10の公開開始タイミングを確認します。Git接続ではproduction branchへのpush／mergeが**自動本番配備の引金**になり得ます。試験のためにmainへpushしません。
 2. `vercel.json`のInstall／Build Commandが使われ、3 workspaceとFunctionがbuildされることをBuild Logsで確認します。設定だけ直した場合のRedeployは、そのdeploymentのソース版を使う操作です。**新しいコードへ切り替わると推測せず**、SourceのSHAを確認します。環境変数変更は次のdeploymentへ適用されるため、保存だけで終えません。
 3. Readyになったdeploymentの詳細でSourceのSHA、Environment、domain、実Node版、bundle情報を記録します。実URLは詳細画面のDomainsから取得し、推測した `project.vercel.app` を使いません。generated deployment URLと安定した公開originを区別し、認証受入は `BETTER_AUTH_URL` と一致する実originで行います。[生成URL](https://vercel.com/docs/deployments/generated-urls)
 4. 工程8をstagingで完了します。同じSHAを本番DB・本番Secret・本番originで別配備し、本番でも工程8の必要項目を再確認します。staging用のDB／Secret／URLを持つPreviewをそのままPromoteしません。一般利用を許可するアクセス設定変更は工程9です。
@@ -396,7 +400,7 @@ DBを変えない更新でもschemaの読取り確認と復旧記録を確認し
 
 1. Hobbyで選べるのは直前のproduction deploymentです。履歴の「正常」と直前が同じか、SHA・domain・環境を確認します。初回で旧正常版がない、直前が不良、旧版を削除済みならこの方法を使いません。受付停止を維持し、修正版の受入へ戻ります。
 2. ダイアログの対象domain・旧SHAを確認し、Confirm Rollbackを行います。これは旧buildへdomainを向ける操作で、DBを戻しません。旧deploymentの環境値はProjectの最新値に自動更新されません。漏えい済み／失効済みキーを使う旧版なら停止します。
-3. **Pause中のproduction URLは503なので、そのまま受入試験はできません。** Pauseを使った場合は、責任者とAPI担当が、一般受付を閉じたまま実originでQAする方法を先に承認します。候補は、無料で利用可能なVercel Authentication等によるproduction domainを含む限定閲覧です。適用範囲・QA担当のアクセス・他のDB入口の遮断を確認してから、限定QAを行うためにResumeします。方法が未採択／利用不可ならPauseを維持して停止します。旧generated URLを実originの代用にしません。
+3. **Pause中のproduction URLは503なので、そのまま受入試験はできません。** Resume前に工程3と同じく、Vercel Authenticationの **All Deployments** が対象Projectへ保存され、実production domainを覆うこと、QA担当のアクセスと他のDB入口の遮断を担当者が確認し、限定QAの再開を承認します。**Standard Protectionは本番ドメインを保護しません。** [公式保護](https://vercel.com/docs/deployment-protection)・[料金表](https://vercel.com/docs/deployment-protection/usage-and-pricing)の記載だけで実設定の成功としません。All Deploymentsが利用不可／課金要求／対象範囲不明、QAアクセス未準備なら、**Pauseを維持してResumeしません**。保護した非本番URLの事前確認は別受入で、旧generated URLを本番実originの代用にしません。
 4. Resume後はまず未許可アクセスが拒否されることを確認し、QA担当だけが**実origin**でhealth、ログイン／ログアウト、合成Goal読取り・保存・Todayを確認します。SHAと結果を記録し、失敗なら再び停止します。すべて成功してから、責任者が限定閲覧の解除と全入口の一般受付再開を承認します。Pauseしていない場合も、受付を止めた方法とQA経路を確認して同じ順で受け入れます。Resume自体は即時操作なので、押す前に範囲と担当を確認します。
 5. Rollback後はproduction domainの自動割当てが無効になります。修正版を再受入した後、OverviewのUndo Rollback等で承認したdeploymentを選び、domain割当てと自動配備の再開を確認します。別のmergeだけで自動復旧するとは期待しません。
 
