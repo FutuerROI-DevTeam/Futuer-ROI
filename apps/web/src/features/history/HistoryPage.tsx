@@ -23,7 +23,8 @@ import '../../ui/components/Button.css';
 import './history.css';
 
 const c = todayCopy;
-const WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日'];
+/** カレンダーの見出し。月曜始まり（monthCells の並びと同じ）。 */
+const WEEKDAY_HEADERS_FROM_MONDAY = ['月', '火', '水', '木', '金', '土', '日'];
 
 /**
  * 記録の履歴（デザイン F1）。/goals/$goalId/history
@@ -130,9 +131,9 @@ function PrivateHistory({ goalId, clearedAt, initialMonth, onMonthChange }: { go
           </p>
         </section>
         <ul className="fr-history__cal" aria-label={c.monthLabel(shown)}>
-          {WEEKDAYS.map((w) => (
-            <li key={w} className="fr-history__wd" aria-hidden="true">
-              {w}
+          {WEEKDAY_HEADERS_FROM_MONDAY.map((weekday) => (
+            <li key={weekday} className="fr-history__wd" aria-hidden="true">
+              {weekday}
             </li>
           ))}
           {monthCells(shown).map((date, i) => {

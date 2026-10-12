@@ -91,7 +91,7 @@ export function unlessLocked(locked: boolean, action: () => void): () => void {
  * - 今日の編集：記録済みの今日の選び直し（changing）、または記録の2択を出している間の量の入力
  * - 昨日の編集：記録済みの昨日の訂正
  */
-export function editLocks(s: {
+export function editLocks(state: {
   changingToday: boolean;
   todayAmountEditing: boolean;
   todayChoicesShown: boolean;
@@ -99,13 +99,13 @@ export function editLocks(s: {
   yesterdayEditing: boolean;
 }): { todayAmountEditing: boolean; yesterdayLocked: boolean; todayLocked: boolean; cancelChangeLocked: boolean } {
   // 量の入力は2択を出しているときだけ開いている（別のタブで記録されて2択が消えたら、昨日を止めたままにしない）
-  const todayAmountEditing = s.todayAmountEditing && s.todayChoicesShown;
+  const todayAmountEditing = state.todayAmountEditing && state.todayChoicesShown;
   return {
     todayAmountEditing,
-    yesterdayLocked: s.changingToday || todayAmountEditing || s.todaySaving,
-    todayLocked: s.yesterdayEditing,
+    yesterdayLocked: state.changingToday || todayAmountEditing || state.todaySaving,
+    todayLocked: state.yesterdayEditing,
     // 今日の保存中は「変更をやめる」で選び直しを閉じない。閉じて保存の状態を消すと、遅れて届いた失敗と再試行を見失う
-    cancelChangeLocked: s.todaySaving,
+    cancelChangeLocked: state.todaySaving,
   };
 }
 
@@ -117,7 +117,9 @@ export function editLocks(s: {
 export function reachedDate(initialProgress: number, totalRequired: number, logs: readonly Log[]): string | null | undefined {
   if (initialProgress >= totalRequired) return null;
   let done = initialProgress;
-  for (const log of [...logs].sort((a, b) => (a.localDate < b.localDate ? -1 : a.localDate > b.localDate ? 1 : 0))) {
+  // YYYY-MM-DD どうしなので文字列の比較で日付順に並ぶ
+  const byDateAscending = (a: Log, b: Log) => (a.localDate < b.localDate ? -1 : a.localDate > b.localDate ? 1 : 0);
+  for (const log of [...logs].sort(byDateAscending)) {
     if (log.status !== 'DONE') continue;
     done += log.amount ?? 0;
     if (done >= totalRequired) return log.localDate;

@@ -45,8 +45,17 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
       document.getElementById('fr-goalform-prior-summary')?.focus();
     } else if (hash === 'goal-sessionAmount') document.getElementById(hash)?.focus();
   }, [onPriorToggle]);
-  const incompleteTime = values.unit === 'minutes' && [values.totalRequired, values.initialProgress].some(v => v.startsWith('@hm:') && !Number.isFinite(parseGoalAmount(v) ?? NaN));
+  // 時間＋分の欄に途中の入力（分が60以上など）が残っている間は、単位を切り替えない（切り替えると整数分へ変換できない）
+  const incompleteTime = values.unit === 'minutes' && [values.totalRequired, values.initialProgress].some(raw => raw.startsWith('@hm:') && !Number.isFinite(parseGoalAmount(raw) ?? NaN));
+  // 記録が付いた後は単位を変えられない（過去の量の意味を保つため）。編集でだけ起きる
+  const unitLocked = mode === 'edit' && goal.unitLocked;
   const bothChosen = priorChosen.a && priorChosen.b;
+  const initialProgressHelp = (
+    <>
+      <p>{goal ? f.initialProgressHelp(longDate(goal.recordStartDate)) : f.initialProgressHelpNew}</p>
+      {locked ? <LockedNote>{f.lockedInitialProgress}</LockedNote> : null}
+    </>
+  );
   // 未選択のエラーは、まだ選んでいない問の下に出す。APIの検査エラーは従来どおり1問目の下に出す
   const priorErrors = !errors.questionPrior ? {} : errors.questionPrior === f.answersRequired
     ? { ...(priorChosen.a ? {} : { a: errors.questionPrior }), ...(priorChosen.b ? {} : { b: errors.questionPrior }) }
@@ -87,14 +96,14 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
             />
           </Field>
 
-          <Field id="goal-unit" label={f.unit} group error={errors.unit} help={mode === 'edit' && goal.unitLocked ? (
+          <Field id="goal-unit" label={f.unit} group error={errors.unit} help={unitLocked ? (
             <>
               <LockedNote>{goalsCopy.errors.unitLocked}</LockedNote>
               {values.unit !== goal.unit ? <Button variant="secondary" disabled={inputDisabled} onClick={() => update('unit', goal.unit)}>{f.restoreSavedUnit}</Button> : null}
               <Link to="/goals/new" className="fr-goalform__new-goal">{f.createNewGoal}</Link>
             </>
           ) : undefined}>
-            <fieldset id="goal-unit" className="fr-unit-radio" aria-labelledby="goal-unit-label" {...fieldAria('goal-unit', { help: mode === 'edit' && goal.unitLocked, error: errors.unit })} disabled={inputDisabled || incompleteTime || (mode === 'edit' && goal.unitLocked)} tabIndex={-1}>
+            <fieldset id="goal-unit" className="fr-unit-radio" aria-labelledby="goal-unit-label" {...fieldAria('goal-unit', { help: unitLocked, error: errors.unit })} disabled={inputDisabled || incompleteTime || unitLocked} tabIndex={-1}>
               <label><input type="radio" name="goal-unit" value="minutes" checked={values.unit === 'minutes'} onChange={() => switchUnit('minutes')} />時間</label>
               <label><input type="radio" name="goal-unit" value="sessions" checked={values.unit === 'sessions'} onChange={() => switchUnit('sessions')} />回数</label>
             </fieldset>
@@ -123,12 +132,7 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
             error={errors.initialProgress}
             disabled={inputDisabled || locked}
             onChange={(v) => update('initialProgress', v)}
-            help={
-              <>
-                <p>{goal ? f.initialProgressHelp(longDate(goal.recordStartDate)) : f.initialProgressHelpNew}</p>
-                {locked ? <LockedNote>{f.lockedInitialProgress}</LockedNote> : null}
-              </>
-            }
+            help={initialProgressHelp}
           />
           ) : (
           <AmountField
@@ -139,12 +143,7 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
             error={errors.initialProgress}
             disabled={inputDisabled || locked}
             onChange={(v) => update('initialProgress', v)}
-            help={
-              <>
-                <p>{goal ? f.initialProgressHelp(longDate(goal.recordStartDate)) : f.initialProgressHelpNew}</p>
-                {locked ? <LockedNote>{f.lockedInitialProgress}</LockedNote> : null}
-              </>
-            }
+            help={initialProgressHelp}
           />
           )}
         </div>

@@ -28,12 +28,13 @@ import '../../ui/components/Button.css';
 import './goals.css';
 
 const c = goalsCopy;
-const badge = { DONE: 'done', SKIPPED: 'rest', UNRECORDED: 'unrecorded' } as const;
+/** API の今日の記録状態 → StatusBadge の種類。 */
+const TODAY_STATUS_BADGE = { DONE: 'done', SKIPPED: 'rest', UNRECORDED: 'unrecorded' } as const;
 
 /** 端末の今日（YYYY-MM-DD）。一覧の日付の見出しだけに使う（各Goalの「今日」は API が Goal の timezone で返す）。 */
 function browserToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 /** Goal 一覧（R-02、#78）。/goals */
@@ -128,7 +129,7 @@ function GoalRow({ goal, evaluationEnabled }: { goal: Goal; evaluationEnabled: b
         <span className="fr-goals__row-top">
           <span className="fr-goals__title">{goal.title}</span>
           <span className="fr-goals__row-end">
-            {achieved ? <span className="fr-goals__achieved">達成</span> : <StatusBadge status={badge[goal.todayStatus]} />}
+            {achieved ? <span className="fr-goals__achieved">達成</span> : <StatusBadge status={TODAY_STATUS_BADGE[goal.todayStatus]} />}
           </span>
         </span>
         <span className="fr-goals__row-sub">

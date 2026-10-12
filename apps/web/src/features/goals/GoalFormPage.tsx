@@ -217,6 +217,27 @@ type FormFailure = FormDraft & { error: unknown; prepareError?: unknown; serverE
 function rejectedCreateOperation(error: unknown, operation: CreateAttempt | null, owner: string | undefined) {
   return owner && operation?.owner === owner && error instanceof ApiError && error.status === 422 && error.body?.error.code === 'VALIDATION_ERROR' ? operation : null;
 }
+/** 送信結果が確定して再送できない作成の失敗（別入力との競合・作成済みGoalの削除）。保存ボタンを押せなくする。 */
+function isCreateBlocked(error: unknown): boolean {
+  return ['conflict', 'deleted'].includes(createFailureKind(error) ?? '');
+}
+/**
+ * 作成の回復情報（sessionStorage）を読む。壊れたJSON・旧schemaでも画面を落とさず、原文は保全する。
+ * 読めないときは、同owner・同訪問で実際に送って422で断られた操作と原文が一致した場合だけ表示用に採用し（knownRejected）、保存は止める。
+ */
+function loadRecovery(owner: string | undefined, failure: FormFailure | undefined): { attempt: CreateAttempt | null; error: CreateRecoveryError | null; knownRejected: boolean } {
+  try { return { attempt: owner ? loadCreateAttempt(owner, sessionStorage) : null, error: null, knownRejected: false }; }
+  catch (error) {
+    const unreadable = error instanceof CreateRecoveryError ? error : new CreateRecoveryError();
+    const rejected = rejectedCreateOperation(failure?.error, failure?.operation ?? null, owner);
+    // rawを新たに信用しない。同owner/同訪問の実送信memory422と原文が一致した場合だけ表示し、保存は止める。
+    try {
+      if (rejected && sessionStorage.getItem(`future-roi:create-attempt:${owner}`) === rejected.raw)
+        return { attempt: rejected, error: unreadable, knownRejected: true };
+    } catch { /* storageを確認できなければ厳密な初回loadの拒否を維持する */ }
+    return { attempt: null, error: unreadable, knownRejected: false };
+  }
+}
 function sameEditableGoal(left: GoalWithAnswers, right: GoalWithAnswers) {
   return left.id === right.id && left.answerRevision === right.answerRevision && left.hasLogs === right.hasLogs &&
     ('goalSettingsRevision' in left ? left.goalSettingsRevision : undefined) === ('goalSettingsRevision' in right ? right.goalSettingsRevision : undefined) &&
@@ -239,20 +260,9 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const locked = mode === 'edit' && goal.hasLogs;
-  // 回復情報は過去の送信結果が不明な証跡。壊れたJSON・旧schemaでも画面を落とさず、原文は保全する。
-  const [recovery] = useState(() => {
-    try { return { attempt: owner ? loadCreateAttempt(owner, sessionStorage) : null, error: null, knownRejected: false }; }
-    catch (error) {
-      const unreadable = error instanceof CreateRecoveryError ? error : new CreateRecoveryError();
-      const rejected = rejectedCreateOperation(failure?.error, failure?.operation ?? null, owner);
-      // rawを新たに信用しない。同owner/同訪問の実送信memory422と原文が一致した場合だけ表示し、保存は止める。
-      try {
-        if (rejected && sessionStorage.getItem(`future-roi:create-attempt:${owner}`) === rejected.raw)
-          return { attempt: rejected, error: unreadable, knownRejected: true };
-      } catch { /* storageを確認できなければ厳密な初回loadの拒否を維持する */ }
-      return { attempt: null, error: unreadable, knownRejected: false };
-    }
-  });
+  const title = mode === 'create' ? f.createTitle : f.editTitle;
+  // 回復情報は過去の送信結果が不明な証跡。最初の描画で1回だけ読む
+  const [recovery] = useState(() => loadRecovery(owner, failure));
   const [attempt, setAttempt] = useState<CreateAttempt | null>(recovery.attempt);
   const recoveryValues = attempt ? valuesFromCreateBody(attempt.body) : null;
   // 失敗表示は同訪問の入力/旧baselineを保持する。作成attemptがK2へ置換されたらK1の表示は採用しない。
@@ -309,6 +319,8 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
   const clientErrors = submitted ? findErrors() : {};
   const errors: FieldErrors = { ...serverErrors, ...clientErrors };
   const count = errorCount(errors);
+  // いまの入力と比較元をまとめた下書き。親へ退避する draft と、失敗表示（FormFailure）の土台に使う
+  const currentDraft = (): FormDraft => ({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers });
 
   const finishCreateAttempt = (operation: CreateAttempt, onCleanupError?: (error: unknown) => void): boolean => {
     // 離脱後に別フォームが同じ操作を復元・再送している可能性がある。
@@ -354,7 +366,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
       let cleanupError: unknown = null;
       if (vars.operation && error instanceof ApiError && error.status === 422) finishCreateAttempt(vars.operation, failure => { cleanupError = failure; });
       const fromApi = fieldErrorsFromApi(error);
-      onFailureChange({ values: vars.values, baseline, sourceGoal: goal, submitted: true, priorOpen, priorChosen, latestAnswers,
+      onFailureChange({ ...currentDraft(), values: vars.values, submitted: true,
         error, prepareError: cleanupError, serverErrors: fromApi ?? {}, operation: vars.operation },
       !mounted.current && vars.operation && error instanceof ApiError && error.status === 422 ? () => clearCreateAttempt(vars.operation!, sessionStorage) : undefined, true);
       if (fromApi && errorCount(fromApi) > 0) {
@@ -364,6 +376,14 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
     },
   });
   const failedSave = save.isError ? save.error : retainedError;
+  // 最後に送った（または復元した）作成操作。410・422 の後始末で、いま保持している attempt と同じものかを確かめる
+  const lastOperation = save.variables?.operation ?? retainedOperation;
+  // 保存の失敗表示を消して、通常の未送信の下書きへ戻す
+  const clearSaveFailure = () => {
+    save.reset();
+    setRetainedError(null);
+    onFailureChange(undefined);
+  };
 
   const remove = useMutation({
     mutationKey: [...operationKey, 'delete'],
@@ -381,13 +401,14 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
 
   useLayoutEffect(() => {
     // 復元後は新mutationのisErrorがfalseでも失敗表示は残る。訪問失効後に入力だけ戻らないよう、通常draftには退避しない。
-    onDraftChange?.(attempt !== null || prepareError !== null || saving.current || deleting.current || reloadInFlight.current || save.isPending || failedSave !== null || remove.isPending || remove.isError || reloadingLatest
-      ? undefined : { values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers });
+    const inProgress = attempt !== null || prepareError !== null || saving.current || deleting.current || reloadInFlight.current
+      || save.isPending || failedSave !== null || remove.isPending || remove.isError || reloadingLatest;
+    onDraftChange?.(inProgress ? undefined : currentDraft());
   }, [values, baseline, goal, submitted, priorOpen, priorChosen, latestAnswers, reloadingLatest, save.isPending, failedSave, remove.isPending, remove.isError, attempt, prepareError, onDraftChange]);
   useLayoutEffect(() => {
     if ((failedSave !== null || prepareError !== null) && !save.isPending && !saving.current && !deleting.current && !remove.isPending && !remove.isError)
-      onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers, error: failedSave, prepareError,
-        serverErrors, operation: failedSave === null ? attempt : save.variables?.operation ?? retainedOperation });
+      onFailureChange({ ...currentDraft(), error: failedSave, prepareError,
+        serverErrors, operation: failedSave === null ? attempt : lastOperation });
   }, [failedSave, prepareError, values, baseline, goal, submitted, priorOpen, priorChosen, latestAnswers, serverErrors, save.isPending, save.variables, retainedOperation, attempt, remove.isPending, remove.isError, onFailureChange]);
 
   // 保存・削除が終わったとき、この画面がまだ表示されていれば一覧へ戻る（離れた後なら、いま表示中の別の画面を動かさない）
@@ -402,7 +423,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
     // 通信失敗/500/409など結果不明・競合はresetせず、通常draftへ戻さない。
     if (failedSave instanceof ApiError && failedSave.status === 422 && failedSave.body?.error.code === 'VALIDATION_ERROR' &&
       errorCount({ ...serverErrors, [name]: undefined }) === 0) {
-      save.reset(); setRetainedError(null); onFailureChange(undefined);
+      clearSaveFailure();
     }
     setValues((prev) => ({ ...prev, [name]: value }));
     if (serverErrors[name]) setServerErrors((prev) => ({ ...prev, [name]: undefined }));
@@ -412,7 +433,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
     event.preventDefault();
     // 送信中は二重に送らない（ボタンも押せなくしている）
     if (saving.current || reloadInFlight.current || prepareError instanceof CreateRecoveryError ||
-      (isEditConflict(failedSave) || ['conflict', 'deleted'].includes(createFailureKind(failedSave) ?? ''))) return;
+      isEditConflict(failedSave) || isCreateBlocked(failedSave)) return;
     setSubmitted(true);
     setServerErrors({});
     // 到達予定日は、選んでいるタイムゾーンの今日より後だけ（APIも同じ検査をする）。変えていない保存済みの日付は送らないので検査しない
@@ -422,7 +443,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
       return;
     }
     onDraftChange(undefined);
-    save.reset(); onFailureChange(undefined); setRetainedError(null);
+    clearSaveFailure();
     setPrepareError(null);
     try {
       // 再表示で復元した操作を優先し、storageから別の操作を準備し直さない。
@@ -432,10 +453,10 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
       saving.current = true;
       save.mutate({ values, operation });
     } catch (error) {
-      saving.current = false; setPrepareError(error);
+      saving.current = false;
+      setPrepareError(error);
       // 再確認と同batchで子が消えても、保存開始前の失敗を同訪問の親へ渡す。
-      onFailureChange({ values, baseline, sourceGoal: goal, submitted: true, priorOpen, priorChosen, latestAnswers,
-        error: null, prepareError: error, serverErrors: {}, operation: attempt }, undefined, true);
+      onFailureChange({ ...currentDraft(), submitted: true, error: null, prepareError: error, serverErrors: {}, operation: attempt }, undefined, true);
     }
   };
 
@@ -463,19 +484,21 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
   // 422 で項目に割り当てられたエラーは各項目に出す。それ以外（通信・サーバー・ログイン切れ）は保存ボタンの上に出す
   const apiFieldErrors = failedSave !== null ? fieldErrorsFromApi(failedSave) : null;
   const saveFailure = prepareError ?? (failedSave !== null && (apiFieldErrors === null || errorCount(apiFieldErrors) === 0) ? failedSave : null);
+  // 410（作成したGoalが削除済み）・回復情報を読めない422 は、いま保持している attempt と同じ操作のときだけ後始末の入口を出す
   const deletedAttempt = mode === 'create' && isCreateResultDeleted(saveFailure) &&
-    (save.variables?.operation ?? retainedOperation)?.owner === owner && (save.variables?.operation ?? retainedOperation)?.raw === attempt?.raw ? attempt : null;
-  const rejectedOperation = mode === 'create' && recoveryBlocked ? rejectedCreateOperation(failedSave, save.variables?.operation ?? retainedOperation, owner) : null;
+    lastOperation?.owner === owner && lastOperation?.raw === attempt?.raw ? attempt : null;
+  const rejectedOperation = mode === 'create' && recoveryBlocked ? rejectedCreateOperation(failedSave, lastOperation, owner) : null;
   const rejectedAttempt = rejectedOperation && rejectedOperation.raw === attempt?.raw ? rejectedOperation : null;
+  // 作成操作の後始末に失敗したとき、失敗表示を保ったまま後始末の失敗（prepareError）だけを親へ渡す
+  const reportCleanupFailure = (operation: CreateAttempt) => (error: unknown) =>
+    onFailureChange({ ...currentDraft(), error: failedSave, prepareError: error, serverErrors, operation }, undefined, true);
   const resumeCorrection = () => {
     const current = getPrivateEpoch();
     if (!rejectedAttempt || busy || !mounted.current || !acceptsFailureAction() || !privateDataReady(current) || current.owner !== owner) return;
-    if (!finishCreateAttempt(rejectedAttempt, error => onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers,
-      error: failedSave, prepareError: error, serverErrors, operation: rejectedAttempt }, undefined, true))) return;
+    if (!finishCreateAttempt(rejectedAttempt, reportCleanupFailure(rejectedAttempt))) return;
     setPrepareError(null);
     // 同batchの確認でも終了済みrawのgateを再採用しない。422項目は訂正まで保持し、POSTやkey生成はしない。
-    onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers,
-      error: failedSave, prepareError: null, serverErrors, operation: null }, undefined, true);
+    onFailureChange({ ...currentDraft(), error: failedSave, prepareError: null, serverErrors, operation: null }, undefined, true);
   };
   // 最新GETで単位ロック等の項目エラーが増えても、409を解除する明示的な再読込は残す。
   const showSaveFailure = saveFailure !== null && (count === 0 || isEditConflict(saveFailure) || prepareError instanceof CreateRecoveryError);
@@ -485,9 +508,10 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
     if (!deletedAttempt || busy || !mounted.current) return;
     try {
       // 410を確認した同owner/keyだけを終了する。新keyは次の明示保存まで作らない。
-      if (!finishCreateAttempt(deletedAttempt, error => onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers,
-        error: failedSave, prepareError: error, serverErrors, operation: deletedAttempt }, undefined, true))) return;
-      setPrepareError(null); setSubmitted(false); save.reset(); setRetainedError(null); onFailureChange(undefined);
+      if (!finishCreateAttempt(deletedAttempt, reportCleanupFailure(deletedAttempt))) return;
+      setPrepareError(null);
+      setSubmitted(false);
+      clearSaveFailure();
     } catch (error) { setPrepareError(error); }
   };
   const reloadLatest = async () => {
@@ -502,7 +526,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
       if (baseline) setValues((current) => rebaseValues(current, baseline, latest));
       setBaseline(latest);
       setLatestAnswers(latest.questionPrior ?? NO_ANSWERS);
-      save.reset(); setRetainedError(null); onFailureChange(undefined);
+      clearSaveFailure();
     } finally {
       reloadInFlight.current = false;
       if (mounted.current) setReloadingLatest(false);
@@ -511,10 +535,10 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
 
   return (
     <div className="fr fr-page fr-page--desk fr-page--goalform">
-      <PageTitle title={mode === 'create' ? f.createTitle : f.editTitle} />
-      <AppBar title={mode === 'create' ? f.createTitle : f.editTitle} leading={<CloseLink />} />
-      <DeskHeader back={goal ? <GoalCrumb goal={goal} /> : <ListCrumb />} title={mode === 'create' ? f.createTitle : f.editTitle} titleAs="p" />
-      <FormIntro title={mode === 'create' ? f.createTitle : f.editTitle} guide={mode === 'create' ? c.formGuideCreate : c.formGuideEdit} {...(goal ? { goalTitle: goal.title } : {})} />
+      <PageTitle title={title} />
+      <AppBar title={title} leading={<CloseLink />} />
+      <DeskHeader back={goal ? <GoalCrumb goal={goal} /> : <ListCrumb />} title={title} titleAs="p" />
+      <FormIntro title={title} guide={mode === 'create' ? c.formGuideCreate : c.formGuideEdit} {...(goal ? { goalTitle: goal.title } : {})} />
       <form ref={formRef} className={`fr-goalform fr-goalform--${mode}`} noValidate onSubmit={onSubmit} aria-busy={busy || undefined}>
         <GoalFormFields
           {...(mode === 'create' ? { mode } : { mode, goal })}
@@ -546,7 +570,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
                   {f.cancel}
                 </Link>
               )}
-              <Button type="submit" variant="primary" block busy={busy} disabled={reloadingLatest || isEditConflict(saveFailure) || recoveryBlocked || ['conflict', 'deleted'].includes(createFailureKind(saveFailure) ?? '')} {...(canRetry ? { icon: 'retry' as const } : {})}>
+              <Button type="submit" variant="primary" block busy={busy} disabled={reloadingLatest || isEditConflict(saveFailure) || recoveryBlocked || isCreateBlocked(saveFailure)} {...(canRetry ? { icon: 'retry' as const } : {})}>
                 {busy ? f.saving : createFailureKind(saveFailure) === 'owner' ? f.createRecovery.ownerRetry : canRetry ? f.saveFailed.retry : mode === 'create' ? f.save : f.saveEdit}
               </Button>
             </div>

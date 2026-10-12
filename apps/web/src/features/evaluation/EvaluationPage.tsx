@@ -16,7 +16,8 @@ import '../../ui/page.css';
 import '../../ui/components/Button.css';
 import './evaluation.css';
 
-const states = {
+/** 照合結果の状態 → 画面の文言。 */
+const STATE_LABELS = {
   REACHED: '期限までに到達', NOT_REACHED: '期限までに未到達', UNKNOWN: '未記録があり判定できない',
   PENDING: '訂正可能期間・観測期間中', NULL: '有限の予測日数なし', OUTSIDE_HORIZON: '照合期間の範囲外',
   INPUT_CORRECTED: '発行時の記録が訂正された', CONTEXT_CHANGED: '目標設定・回答の版が変わった',
@@ -86,15 +87,16 @@ function Summary({ report }: { report: EvaluationReport }) {
       const counts = report.summary[key];
       const lower = counts.lowerCoverage, upper = counts.upperCoverage;
       return <section key={key}><h3>{key.toUpperCase()}の日数までの到達割合</h3><p>{lower === null || upper === null ? '割合を計算できる記録がありません。' : `${Math.round(lower * 100)}〜${Math.round(upper * 100)}%（未記録を考慮した範囲）`}</p>
-        <dl>{Object.entries(states).map(([state, label]) => <div key={state}><dt>{label}</dt><dd>{counts[state as keyof typeof states]}件</dd></div>)}</dl></section>;
+        <dl>{Object.entries(STATE_LABELS).map(([state, label]) => <div key={state}><dt>{label}</dt><dd>{counts[state as keyof typeof STATE_LABELS]}件</dd></div>)}</dl></section>;
     })}</div>
   </section>;
 }
-function ForecastRow({ forecast: f }: { forecast: EvaluationForecast }) {
-  return <li><h3>{f.anchorDate} の予測</h3><p>発行: {f.issuedAt} ／ 日付基準: {f.timezone}</p>
-    <p>発行時の残量: {f.remainingAmount} {f.unit}。P50: {f.p50Days === null ? '有限値なし' : `${f.p50Days}日`} ／ P80: {f.p80Days === null ? '有限値なし' : `${f.p80Days}日`}</p>
-    <p>P50: {states[f.p50State]} ／ P80: {states[f.p80State]}</p>
-    {f.predictionStatus === 'insufficient' ? <p>記録が不足し、予測日数を発行できませんでした。</p> : null}
-    <p className="fr-evaluation__metadata">設定版: {f.goalSettingsRevision} ／ 回答版: {f.answerRevision} ／ モデル: {f.modelVersion} ／ ビルド: {f.buildVersion} ／ 保存期限: {f.expiresAt}</p>
+function ForecastRow({ forecast }: { forecast: EvaluationForecast }) {
+  const daysLabel = (days: number | null) => days === null ? '有限値なし' : `${days}日`;
+  return <li><h3>{forecast.anchorDate} の予測</h3><p>発行: {forecast.issuedAt} ／ 日付基準: {forecast.timezone}</p>
+    <p>発行時の残量: {forecast.remainingAmount} {forecast.unit}。P50: {daysLabel(forecast.p50Days)} ／ P80: {daysLabel(forecast.p80Days)}</p>
+    <p>P50: {STATE_LABELS[forecast.p50State]} ／ P80: {STATE_LABELS[forecast.p80State]}</p>
+    {forecast.predictionStatus === 'insufficient' ? <p>記録が不足し、予測日数を発行できませんでした。</p> : null}
+    <p className="fr-evaluation__metadata">設定版: {forecast.goalSettingsRevision} ／ 回答版: {forecast.answerRevision} ／ モデル: {forecast.modelVersion} ／ ビルド: {forecast.buildVersion} ／ 保存期限: {forecast.expiresAt}</p>
   </li>;
 }
