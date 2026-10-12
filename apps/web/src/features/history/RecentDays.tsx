@@ -1,11 +1,9 @@
 import type { Log } from '@contracts';
-import { longDate } from '../../copy/date.ts';
+import { longDate, WEEKDAY_LABELS } from '../../copy/date.ts';
 import { todayCopy } from '../../copy/today.ts';
 import { dayState, recentDays } from './calendar.ts';
 import { DayMark } from './DayMark.tsx';
 import './history.css';
-
-const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
 /**
  * 直近7日の帯（デザイン P1）。問いの上に置き、日付ごとの記録を印で見せる。
@@ -31,7 +29,7 @@ export function RecentDays({
     <ul className="fr-recent" aria-label={todayCopy.recentDays}>
       {recentDays(today).map((date) => {
         const state = dayState(date, logs, recordStartDate, today);
-        const weekday = WEEKDAY[new Date(`${date}T00:00:00Z`).getUTCDay()] ?? '';
+        const weekday = WEEKDAY_LABELS[new Date(`${date}T00:00:00Z`).getUTCDay()] ?? '';
         const isToday = date === today;
         const action = isToday ? onToday : date === yesterday ? onYesterday : undefined;
         const label = `${longDate(date)}${isToday ? `・${todayCopy.recentToday}` : ''}${state === 'outside' ? '' : ` ${todayCopy.dayStateLabel[state]}`}`;

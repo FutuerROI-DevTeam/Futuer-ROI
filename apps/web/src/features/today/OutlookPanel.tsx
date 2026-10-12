@@ -178,6 +178,24 @@ function labelAnchor(x: number, width: number, edge: number): 'start' | 'middle'
 const AXIS_HEIGHT = 130;
 /** 軸を省いた印（//）の、中心からの片側の幅（px）。 */
 const CUT_GAP = 4;
+// 図の縦の配置（px）。上から：到達予定日のラベル → 印のラベル → 印（点） → 軸 → 目盛りのラベル → 年のラベル
+const TARGET_LABEL_Y = 12;
+const TARGET_LINE_TOP_Y = 18;
+const MARKER_DOT_Y = 58;
+const MARKER_DOT_RADIUS = 7;
+const MARKER_LINE_TOP_Y = 62;
+const TODAY_MARK_TOP_Y = 84;
+const AXIS_Y = 92;
+const TICK_BOTTOM_Y = 97;
+const TICK_LABEL_Y = 112;
+const YEAR_LABEL_Y = 128;
+/** 軸を省いた印（//）の斜線。軸をまたいで上下に伸ばし、横に少し傾ける。 */
+const CUT_MARK_TOP_Y = 85;
+const CUT_MARK_BOTTOM_Y = 99;
+const CUT_MARK_SLANT = 3;
+/** ラベルが図の端からはみ出さないよう、寄せる向きを変える幅（px）。年のラベルは短く、印のラベルは長い。 */
+const YEAR_LABEL_EDGE = 24;
+const MARKER_LABEL_EDGE = 60;
 
 function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: string; p50Days: number; p80Days: number | null; sameWeek: boolean; targetDate: string | null }) {
   // 実際の幅で描く（縮めて表示すると文字まで小さくなるため）
@@ -196,46 +214,46 @@ function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: s
         {axis.cut ? (
           <>
             {/* 到達予定日が大きく先なので、軸を途中で省く（#187）。ここから右は日付に比例しない */}
-            <line x1={axis.axisLeft} y1="92" x2={axis.cut.x - CUT_GAP} y2="92" className="fr-chart__axis" />
-            <line x1={axis.cut.x + CUT_GAP} y1="92" x2={axis.axisRight} y2="92" className="fr-chart__axis" />
-            <line x1={axis.cut.x - CUT_GAP - 3} y1="99" x2={axis.cut.x - CUT_GAP + 3} y2="85" className="fr-chart__axis" />
-            <line x1={axis.cut.x + CUT_GAP - 3} y1="99" x2={axis.cut.x + CUT_GAP + 3} y2="85" className="fr-chart__axis" />
+            <line x1={axis.axisLeft} y1={AXIS_Y} x2={axis.cut.x - CUT_GAP} y2={AXIS_Y} className="fr-chart__axis" />
+            <line x1={axis.cut.x + CUT_GAP} y1={AXIS_Y} x2={axis.axisRight} y2={AXIS_Y} className="fr-chart__axis" />
+            <line x1={axis.cut.x - CUT_GAP - CUT_MARK_SLANT} y1={CUT_MARK_BOTTOM_Y} x2={axis.cut.x - CUT_GAP + CUT_MARK_SLANT} y2={CUT_MARK_TOP_Y} className="fr-chart__axis" />
+            <line x1={axis.cut.x + CUT_GAP - CUT_MARK_SLANT} y1={CUT_MARK_BOTTOM_Y} x2={axis.cut.x + CUT_GAP + CUT_MARK_SLANT} y2={CUT_MARK_TOP_Y} className="fr-chart__axis" />
           </>
         ) : (
-          <line x1={axis.axisLeft} y1="92" x2={axis.axisRight} y2="92" className="fr-chart__axis" />
+          <line x1={axis.axisLeft} y1={AXIS_Y} x2={axis.axisRight} y2={AXIS_Y} className="fr-chart__axis" />
         )}
-        {axis.ticks.map((t) => (
-          <g key={`${t.label}-${t.x}`}>
-            <line x1={t.x} y1="92" x2={t.x} y2="97" className="fr-chart__axis" />
-            <text x={t.x} y="112" textAnchor="middle" className="fr-chart__text">
-              {t.label}
+        {axis.ticks.map((tick) => (
+          <g key={`${tick.label}-${tick.x}`}>
+            <line x1={tick.x} y1={AXIS_Y} x2={tick.x} y2={TICK_BOTTOM_Y} className="fr-chart__axis" />
+            <text x={tick.x} y={TICK_LABEL_Y} textAnchor="middle" className="fr-chart__text">
+              {tick.label}
             </text>
-            {t.yearLabel ? (
-              <text x={t.x} y="128" textAnchor={labelAnchor(t.x, width, 24)} className="fr-chart__text">
-                {t.yearLabel}
+            {tick.yearLabel ? (
+              <text x={tick.x} y={YEAR_LABEL_Y} textAnchor={labelAnchor(tick.x, width, YEAR_LABEL_EDGE)} className="fr-chart__text">
+                {tick.yearLabel}
               </text>
             ) : null}
           </g>
         ))}
-        <line x1={axis.axisLeft} y1="84" x2={axis.axisLeft} y2="97" className="fr-chart__today" />
-        <text x={axis.axisLeft} y="112" textAnchor="start" className="fr-chart__text fr-chart__text--strong">
+        <line x1={axis.axisLeft} y1={TODAY_MARK_TOP_Y} x2={axis.axisLeft} y2={TICK_BOTTOM_Y} className="fr-chart__today" />
+        <text x={axis.axisLeft} y={TICK_LABEL_Y} textAnchor="start" className="fr-chart__text fr-chart__text--strong">
           今日
         </text>
-        {axis.markers.map((m) => (
-          <g key={m.kind}>
-            <line x1={m.x} y1="62" x2={m.x} y2="92" className="fr-chart__marker-line" />
+        {axis.markers.map((marker) => (
+          <g key={marker.kind}>
+            <line x1={marker.x} y1={MARKER_LINE_TOP_Y} x2={marker.x} y2={AXIS_Y} className="fr-chart__marker-line" />
             {/* 塗り＝目安、白抜き＝10回中8回（色だけに頼らない） */}
-            <circle cx={m.x} cy="58" r="7" className={m.kind === 'p50' ? 'fr-chart__dot' : 'fr-chart__dot fr-chart__dot--open'} />
-            <text x={m.x} y={m.labelY} textAnchor={labelAnchor(m.x, width, 60)} className="fr-chart__text">
-              {m.kind === 'p50' ? (axis.sameWeek ? '目安・10回中8回' : '目安') : '10回中8回'}
+            <circle cx={marker.x} cy={MARKER_DOT_Y} r={MARKER_DOT_RADIUS} className={marker.kind === 'p50' ? 'fr-chart__dot' : 'fr-chart__dot fr-chart__dot--open'} />
+            <text x={marker.x} y={marker.labelY} textAnchor={labelAnchor(marker.x, width, MARKER_LABEL_EDGE)} className="fr-chart__text">
+              {marker.kind === 'p50' ? (axis.sameWeek ? '目安・10回中8回' : '目安') : '10回中8回'}
             </text>
           </g>
         ))}
         {/* 到達予定日（#157、B案）。破線で示す */}
         {axis.target && targetDate ? (
           <g>
-            <line x1={axis.target.x} y1="18" x2={axis.target.x} y2="92" className="fr-chart__due" />
-            <text x={axis.target.x} y="12" textAnchor={labelAnchor(axis.target.x, width, 60)} className="fr-chart__text fr-chart__text--strong">
+            <line x1={axis.target.x} y1={TARGET_LINE_TOP_Y} x2={axis.target.x} y2={AXIS_Y} className="fr-chart__due" />
+            <text x={axis.target.x} y={TARGET_LABEL_Y} textAnchor={labelAnchor(axis.target.x, width, MARKER_LABEL_EDGE)} className="fr-chart__text fr-chart__text--strong">
               {/* 軸を省いたときは位置から遠さが読めないので、年まで書く（#187） */}
               {todayCopy.targetDateAxis(axis.cut ? fullDate(targetDate) : shortDate(parseLocalDate(targetDate)))}
             </text>

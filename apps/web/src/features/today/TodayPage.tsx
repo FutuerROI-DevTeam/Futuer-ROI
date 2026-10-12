@@ -32,9 +32,11 @@ import { AchievedFacts, AchievedPanel, ChangeHeader, RecordedSummary, TodayRecor
 import { useTodayData } from './useTodayData.ts';
 import { toForecastView } from './forecast-view.ts';
 import { SaveFeedback } from '../logs/SaveFeedback.tsx';
+import type { SaveFeedback as SaveFeedbackValue } from '../logs/save-feedback.ts';
 import { draftProgress, recordPreviewBaseline, type RecordDraft, type DraftProgress } from '../logs/draft-preview.ts';
 import { DraftProgressPreview } from './DraftProgressPreview.tsx';
 import { StickyActionBar } from '../../ui/components/StickyActionBar.tsx';
+import { WIDE_LAYOUT_QUERY } from '../../ui/layout.ts';
 import { useSaveLog } from '../logs/useSaveLog.ts';
 import { showYesterdayPrompt } from './yesterday-later.ts';
 import { YesterdayCorrection } from '../logs/YesterdayCorrection.tsx';
@@ -59,22 +61,32 @@ export function TodayPage({ goalId }: { goalId: string }) {
   const draftGeneration = useDraftGeneration();
   const session = authClient.useSession();
   // いま表示している画面の利用者。確認の結果が別の人・未ログイン・失敗なら捨てる
-  const shown = useRef<string | undefined>(undefined);
+  const shownOwner = useRef<string | undefined>(undefined);
   const { owner, clearedAt } = current;
   const ready = privateDataReady(current);
-  const checking = !ready && checkingSameOwner(shown.current, current, session);
-  shown.current = ready ? owner ?? undefined : checking ? shown.current : undefined;
+  const isCheckingSameOwner = !ready && checkingSameOwner(shownOwner.current, current, session);
+  shownOwner.current = ready ? owner ?? undefined : isCheckingSameOwner ? shownOwner.current : undefined;
   if (owner === null) return <SignedOutPage />;
-  if (!shown.current) return <Loading />;
-  return <TodayScreen key={`${shown.current}:${goalId}:${draftGeneration}`} goalId={goalId} notBefore={checking ? Number.POSITIVE_INFINITY : clearedAt} />;
+  if (!shownOwner.current) return <Loading />;
+  return <TodayScreen key={`${shownOwner.current}:${goalId}:${draftGeneration}`} goalId={goalId} notBefore={isCheckingSameOwner ? Number.POSITIVE_INFINITY : clearedAt} />;
+}
+
+/** 記録の入力欄の設定を1つの文字列にする。これが変わったら、入力中の量を新しい設定へ読み替えずに入力し直してもらう（RecordChoiceBar）。 */
+function recordSettingsKey(goal: Pick<Goal, 'id' | 'unit' | 'timezone' | 'goalSettingsRevision' | 'sessionAmount'>): string {
+  return JSON.stringify([goal.id, goal.unit, goal.timezone, goal.goalSettingsRevision, goal.sessionAmount]);
+}
+
+/** 今日と昨日の保存結果の通知のうち、新しい方（sequence が大きい方）を1つだけ出す。 */
+function newestFeedback(...candidates: (SaveFeedbackValue | null)[]): SaveFeedbackValue | null {
+  return candidates.filter(value => value !== null).sort((a, b) => (b.sequence ?? 0) - (a.sequence ?? 0))[0] ?? null;
 }
 
 function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number }) {
   // graphは一つだけ描画し、画面幅とともにDOM順も変える（PCは週間履歴の後、スマホは見通しの後）。
-  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 960px)').matches);
+  const [isWideLayout, setIsWideLayout] = useState(() => typeof window !== 'undefined' && window.matchMedia(WIDE_LAYOUT_QUERY).matches);
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 960px)');
-    const changed = () => setWide(media.matches);
+    const media = window.matchMedia(WIDE_LAYOUT_QUERY);
+    const changed = () => setIsWideLayout(media.matches);
     media.addEventListener('change', changed);
     return () => media.removeEventListener('change', changed);
   }, []);
@@ -98,14 +110,18 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
   // 今日の記録を保存したとき・選び直しをやめたときは、押したボタンが消えるので、記録済み（または達成済み）の見出しへ
   // フォーカスを移す（キーボード・読み上げで場所を見失わない）
   const focusAfterSave = useRef(false);
+  // 今日の編集状態（選び直し・量の入力・対象日・下書き）をすべて閉じる。保存の成功・取りやめ・画面の取り直しで共通
+  const resetTodayEdit = () => {
+    setChanging(false);
+    setAmountEditing(false);
+    setTodayEditDate(undefined);
+    setRecordDraft(null);
+  };
   const todaySaver = useSaveLog(goalId, {
     context: snapshot?.goal ?? acceptedGoal,
     onSaved: () => {
       focusAfterSave.current = true;
-      setChanging(false);
-      setAmountEditing(false);
-      setTodayEditDate(undefined);
-      setRecordDraft(null);
+      resetTodayEdit();
     },
     localDate: todayEditDate ?? snapshot?.today.today ?? acceptedGoal?.today,
     // 再描画前のクリックでも、QueryClient に到着済みの API 日付を検査する
@@ -182,14 +198,14 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
 
   // 記録済みの昨日（訂正の対象）。昨日の行と、Goalのメニューの「昨日の記録を訂正」（デザイン P3）の両方から始められる
   const yesterday = goal && today && snapshot ? yesterdayRecord(today.yesterday, goal.recordStartDate, snapshot.logs) : null;
+  // 訂正を始めた入口（押したボタン）を覚えておき、取りやめたときにフォーカスを戻せるようにする
+  const beginYesterdayCorrection = (log: Log) => {
+    yesterdayOriginalEntry.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    yesterdaySaver.reset();
+    setYesterdayEdit(log);
+  };
   const startYesterdayCorrection =
-    yesterday?.kind === 'recorded' && !yesterdayEdit && !locks.yesterdayLocked
-      ? () => {
-          yesterdayOriginalEntry.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-          yesterdaySaver.reset();
-          setYesterdayEdit(yesterday.log);
-        }
-      : undefined;
+    yesterday?.kind === 'recorded' && !yesterdayEdit && !locks.yesterdayLocked ? () => beginYesterdayCorrection(yesterday.log) : undefined;
 
   // 記録済みの今日を選び直す（「記録を変更」と直近7日の帯の今日から）
   const startTodayChange = () => {
@@ -205,10 +221,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
     if (locks.cancelChangeLocked) return;
     focusAfterSave.current = true;
     todaySaver.reset();
-    setChanging(false);
-    setAmountEditing(false);
-    setTodayEditDate(undefined);
-    setRecordDraft(null);
+    resetTodayEdit();
   };
 
   let yesterdayArea = null;
@@ -252,11 +265,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
           currentYesterday={today.yesterday}
           editing={false}
           disabled={locks.yesterdayLocked}
-          onStart={() => {
-            yesterdayOriginalEntry.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-            yesterdaySaver.reset();
-            setYesterdayEdit(log);
-          }}
+          onStart={() => beginYesterdayCorrection(log)}
           onEnd={() => setYesterdayEdit(null)}
         />
       );
@@ -281,7 +290,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
   const historyArea = validSnapshot ? <ForecastBoundary resetKey={todayQuery.dataUpdatedAt}>
     <TodayContent area="history" goal={snapshot.goal} today={snapshot.today} logs={snapshot.logs} changing={changing} changeDisabled={!!yesterdayEdit} onChange={startTodayChange} />
   </ForecastBoundary> : null;
-  const feedback = [todaySaver.feedback, yesterdaySaver.feedback].filter(value => value !== null).sort((a, b) => (b.sequence ?? 0) - (a.sequence ?? 0))[0] ?? null;
+  const feedback = newestFeedback(todaySaver.feedback, yesterdaySaver.feedback);
   return (
     <div className="fr fr-page fr-page--today">
       <PageTitle title={recordGoal?.title} />
@@ -353,9 +362,9 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
         </section>
       ) : null}
 
-      {wide ? historyArea : null}
+      {isWideLayout ? historyArea : null}
 
-      {snapshot && !todayQuery.isError && !goalQuery.isError && !logsQuery.isError && !resyncFailed ? (
+      {validSnapshot ? (
         <ForecastBoundary resetKey={todayQuery.dataUpdatedAt}>
           <TodayContent area="details"
             goal={snapshot.goal}
@@ -369,7 +378,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
         </ForecastBoundary>
       ) : null}
 
-      {!wide ? historyArea : null}
+      {!isWideLayout ? historyArea : null}
 
 
       </div>
@@ -386,7 +395,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
           today={recordDate}
           sessionAmount={recordGoal.sessionAmount}
           fmt={amountFormat(recordGoal)}
-          recordSettings={JSON.stringify([recordGoal.id, recordGoal.unit, recordGoal.timezone, recordGoal.goalSettingsRevision, recordGoal.sessionAmount])}
+          recordSettings={recordSettingsKey(recordGoal)}
           current={changing && today ? today.todayLog : null}
           saver={todaySaver}
           previewBaseline={previewBaseline}
@@ -400,10 +409,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
           }}
           onRefresh={() => {
             todaySaver.reset();
-            setChanging(false);
-            setAmountEditing(false);
-            setTodayEditDate(undefined);
-            setRecordDraft(null);
+            resetTodayEdit();
             refresh();
           }}
         />
@@ -449,10 +455,12 @@ function TodayContent({
   const view = toForecastView(today.prediction, goal.unit, { provenance: today.provenance, plan: today.plan, sessionAmount: today.context.sessionAmount });
   assertForecastPresentation(view);
   const fmt = amountFormat(goal);
-  if (area === 'history') return view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded'
+  // 積み上げ（進捗）を出せるのは、達成済み・見通しあり・今日記録済みのとき（読み込み中やエラーの表示状態では出さない）
+  const hasProgress = view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded';
+  if (area === 'history') return hasProgress
     ? <ProgressDetails progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} /> : null;
   const progress =
-    view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded' ? (
+    hasProgress ? (
       <ProgressSummary showDetails={false} preview={preview} brief={view.kind === 'forecast' || view.kind === 'today-recorded' ? <CompletionBrief completion={view.completion} /> : null} progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} />
     ) : null;
   const outlookTitle = todayCopy.outlookTitle(fmt.total(goal.totalRequired));
@@ -538,7 +546,7 @@ function SignedOutPage() {
       <AppBar
         title=""
         leading={
-          <Link to="/goals" className="fr-icon-btn" aria-label="Goal一覧へ戻る">
+          <Link to="/goals" className="fr-icon-btn" aria-label={todayCopy.backToList}>
             <Icon name="back" />
           </Link>
         }

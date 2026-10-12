@@ -1,7 +1,11 @@
 // 日付の表示。基準日は API が返す today（Goal の timezone での暦日 YYYY-MM-DD）で、ブラウザの時計は使わない。
 // 暦日だけを扱うので、UTC の日付として計算して時差の影響を受けないようにする。
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+/** 1日のミリ秒。暦日の差や日数の加算に使う。 */
+export const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 曜日の表示（getUTCDay の順＝日曜始まり）。 */
+export const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'] as const;
 
 function parseLocalDate(value: string): Date {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -35,7 +39,7 @@ export function shortDate(date: Date): string {
 /** 「10月5日（月）」。 */
 export function longDate(value: string): string {
   const date = parseLocalDate(value);
-  const weekday = ['日', '月', '火', '水', '木', '金', '土'][date.getUTCDay()] ?? '';
+  const weekday = WEEKDAY_LABELS[date.getUTCDay()] ?? '';
   return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日（${weekday}）`;
 }
 

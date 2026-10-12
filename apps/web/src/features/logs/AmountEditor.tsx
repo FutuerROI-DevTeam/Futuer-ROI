@@ -52,14 +52,7 @@ export function AmountEditor({
   const canDecrease = valid && stepRecordAmount(value, stepSize, -1) !== value;
   const minusRef = useRef<HTMLButtonElement>(null);
   const plusRef = useRef<HTMLButtonElement>(null);
-  // ボタンで下限・上限に達して押せなくなるときは、先に反対側のボタンへフォーカスを移す（押せないボタンにフォーカスを残さない、#221）
-  const stepByButton = (direction: -1 | 1) => {
-    if (busy || !valid) return;
-    const next = stepRecordAmount(value, stepSize, direction);
-    const limit = direction === -1 ? stepRecordAmount(next, stepSize, -1) === next : next >= RECORD_AMOUNT_MAX;
-    if (limit) (direction === -1 ? plusRef : minusRef).current?.focus();
-    step(direction);
-  };
+  // 刻み1つ分だけ量を変える（↑↓キーとボタンの両方から使う）
   const step = (direction: -1 | 1) => {
     if (busy || !valid) return;
     // 同じevent batchの連打でも、前の更新後の入力値を基準にする。
@@ -68,6 +61,14 @@ export function AmountEditor({
       return isRecordAmount(current) ? String(stepRecordAmount(current, stepSize, direction)) : previous;
     });
     setError(undefined);
+  };
+  // ボタンで下限・上限に達して押せなくなるときは、先に反対側のボタンへフォーカスを移す（押せないボタンにフォーカスを残さない、#221）
+  const stepByButton = (direction: -1 | 1) => {
+    if (busy || !valid) return;
+    const next = stepRecordAmount(value, stepSize, direction);
+    const reachesLimit = direction === -1 ? stepRecordAmount(next, stepSize, -1) === next : next >= RECORD_AMOUNT_MAX;
+    if (reachesLimit) (direction === -1 ? plusRef : minusRef).current?.focus();
+    step(direction);
   };
   const submit = () => {
     if (busy) return;
