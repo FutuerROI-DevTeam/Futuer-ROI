@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { assertSyntheticMilestoneDatabase } from './helpers/milestone-database-policy.ts';
 import { DEFAULT_CONFIG, completionDistributionForFrozenState, frozenCompletionCdf } from '@futureroi/prediction';
 import { applyOffset, fitMilestoneOffset, identityFit, MILESTONE_PROTOCOL, observationLoss, offsetObjective,
   type FitEpisode, type Scope } from '../src/milestone/core.ts';
@@ -103,4 +104,12 @@ test('#248 CDF keeps original calculation method and handles kernel roundoff wit
   assert.equal(sampled.computation.method, 'POSTERIOR_SAMPLING');
   assert.deepEqual(sampled.cdf, frozenCompletionCdf({ posterior, initialState: 'DONE', requiredFutureDone: 1, computation: sampled.computation }));
   assert.deepEqual(frozenCompletionCdf({ posterior, initialState: 'DONE', requiredFutureDone: 31, computation: integrated.computation }), Array(30).fill(0));
+});
+test('#248 database guard accepts only an unset URL or the exact disposable CI service', () => {
+  const ci = 'postgres://futureroi:ci-only-placeholder@127.0.0.1:5432/futureroi';
+  assert.doesNotThrow(() => assertSyntheticMilestoneDatabase({}));
+  assert.doesNotThrow(() => assertSyntheticMilestoneDatabase({ GITHUB_ACTIONS: 'true', DATABASE_URL: ci }));
+  assert.throws(() => assertSyntheticMilestoneDatabase({ DATABASE_URL: ci }));
+  assert.throws(() => assertSyntheticMilestoneDatabase({ GITHUB_ACTIONS: 'false', DATABASE_URL: ci }));
+  assert.throws(() => assertSyntheticMilestoneDatabase({ GITHUB_ACTIONS: 'true', DATABASE_URL: 'postgres://example.invalid/synthetic' }));
 });

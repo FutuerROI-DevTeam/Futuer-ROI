@@ -6,7 +6,7 @@ Supporting Artifact / Not Source of Truth。2026-10-12。正式契約は[Product
 
 base: `3e5d9fb23afcd78e66e309c93c0000e6a3a8ab1d`、branch: `feat/248-goal-milestone-calibration`。独立worktreeにだけ変更し、main・他の作業領域・既存研究helperは編集しない。最終HEAD・変更fileのSHA256・ログhashは提出時の外部verification manifestに固定する。Node 24.21.0 / npm 11.19.0、Python Decimalは70桁で使用する。
 
-実行時はchildprocessのDATABASE_URLを除外し、テストfixtureが新規ローカルembedded PostgreSQLを生成する。既存DB・実アカウント・実ユーザー履歴・追加の本試験/最終確認群は使用しない。0008はこの隔離合成DBでだけ適用する。小さい匿名合成例はGoal300、q10、4日の初期隣接記録、3回の途中到達とその後の1発行に限定する。数値はtest diagnosticsと固定manifestへ保存する。
+ローカル実行時はchildprocessのDATABASE_URLを除外し、テストfixtureが新規embedded PostgreSQLを生成する。GitHub Actionsでは既存application.ymlが作る専用serviceの固定URLだけを許可し、任意の外部admin接続は拒否する。CIでもfixtureが生成した専用databaseだけを変更する。既存DB・実アカウント・実ユーザー履歴・追加の本試験/最終確認群は使用しない。0008はこの隔離合成DBでだけ適用する。小さい匿名合成例はGoal300、q10、4日の初期隣接記録、3回の途中到達とその後の1発行に限定する。数値はtest diagnosticsと固定manifestへ保存する。
 
 ## 切断前の実施状況と復旧時の読取
 
@@ -23,6 +23,7 @@ base: `3e5d9fb23afcd78e66e309c93c0000e6a3a8ab1d`、branch: `feat/248-goal-milest
 | 純粋Engine | 初回76/77。追加CDF export2関数の明示一覧を既存scaffoldへ反映し、再実行77/77 PASS。既存CDF独立oracle3/3 PASS |
 | 型検査・build・文書 | root全workspace型検査PASS、Vercel用build生成PASS、文書113file/2059local link PASS |
 | 全workspace回帰・Vercel検証 | 全API/Web回帰とbundle検証は切断で終了summaryなし。結果を推測せず再実行する |
+| 復旧後のCI事前照合 | 旧guardが既存CI専用serviceも拒否する点を修正。GITHUB_ACTIONS=trueとworkflowの固定接続の両方を要求するpure guard回帰を追加。最終実行は新規21件となる |
 | 独立レビュー | 初回2指摘を修正し、source `cebb12b6`と文書の修正を独立AI reviewerが確認。新Blocking/Should Fixなし。最終提出版の引継ぎとHuman Reviewは別 |
 
 ## レビューで直した問題

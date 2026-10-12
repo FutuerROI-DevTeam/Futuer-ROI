@@ -6,9 +6,10 @@ import type { Goal, GoalCreate } from '../src/contracts/goal.ts';
 import type { MilestoneReport } from '../src/contracts/milestone.ts';
 import { purgeExpiredMilestone } from '../src/milestone/store.ts';
 import { Client, setup, signedInClient } from './helpers/stack.ts';
+import { assertSyntheticMilestoneDatabase } from './helpers/milestone-database-policy.ts';
 
-// 外部admin接続を使わない。このfileは新しいローカル合成clusterだけで実行する。
-if (process.env.DATABASE_URL) throw new Error('Milestone tests require DATABASE_URL unset and a fresh synthetic local database');
+// ローカルは新規embedded cluster、CIはworkflowの専用serviceだけ。値は出力しない。
+assertSyntheticMilestoneDatabase(process.env);
 const POLICY = 'session-milestone-opt-in-v1';
 const options = { enabled: true, buildVersion: 'synthetic-milestone-integration' };
 const input: GoalCreate = { title: 'synthetic milestone goal', unit: 'minutes', totalRequired: 300,
