@@ -48,9 +48,9 @@ export const goalsCopy = {
   form: {
     createTitle: 'Goalを作成',
     /** 初期質問の見出し（開閉の見出し。PR #120 の部品と同じ文言）。 */
-    // 見出しは文節の切れ目（「最初の見通しを／調整する（任意）」）でだけ折り返すよう、2つに分けて持つ（#221）
+    // 見出しは文節の切れ目（「最初の見通しを／調整する（必須）」）でだけ折り返すよう、2つに分けて持つ（#221）。#259 で必須に変更
     priorTitleLead: '最初の見通しを',
-    priorTitleTail: '調整する（任意）',
+    priorTitleTail: '調整する（必須）',
     editTitle: 'Goalを編集',
     close: '閉じる',
     /** デスクトップ幅で、保存の横に置く取りやめ（スマートフォン幅の「×」の代わり。デザイン Desk-create・Desk-edit）。 */
@@ -111,6 +111,8 @@ export const goalsCopy = {
     delete: 'このGoalを削除',
     // R-11 の初期質問（#137）。質問文・選択肢は PR #120 の QuestionPriorFields にある
     answersNotRecords: '回答は実績や記録には加えません',
+    /** 初期質問は必須（#259）。「回答しない」も1つの選択として選べる。 */
+    answersRequired: '2問とも、どれか1つを選んでください（「回答しない」も選べます）',
     answersWithdrawn: '単位か1回の量を変えると、質問の回答は取り消されます。保存した後に、もう一度答えられます。',
     answersNotSavedWithContext: '単位か1回の量を変えるときは、質問の回答を一緒に保存できません。保存した後に、もう一度開いて答えられます。',
     answerConflict: {

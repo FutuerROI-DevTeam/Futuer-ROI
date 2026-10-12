@@ -29,7 +29,7 @@
 | `/login` | ログイン | 不要。ログイン済みなら戻り先へreplace | [R-01](product-spec.md#requirementsmvp) | [AuthPage](../apps/web/src/routes/AuthPage.tsx) |
 | `/register` | 新規登録 | 同上 | R-01 | AuthPage |
 | `/goals` | Goal一覧。今日の状態と累計からTodayへ進む | 必須 | R-02 | [GoalListPage](../apps/web/src/features/goals/GoalListPage.tsx) |
-| `/goals/new` | Goal作成、任意の初期質問 | 必須 | R-02・R-11、P-18〜P-20 | [GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx) |
+| `/goals/new` | Goal作成、必須の初期質問（P-24） | 必須 | R-02・R-11、P-18〜P-20 | [GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx) |
 | `/goals/$goalId/edit` | 設定・質問の編集とGoal削除 | 必須 | 同上 | GoalFormPage |
 | `/goals/$goalId` | Today。今日の記録・昨日の補完/訂正・見通し | 必須 | R-03〜R-08・R-11、P-21 | [TodayPage](../apps/web/src/features/today/TodayPage.tsx) |
 | `/goals/$goalId/history` | 月別の記録履歴 | 必須 | R-03・R-04、[P-17](product-spec.md#p-17-デザインの全画面とルート構成をmustにする) | [HistoryPage](../apps/web/src/features/history/HistoryPage.tsx) |
@@ -97,7 +97,7 @@ flowchart TD
 | 公開トップ | 名前・説明・認証入口を空と山並みの背景（全幅）の上に置き、手順・注記は背景の外で縦に読む | 背景は全幅、中身は最大1120pxの列。説明は1列、3つの手順は横並び | [auth.css](../apps/web/src/routes/auth.css) |
 | ログイン・登録 | 1枚のフォームカード | 広い画面でも認証カードに入力を集約 | AuthPage、auth.css |
 | Goal一覧 | カードを縦に並べる | 横幅・余白・見出し/追加ボタンを広げる。現行CSSにカード一覧を2列化する規則はない | [goals.css](../apps/web/src/features/goals/goals.css) |
-| 作成・編集 | 基本→量→日付→任意質問。保存欄は通常の文書配置。ページ見出しはAppBarと重なるため視覚上は隠し、読み上げに残す | セクション見出し＋入力、量/日付の組を2列。取消・削除を保存付近へ | GoalFormFields、goals.css |
+| 作成・編集 | 基本→量→必須質問→日付。保存欄は通常の文書配置。ページ見出しはAppBarと重なるため視覚上は隠し、読み上げに残す | セクション見出し＋入力、日付の組を2列。量は総量→1回量→初期量の縦1列（P-24）。取消・削除を保存付近へ | GoalFormFields、goals.css |
 | Today | 100dvh内で本文と下部操作帯を分ける。本文は縦スクロール、操作帯は実高さを確保。短い画面では操作帯内部もスクロール可能 | 最大1200px。左に問い・直近/昨日・操作、右に進捗・見通し・詳細。操作帯は左列の下端まで場所を取り、左列内でsticky | [today-dawn.css](../apps/web/src/features/today/today-dawn.css) |
 | 履歴 | 月送り＋7列カレンダー | 最大720pxの枠。共通バー＋DeskHeader | HistoryPage、[history.css](../apps/web/src/features/history/history.css) |
 | 詳細の開閉 | 完了予測/記録の詳細は初期折畳み | 同詳細は初期展開。利用者の明示開閉は幅変更でも保持 | [ResponsiveDetails](../apps/web/src/features/today/ResponsiveDetails.tsx) |
@@ -173,7 +173,7 @@ TodayのDOMは問い→直近/昨日→進捗・見通し・詳細→操作帯�
 
 ### Goal作成・編集・削除
 
-構成は①名称/単位、②総量/1回量/初期量、③任意到達予定日/timezone、任意初期質問、保存欄。編集には削除入口と確認dialogを付ける。質問は初期は折畳み、既存回答・エラー・最新回答案内・文脈変更の注意がある場合は展開する。R1の「次へ進む2段階ウィザード」は実装していない。
+構成は①名称/単位、②総量/1回量/初期量、③任意到達予定日/timezone、初期質問（必須、P-24）、保存欄。編集には削除入口と確認dialogを付ける。質問は作成と未選択の問がある編集で展開し、2問とも選ぶまで保存しない（「回答しない」も選択。P-24）。既存回答・エラー・最新回答案内・文脈変更の注意がある場合も展開する。R1の「次へ進む2段階ウィザード」は実装していない。
 
 | 状態 | 表示・操作・遷移 |
 | --- | --- |
@@ -205,7 +205,7 @@ mobileの「×」は編集でも一覧へ戻る。desktopの編集パンくず/�
 | 主状態 | 表示・操作 |
 | --- | --- |
 | 未記録・材料あり | 現行の問いと中心指標。出所・注釈、進捗、設定量で続ける完了見込み。「やった／今日は休む」 |
-| 未記録・材料不足 | 不足理由。完了欄もAPI由来の不足または条件付き計画。中心不足かつ未回答なら任意の質問入力として編集へ |
+| 未記録・材料不足 | 不足理由。完了欄もAPI由来の不足または条件付き計画。初期質問の回答を変える入口は「Goalの編集で、初期質問の回答を変える」（編集画面の一番上へ。P-24） |
 | 回答/回答＋実績由来 | 中心の数字の下は出所に合わせた要約の文（「回答」等のラベルは出さない）。見通しは回答を使うときだけ「最初の質問の回答（仮定）を含めて計算した見通しです。」の1文。回答を実績件数と表現しない |
 | P50/P80の範囲外 | 欠けた日付を作らず該当する範囲外の説明。材料不足とは別 |
 | 今日記録済み | 中心の問い比較を出さず記録内容と変更入口。完了見込みはCURRENT_STATEの表示 |

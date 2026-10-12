@@ -9,7 +9,7 @@ import { Icon } from '../../../ui/components/Icon.tsx';
 import { TimeAmountField, timeParts } from './TimeAmountField.tsx';
 import { parseGoalAmount } from '../goal-form.ts';
 import { QuestionPriorFields } from '../../prior/QuestionPriorFields.tsx';
-import { NO_ANSWERS, TITLE_MAX, titleLength, type FieldErrors, type FieldName, type FormValues, type GoalWithAnswers, type answersLockReason } from '../goal-form.ts';
+import { NO_ANSWERS, TITLE_MAX, titleLength, type FieldErrors, type FieldName, type FormValues, type GoalWithAnswers, type PriorChosen, type answersLockReason } from '../goal-form.ts';
 
 const f = goalsCopy.form;
 
@@ -27,6 +27,8 @@ type Props = {
   priorOpen: boolean;
   latestAnswers: GoalWithAnswers['questionPrior'] | null;
   answersLock: ReturnType<typeof answersLockReason>;
+  priorChosen: PriorChosen;
+  onPriorChoose: (origin: keyof PriorChosen) => void;
   update: <K extends FieldName>(name: K, value: FormValues[K]) => void;
   onPriorToggle: (open: boolean) => void;
   onDeleteOpen: () => void;
@@ -35,7 +37,7 @@ type Props = {
 /** controlledな項目表示。入力・baseline・保存操作のstateは親フォームだけが持つ。 */
 export function GoalFormFields({ mode, goal, values, errors, count, unit, timezones,
   discardedDraft, pendingCreate, refreshNotice, inputDisabled, locked, priorOpen, latestAnswers,
-  answersLock, update, onPriorToggle, onDeleteOpen }: Props) {
+  answersLock, priorChosen, onPriorChoose, update, onPriorToggle, onDeleteOpen }: Props) {
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash === 'fr-goalform-prior') {
@@ -44,7 +46,11 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
     } else if (hash === 'goal-sessionAmount') document.getElementById(hash)?.focus();
   }, [onPriorToggle]);
   const incompleteTime = values.unit === 'minutes' && [values.totalRequired, values.initialProgress].some(v => v.startsWith('@hm:') && !Number.isFinite(parseGoalAmount(v) ?? NaN));
-  const hasPriorAnswers = values.questionPrior.a !== null || values.questionPrior.b !== null;
+  const bothChosen = priorChosen.a && priorChosen.b;
+  // 未選択のエラーは、まだ選んでいない問の下に出す。APIの検査エラーは従来どおり1問目の下に出す
+  const priorErrors = !errors.questionPrior ? {} : errors.questionPrior === f.answersRequired
+    ? { ...(priorChosen.a ? {} : { a: errors.questionPrior }), ...(priorChosen.b ? {} : { b: errors.questionPrior }) }
+    : { a: errors.questionPrior };
   const switchUnit = (next: FormValues['unit']) => {
     for (const field of ['totalRequired', 'initialProgress'] as const) {
       if (values[field].startsWith('@hm:')) update(field, String(parseGoalAmount(values[field])));
@@ -144,7 +150,7 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
         </div>
       </section>
 
-      {/* 量設定直後の任意質問。未回答の新規作成は初期展開し、回答を強制しない。 */}
+      {/* 量設定直後の初期質問（#259で必須）。2問ともどれか（「回答しない」を含む）を選ぶまで保存できない。 */}
       <details
         id="fr-goalform-prior"
         className="fr-goalform__prior"
@@ -153,11 +159,11 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
       >
         <summary id="fr-goalform-prior-summary" className="fr-goalform__prior-summary">
           <h2 id="fr-goalform-prior-title" className="fr-goalform__prior-title">
-            あなたに合う最初の見通しをつくる <span>（任意）</span>
+            あなたに合う最初の見通しをつくる <span>（必須）</span>
           </h2>
           <Icon name="chevronDown" size={20} />
         </summary>
-        <p className="fr-goals__help">最近の取り組み方を2問だけ教えてください。続けやすさ・再開しやすさを最初の見通しに使い、その後は本人の記録で更新します。回答しないまま進むこともできます。</p>
+        <p className="fr-goals__help">最近の取り組み方を2問だけ教えてください。続けやすさ・再開しやすさを最初の見通しに使い、その後は本人の記録で更新します。</p>
         {latestAnswers ? (
           <p className="fr-goalform__latest" role="status">
             {f.latestAnswers(answerLabel(latestAnswers.a), answerLabel(latestAnswers.b))}
@@ -168,13 +174,14 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
           value={answersLock ? NO_ANSWERS : values.questionPrior}
           onChange={(next) => update('questionPrior', next)}
           disabled={inputDisabled || answersLock !== null}
-          fieldErrors={errors.questionPrior ? { a: errors.questionPrior } : {}}
+          fieldErrors={priorErrors}
+          {...(answersLock ? {} : { chosen: priorChosen, onChoose: onPriorChoose })}
         />
         {answersLock ? <LockedNote>{answersLock === 'withdrawn' ? f.answersWithdrawn : f.answersNotSavedWithContext}</LockedNote> : null}
         <p className="fr-goals__help">{f.answersNotRecords}</p>
-        {mode === 'create' ? <>
-          {hasPriorAnswers ? <p className="fr-goals__help">欄を閉じても選んだ回答は保存されます。取り消すときは各問の「回答しない」を選んでください。</p> : null}
-          <Button variant="text" disabled={inputDisabled || answersLock !== null} onClick={() => { onPriorToggle(false); document.getElementById('fr-goalform-prior-summary')?.focus(); }}>{hasPriorAnswers ? '回答欄を閉じる' : '回答せずに進む'}</Button>
+        {mode === 'create' && bothChosen ? <>
+          <p className="fr-goals__help">欄を閉じても選んだ回答は残ります。</p>
+          <Button variant="text" disabled={inputDisabled} onClick={() => { onPriorToggle(false); document.getElementById('fr-goalform-prior-summary')?.focus(); }}>回答欄を閉じる</Button>
         </> : null}
       </details>
 

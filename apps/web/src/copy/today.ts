@@ -176,7 +176,8 @@ export const todayCopy = {
     `残り${remaining}。1回${session}の設定量で行う場合。最後に必要な量は${last}です。これは日数の予測ではありません。`,
   sourcesQuestionNote: '最初の質問の回答（仮定）を含めて計算した見通しです。',
   whyQuestion: '最初の質問の回答を、弱い初期の仮定として使っています。回答は実績や記録には加えず、記録がたまるほど回答の影響は小さくなります。',
-  answerQuestions: '質問に答えて、最初の見通しを調整する（任意）',
+  /** Goalの編集画面へ移り、初期質問の回答を変える入口（#259）。 */
+  editAnswers: 'Goalの編集で、初期質問の回答を変える',
   inconsistentTitle: '表示をそろえられませんでした',
   inconsistent: 'Goal・記録・見通しを同じ時点の内容で読み込めませんでした。別の画面で変更が続いている可能性があります。もう一度読み込んでください。',
   signedOutTitle: 'ログインが切れました',

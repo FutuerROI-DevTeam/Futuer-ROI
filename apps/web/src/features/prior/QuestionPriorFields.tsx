@@ -15,7 +15,7 @@ const questions: Readonly<Record<Origin, string>> = {
 };
 const origins: readonly Origin[] = ["a", "b"];
 
-export function QuestionPriorFields({ value, onChange, disabled = false, fieldErrors = {}, className, externalHeadingId }: QuestionPriorFieldsProps) {
+export function QuestionPriorFields({ value, onChange, disabled = false, fieldErrors = {}, className, externalHeadingId, chosen, onChoose }: QuestionPriorFieldsProps) {
   if (externalHeadingId !== undefined && (typeof externalHeadingId !== "string" || !/^\S+$/.test(externalHeadingId))) {
     throw new TypeError("externalHeadingId must identify one existing visible heading.");
   }
@@ -25,9 +25,9 @@ export function QuestionPriorFields({ value, onChange, disabled = false, fieldEr
   const unansweredId = `${id}-unanswered`;
   return (
     <section className={["r11-qp", className].filter(Boolean).join(" ")} aria-labelledby={externalHeadingId ?? `${id}-title`}>
-      {externalHeadingId === undefined && <h2 id={`${id}-title`}>最初の見通しを調整する（任意）</h2>}
-      <p id={helpId}>記録開始前の、今回に近い行動・量・生活状況を思い出して選んでください。これからの意欲や理想ではなく、過去の取り組み方を答えてください。少量でも取り組めた日を含みます。答えられなくても大丈夫です。各問を回答しないまま進められます。</p>
-      <p id={unansweredId}>「経験がない・思い出せない」はその回答を保存します。「回答しない」は未回答のまま進む操作です。どちらも、その質問の回数を見通しの材料には使いません。</p>
+      {externalHeadingId === undefined && <h2 id={`${id}-title`}>最初の見通しを調整する（必須）</h2>}
+      <p id={helpId}>記録開始前の、今回に近い行動・量・生活状況を思い出して選んでください。これからの意欲や理想ではなく、過去の取り組み方を答えてください。少量でも取り組めた日を含みます。2問とも、どれか1つを選んでください。答えにくいときは「経験がない・思い出せない」か「回答しない」を選べます。</p>
+      <p id={unansweredId}>「経験がない・思い出せない」はその回答を保存します。「回答しない」は回答を保存せずに進む選択です。どちらも、その質問の回数を見通しの材料には使いません。</p>
       {origins.map(origin => {
         const error = fieldErrors[origin];
         const errorId = `${id}-${origin}-error`;
@@ -40,10 +40,10 @@ export function QuestionPriorFields({ value, onChange, disabled = false, fieldEr
               return (
                 <label key={raw || "missing"} className="r11-qp-option" htmlFor={inputId}>
                   <input id={inputId} name={`${id}-${origin}`} type="radio" value={raw}
-                    checked={value[origin] === option.value}
+                    checked={(chosen?.[origin] ?? true) && value[origin] === option.value}
                     aria-describedby={error ? errorId : undefined}
                     aria-invalid={error ? true : undefined}
-                    onChange={() => { if (!disabled) onChange({ ...value, [origin]: option.value }); }} />
+                    onChange={() => { if (disabled) return; onChoose?.(origin); onChange({ ...value, [origin]: option.value }); }} />
                   {option.label}
                 </label>
               );

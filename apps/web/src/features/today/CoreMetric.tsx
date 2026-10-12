@@ -11,16 +11,13 @@ import type { CorePresentation, SufficientSource } from '../prior/presentation-t
  * 記録だけのときは、Product Spec P-12 の固定文言のまま。
  * 補助指標1「休んだ翌日にやれたのは ○回中○回」は出さない（2026-10-08、依頼者判断による P-12 の改訂。#146）。
  */
-export function CoreMetric({ core, children, guidance }: { core: CorePresentation; children?: ReactNode; guidance?: ReactNode }) {
+export function CoreMetric({ core, children }: { core: CorePresentation; children?: ReactNode }) {
   if (core.kind === 'insufficient') {
     return (
-      <>
-        <div className="fr-today__hero">
-          {children}
-          <InsufficientNotice>{core.message ?? todayCopy.insufficientCore}</InsufficientNotice>
-        </div>
-        {guidance ? <div className="fr-today__basis">{guidance}</div> : null}
-      </>
+      <div className="fr-today__hero">
+        {children}
+        <InsufficientNotice>{core.message ?? todayCopy.insufficientCore}</InsufficientNotice>
+      </div>
     );
   }
   return (

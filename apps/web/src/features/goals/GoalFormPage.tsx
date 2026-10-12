@@ -27,10 +27,14 @@ import { StickyActionBar } from '../../ui/components/StickyActionBar.tsx';
 import { fetchPolicy } from '../today/fetch-policy.ts';
 import '../prior/question-prior.css';
 import {
+  ALL_CHOSEN,
   answersLockReason,
   emptyValues,
   errorCount,
   FIELD_ORDER,
+  initialPriorChosen,
+  priorChoiceError,
+  type PriorChosen,
   fieldErrorsFromApi,
   rebaseValues,
   reloadLatestGoal,
@@ -205,6 +209,8 @@ type FormDraft = {
   sourceGoal: GoalWithAnswers | undefined;
   submitted: boolean;
   priorOpen: boolean;
+  /** 初期質問の各問でどれかを選んだか（#259）。古い保存形式では無いことがある。 */
+  priorChosen?: PriorChosen;
   latestAnswers: GoalWithAnswers['questionPrior'] | null;
 };
 type FormFailure = FormDraft & { error: unknown; prepareError?: unknown; serverErrors: FieldErrors; operation: CreateAttempt | null };
@@ -276,8 +282,10 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
   const [baseline, setBaseline] = useState(restored?.baseline ?? goal);
   // 最新を読み直したときの回答。入力中の回答で上書きする前に確かめられるよう、知らせとして出す
   const [latestAnswers, setLatestAnswers] = useState<GoalWithAnswers['questionPrior'] | null>(restored?.latestAnswers ?? null);
-  // 初期質問の開閉。保存済みの回答がある編集では開いた状態から始める
-  const [priorOpen, setPriorOpen] = useState(() => restored?.priorOpen ?? (mode === 'create' || values.questionPrior.a !== null || values.questionPrior.b !== null));
+  // 初期質問でどれかを選んだか（#259、必須）。未確定の作成を復元したときは、保存前の検査を通った回答なので選択済みとする
+  const [priorChosen, setPriorChosen] = useState<PriorChosen>(() => attempt ? ALL_CHOSEN : restored?.priorChosen ?? initialPriorChosen(mode, restored?.values.questionPrior ?? values.questionPrior));
+  // 初期質問の開閉。作成と、まだ選んでいない問がある編集では開いた状態から始める
+  const [priorOpen, setPriorOpen] = useState(() => restored?.priorOpen ?? (mode === 'create' || !priorChosen.a || !priorChosen.b || values.questionPrior.a !== null || values.questionPrior.b !== null));
   const [reloadingLatest, setReloadingLatest] = useState(false);
   const reloadInFlight = useRef(false);
   // この画面がまだ表示されているか。保存の途中で離れた後に、別の画面を一覧へ移さないために使う
@@ -289,7 +297,16 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
     };
   }, []);
 
-  const clientErrors = submitted ? validateGoalForm(values, { locked, baseline, goal, recoveryBody: attempt?.body }) : {};
+  // 単位か1回の量を変えている間は、回答を一緒に送れない（R-11、#133。保存済みの回答は API が取り消す）。
+  // 保存済みの回答の有無にかかわらず回答の欄は押せなくし、そのことを伝える（入力した回答が黙って保存されないことを防ぐ）
+  const answersLock = mode === 'edit' && baseline !== undefined ? answersLockReason(values, baseline) : null;
+  // 送る前の検査。初期質問は2問とも選ぶまで保存させない（#259。回答欄を押せない間は求めない）
+  const findErrors = (): FieldErrors => {
+    const found = validateGoalForm(values, { locked, baseline, goal, recoveryBody: attempt?.body });
+    const prior = priorChoiceError(priorChosen, answersLock !== null);
+    return prior ? { ...found, questionPrior: prior } : found;
+  };
+  const clientErrors = submitted ? findErrors() : {};
   const errors: FieldErrors = { ...serverErrors, ...clientErrors };
   const count = errorCount(errors);
 
@@ -337,7 +354,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
       let cleanupError: unknown = null;
       if (vars.operation && error instanceof ApiError && error.status === 422) finishCreateAttempt(vars.operation, failure => { cleanupError = failure; });
       const fromApi = fieldErrorsFromApi(error);
-      onFailureChange({ values: vars.values, baseline, sourceGoal: goal, submitted: true, priorOpen, latestAnswers,
+      onFailureChange({ values: vars.values, baseline, sourceGoal: goal, submitted: true, priorOpen, priorChosen, latestAnswers,
         error, prepareError: cleanupError, serverErrors: fromApi ?? {}, operation: vars.operation },
       !mounted.current && vars.operation && error instanceof ApiError && error.status === 422 ? () => clearCreateAttempt(vars.operation!, sessionStorage) : undefined, true);
       if (fromApi && errorCount(fromApi) > 0) {
@@ -365,13 +382,13 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
   useLayoutEffect(() => {
     // 復元後は新mutationのisErrorがfalseでも失敗表示は残る。訪問失効後に入力だけ戻らないよう、通常draftには退避しない。
     onDraftChange?.(attempt !== null || prepareError !== null || saving.current || deleting.current || reloadInFlight.current || save.isPending || failedSave !== null || remove.isPending || remove.isError || reloadingLatest
-      ? undefined : { values, baseline, sourceGoal: goal, submitted, priorOpen, latestAnswers });
-  }, [values, baseline, goal, submitted, priorOpen, latestAnswers, reloadingLatest, save.isPending, failedSave, remove.isPending, remove.isError, attempt, prepareError, onDraftChange]);
+      ? undefined : { values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers });
+  }, [values, baseline, goal, submitted, priorOpen, priorChosen, latestAnswers, reloadingLatest, save.isPending, failedSave, remove.isPending, remove.isError, attempt, prepareError, onDraftChange]);
   useLayoutEffect(() => {
     if ((failedSave !== null || prepareError !== null) && !save.isPending && !saving.current && !deleting.current && !remove.isPending && !remove.isError)
-      onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, latestAnswers, error: failedSave, prepareError,
+      onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers, error: failedSave, prepareError,
         serverErrors, operation: failedSave === null ? attempt : save.variables?.operation ?? retainedOperation });
-  }, [failedSave, prepareError, values, baseline, goal, submitted, priorOpen, latestAnswers, serverErrors, save.isPending, save.variables, retainedOperation, attempt, remove.isPending, remove.isError, onFailureChange]);
+  }, [failedSave, prepareError, values, baseline, goal, submitted, priorOpen, priorChosen, latestAnswers, serverErrors, save.isPending, save.variables, retainedOperation, attempt, remove.isPending, remove.isError, onFailureChange]);
 
   // 保存・削除が終わったとき、この画面がまだ表示されていれば一覧へ戻る（離れた後なら、いま表示中の別の画面を動かさない）
   const leaveToList = () => {
@@ -399,7 +416,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
     setSubmitted(true);
     setServerErrors({});
     // 到達予定日は、選んでいるタイムゾーンの今日より後だけ（APIも同じ検査をする）。変えていない保存済みの日付は送らないので検査しない
-    const found = validateGoalForm(values, { locked, baseline, goal, recoveryBody: attempt?.body });
+    const found = findErrors();
     if (errorCount(found) > 0) {
       focusFirstError(found);
       return;
@@ -417,7 +434,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
     } catch (error) {
       saving.current = false; setPrepareError(error);
       // 再確認と同batchで子が消えても、保存開始前の失敗を同訪問の親へ渡す。
-      onFailureChange({ values, baseline, sourceGoal: goal, submitted: true, priorOpen, latestAnswers,
+      onFailureChange({ values, baseline, sourceGoal: goal, submitted: true, priorOpen, priorChosen, latestAnswers,
         error: null, prepareError: error, serverErrors: {}, operation: attempt }, undefined, true);
     }
   };
@@ -425,7 +442,9 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
   const focusFirstError = (found: FieldErrors) => {
     const first = FIELD_ORDER.find((name) => found[name]);
     if (!first) return;
-    const selector = first === 'unit' ? '[aria-labelledby="goal-unit-label"] button' : first === 'questionPrior' ? '.r11-qp input' : `#goal-${first}`;
+    const selector = first === 'unit' ? '[aria-labelledby="goal-unit-label"] button' : first === 'questionPrior' ? `.r11-qp fieldset:nth-of-type(${priorChosen.a ? 2 : 1}) input` : `#goal-${first}`;
+    // 閉じた回答欄の中へは移れないため、先に開く
+    if (first === 'questionPrior') { const prior = formRef.current?.querySelector<HTMLDetailsElement>('#fr-goalform-prior'); if (prior) prior.open = true; }
     const target = formRef.current?.querySelector<HTMLElement>(selector);
     target?.focus();
   };
@@ -451,11 +470,11 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
   const resumeCorrection = () => {
     const current = getPrivateEpoch();
     if (!rejectedAttempt || busy || !mounted.current || !acceptsFailureAction() || !privateDataReady(current) || current.owner !== owner) return;
-    if (!finishCreateAttempt(rejectedAttempt, error => onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, latestAnswers,
+    if (!finishCreateAttempt(rejectedAttempt, error => onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers,
       error: failedSave, prepareError: error, serverErrors, operation: rejectedAttempt }, undefined, true))) return;
     setPrepareError(null);
     // 同batchの確認でも終了済みrawのgateを再採用しない。422項目は訂正まで保持し、POSTやkey生成はしない。
-    onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, latestAnswers,
+    onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers,
       error: failedSave, prepareError: null, serverErrors, operation: null }, undefined, true);
   };
   // 最新GETで単位ロック等の項目エラーが増えても、409を解除する明示的な再読込は残す。
@@ -466,14 +485,11 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
     if (!deletedAttempt || busy || !mounted.current) return;
     try {
       // 410を確認した同owner/keyだけを終了する。新keyは次の明示保存まで作らない。
-      if (!finishCreateAttempt(deletedAttempt, error => onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, latestAnswers,
+      if (!finishCreateAttempt(deletedAttempt, error => onFailureChange({ values, baseline, sourceGoal: goal, submitted, priorOpen, priorChosen, latestAnswers,
         error: failedSave, prepareError: error, serverErrors, operation: deletedAttempt }, undefined, true))) return;
       setPrepareError(null); setSubmitted(false); save.reset(); setRetainedError(null); onFailureChange(undefined);
     } catch (error) { setPrepareError(error); }
   };
-  // 単位か1回の量を変えている間は、回答を一緒に送れない（R-11、#133。保存済みの回答は API が取り消す）。
-  // 保存済みの回答の有無にかかわらず回答の欄は押せなくし、そのことを伝える（入力した回答が黙って保存されないことを防ぐ）
-  const answersLock = mode === 'edit' && baseline !== undefined ? answersLockReason(values, baseline) : null;
   const reloadLatest = async () => {
     if (reloadInFlight.current || saving.current) return;
     reloadInFlight.current = true;
@@ -506,7 +522,7 @@ function GoalForm({ mode, owner, goal, draft, onDraftChange, operationKey, onSav
           discardedDraft={discardedDraft} pendingCreate={attempt !== null}
           refreshNotice={refreshError && onRetryRefresh ? <RefreshFailed error={refreshError} onRetry={isEditConflict(failedSave) ? () => void reloadLatest() : onRetryRefresh} editConflict={isEditConflict(failedSave)} /> : null}
           inputDisabled={inputDisabled} locked={locked} priorOpen={priorOpen} latestAnswers={latestAnswers}
-          answersLock={answersLock} update={update} onPriorToggle={setPriorOpen} onDeleteOpen={() => setDeleteOpen(true)}
+          answersLock={answersLock} priorChosen={priorChosen} onPriorChoose={(origin) => setPriorChosen((current) => current[origin] ? current : { ...current, [origin]: true })} update={update} onPriorToggle={setPriorOpen} onDeleteOpen={() => setDeleteOpen(true)}
         />
 
         <StickyActionBar>

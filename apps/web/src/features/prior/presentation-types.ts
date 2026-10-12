@@ -38,6 +38,9 @@ export interface QuestionPriorFieldsProps {
   readonly onChange: (next: Answers) => void;
   readonly disabled?: boolean;
   readonly fieldErrors?: Readonly<Partial<Record<Origin, string>>>;
+  // Optional (#259): an origin with false shows no option checked, even when its value is null.
+  readonly chosen?: Readonly<Record<Origin, boolean>>;
+  readonly onChoose?: (origin: Origin) => void;
   readonly className?: string;
   // Parent must render this visible heading. Its presence suppresses only the internal h2.
   readonly externalHeadingId?: string;

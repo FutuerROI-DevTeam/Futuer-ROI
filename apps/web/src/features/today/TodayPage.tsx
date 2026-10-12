@@ -451,9 +451,6 @@ function TodayContent({
   const fmt = amountFormat(goal);
   if (area === 'history') return view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded'
     ? <ProgressDetails progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} /> : null;
-  const missingA = today.provenance.a === 'NONE';
-  const missingB = today.provenance.b === 'NONE';
-  const questionLink = <Link to="/goals/$goalId/edit" params={{ goalId: goal.id }} hash="fr-goalform-prior" className="fr-link">{todayCopy.answerQuestions}（任意）</Link>;
   const progress =
     view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded' ? (
       <ProgressSummary showDetails={false} preview={preview} brief={view.kind === 'forecast' || view.kind === 'today-recorded' ? <CompletionBrief completion={view.completion} /> : null} progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} />
@@ -479,7 +476,7 @@ function TodayContent({
       if (area === 'primary') {
         if (view.kind === 'today-recorded') return changeHeader ?? (today.todayLog ? <RecordedSummary todayLog={today.todayLog} fmt={fmt} onChange={onChange} changeDisabled={changeDisabled} /> : null);
         return <section className="fr-today__top" aria-labelledby="fr-question">
-          <CoreMetric core={view.core} guidance={view.core.kind === 'insufficient' && missingB ? questionLink : null}>
+          <CoreMetric core={view.core}>
             <h1 id="fr-question" className="fr-today__question">
               {todayCopy.question.split(/(?<=、|は)/).map((phrase, index) => <Fragment key={index}>{phrase}<wbr /></Fragment>)}
             </h1>
@@ -489,8 +486,8 @@ function TodayContent({
       return <div className="fr-today__right">
         {progress}
         <OutlookPanel showDetails={false} completion={view.completion} today={today.today} title={outlookTitle} fmt={fmt} targetDate={goal.targetDate} sessionAmount={today.context.sessionAmount} />
-        <Link to="/goals/$goalId/edit" params={{ goalId: goal.id }} hash="goal-sessionAmount" className="fr-link">計算に使う量を確認する</Link>
-        {view.completion.kind !== 'estimate' && (view.kind === 'today-recorded' ? missingA || missingB : missingA && !missingB) ? questionLink : null}
+        {/* 初期質問の回答を変えたいときの入口（#259）。編集画面の一番上へ移る */}
+        <Link to="/goals/$goalId/edit" params={{ goalId: goal.id }} className="fr-link">{todayCopy.editAnswers}</Link>
         {view.completion.kind === 'estimate' ? <div className="fr-today__details">
           <CompletionDetails completion={view.completion} today={today.today} targetDate={goal.targetDate} />
         </div> : null}
