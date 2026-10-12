@@ -154,7 +154,8 @@
 .fr-welcome__eyebrow { font-size: 14px; font-weight: 700; color: var(--fr-ink-2); }
 .fr-welcome__title { font-family: 'Zen Old Mincho', serif; font-weight: 900; font-size: clamp(38px, 8vw, 56px); line-height: 1.5; letter-spacing: .04em; }
 .fr-welcome__body .fr-auth__lead { font-size: 16px; max-width: 31em; }
-.fr-auth__returning { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; color: var(--fr-ink-2); font-size: 13px; }
+/* ログインの入口。案内の文は置かず、ボタンを右端に置く（#251） */
+.fr-auth__returning { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 12px; color: var(--fr-ink-2); font-size: 13px; }
 .fr-auth__returning .fr-btn { font-size: 14px; min-height: 44px; padding: 8px 20px; }
 .fr-welcome__steps { list-style: none; margin: 0; padding: 24px 0 0; border-top: 1px solid var(--fr-line); display: grid; gap: 16px; }
 .fr-welcome__steps li { display: flex; align-items: baseline; gap: 12px; font-size: 14px; }
@@ -171,6 +172,9 @@
   .fr-auth--home { gap: 40px; padding-top: 0; }
   .fr-welcome-hero { gap: 40px; padding-top: 56px; }
   .fr-welcome { max-width: 600px; }
+  /* 名前と本文のかたまりを同じ幅の1列にして中央へ置く。かたまりの中の左揃えと位置関係は変えない（#251） */
+  .fr-welcome-hero > .fr-auth__head,
+  .fr-welcome-hero > .fr-welcome { width: min(600px, 100%); margin-inline: auto; }
   .fr-welcome__body { padding-block: 16px; }
   .fr-welcome__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 }

@@ -10,7 +10,6 @@ export const appCopy = {
     lead: 'やった量や休んだ日を記録して、今日休むことでゴールが遠ざかる日数の目安と、設定量で続けた完了の見通しを確かめる。',
     register: '登録してはじめる',
     login: 'ログイン',
-    returning: '登録済みの方はこちら',
     openGoals: 'Goal一覧を開く',
     checking: '確認中',
     stepsLabel: 'はじめ方',
