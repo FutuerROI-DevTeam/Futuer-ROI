@@ -121,6 +121,14 @@ test('小さい実績を0%にせず、未達を丸めで100%にしない。超�
   assert.equal(progressPercentQualifier(1, 100000), '以下');
   assert.equal(progressPercentLabel(1, 10000), '0.01');
   assert.equal(progressPercentQualifier(1, 10000), '');
+  // 丸めると0.01になる0.005%・0.009%も、0.01%を下回るので「以下」を付ける。ちょうど0.01%には付けない
+  assert.equal(progressPercentLabel(5, 100000), '0.01');
+  assert.equal(progressPercentQualifier(5, 100000), '以下');
+  assert.equal(progressPercentLabel(9, 100000), '0.01');
+  assert.equal(progressPercentQualifier(9, 100000), '以下');
+  assert.equal(progressPercentLabel(10, 100000), '0.01');
+  assert.equal(progressPercentQualifier(10, 100000), '');
+  assert.equal(progressPercentQualifier(11, 100000), '');
   assert.equal(progressPercentQualifier(0, 18000), '');
   assert.equal(progressPercentLabel(9999, 10000), '99.99');
   assert.equal(progressPercentLabel(99999, 100000), '99.99');
