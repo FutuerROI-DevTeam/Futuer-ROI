@@ -16,6 +16,8 @@ import { PredictionFailed } from './prediction/engine.ts';
 import { registerTodayRoute } from './prediction/routes.ts';
 import { registerEvaluationRoutes } from './evaluation/routes.ts';
 import type { EvaluationOptions } from './evaluation/policy.ts';
+import { registerMilestoneRoutes } from './milestone/routes.ts';
+import type { MilestoneOptions } from './milestone/policy.ts';
 
 export type AppOptions = {
   pool: Pool;
@@ -38,6 +40,8 @@ export type AppOptions = {
   now?: () => Date;
   /** 本人の明示操作による評価保存。省略時OFF、本番有効化は別途判断。 */
   evaluation?: EvaluationOptions;
+  /** 本人の別opt-inによる途中到達補助。省略時OFF、標準Todayへ自動適用しない。 */
+  milestoneCalibration?: MilestoneOptions;
 };
 
 type PgError = FastifyError & { code?: string };
@@ -125,6 +129,7 @@ export async function buildApp(o: AppOptions): Promise<FastifyInstance> {
     await registerLogRoutes(app, deps);
     await registerTodayRoute(app, deps);
     await registerEvaluationRoutes(app, { ...deps, options: o.evaluation });
+    await registerMilestoneRoutes(app, { ...deps, options: o.milestoneCalibration });
   }
 
   // Type Providerはpluginごとに適用する（Fastifyのカプセル化により外側の指定は継承されない）。

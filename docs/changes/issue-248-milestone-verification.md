@@ -1,0 +1,33 @@
+# #248 途中到達補正の検証記録
+
+Supporting Artifact / Not Source of Truth。2026-10-12。正式契約は[Product](../product-spec.md#途中到達の個人補正比較248既定off)/[Architecture](../architecture.md#d-248-途中到達による個人補正248)、コード・テストは[対応表](../change-map.md#途中到達の個人補正248)。[Issue #248](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/248)の限定実装。CONDITIONAL、Human Review・実利用は未完了。
+
+## 固定範囲
+
+base: `3e5d9fb23afcd78e66e309c93c0000e6a3a8ab1d`、branch: `feat/248-goal-milestone-calibration`。独立worktreeにだけ変更し、main・他の作業領域・既存研究helperは編集しない。最終HEAD・変更fileのSHA256・ログhashは提出時の外部verification manifestに固定する。Node 24.21.0 / npm 11.19.0、Python Decimalは70桁で使用する。
+
+実行時はchildprocessのDATABASE_URLを除外し、テストfixtureが新規ローカルembedded PostgreSQLを生成する。既存DB・実アカウント・実ユーザー履歴・追加の本試験/最終確認群は使用しない。0008はこの隔離合成DBでだけ適用する。小さい匿名合成例はGoal300、q10、4日の初期隣接記録、3回の途中到達とその後の1発行に限定する。数値はtest diagnosticsと固定manifestへ保存する。
+
+## 実施状況
+
+| 確認 | 結果・範囲 |
+| --- | --- |
+| 初回root typecheck | policy literal / TypeBox unionの型エラーを修正。修正後PASS |
+| 新規20テスト初回 | 19 PASS。既存Today responseにGoalがあると誤仮定した1テストを修正し、対象1件再実行PASS |
+| Pure数値8件 | 直接確率NLL・有限差分勾配・Decimal内点・±境界KKT・非ゼロ・identity/支持失敗・総重み/重複・本人Goal分離・日付選択・元method/roundoff |
+| Assessment6件 | DST/d+2、実量、origin二重加算なし、欠測interval/UNKNOWN/censor、cutoff固定、後日訂正、設定/回答/build/expiry、H30管理打切り |
+| 合成HTTP/DB6件 | default OFFで新tableなし、別同意、auth/owner/Goal/FK、非ゼロの前向き比較、Today一致、immutable発行、CAS/withdraw→rejoin、旧訂正・版・expiry・90日・Goal delete/purge、compare domain 409 |
+| 全workspace回帰・build・Vercel・文書 | 最終実行結果を追記するまで未確認 |
+| 独立レビュー | 初回2指摘を修正。最終レビューは固定HEADで別に確認する |
+
+## レビューで直した問題
+
+元のBeta積分kernelは有効なposteriorでもCDFが`1.0000000000000002`になることがあり、初回の厳格検査では正常な発行を500にした。既存NUMERICAL_MARGIN内だけの表現補正を版付きで保存し、a=Beta(2,35)/b=Beta(35,2)とsampling/BOUNDARYの回帰を追加した。元predict・quantileは変えず、構造的支持の救済εは入れない。
+
+compareの未記録・達成済み・near Goal・元材料不足が内部errorになった点は、発行と同じdomain error→409へ統一した。未記録/達成済みは実HTTPで回帰する。独立レビューはAIレビューでありHuman Approveの代替ではない。
+
+## 主張と未確認
+
+小さい合成例で係数が非ゼロになり、未学習の次の途中到達のNLLが下がることは実装が動く証拠に限る。実効用、最終Goalの達成日改善、安定性/状況変化への一般化、校正保証、独立人数の増加を意味しない。fixtureの最終Goalの早期未達は構造的CDF0で、baseline/candidateのfinal scoreは一致する。
+
+UIは追加せず、実ブラウザ/初見理解は未検証。実DB migration・本番flag・purge CLIの実DB実行・公開混合負荷・自動purge/backup反映は未実施。90日のread filterと合成physical purge成功を運用保証に置き換えない。merge/deploy/Issue Done・チーム受入は実施しない。

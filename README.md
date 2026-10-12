@@ -113,6 +113,7 @@ AIは最初にAGENTS.mdを読み、必要な文書とSkillを参照してくだ�
 | --- | --- |
 | [question-prior-engine-candidate](experiments/question-prior-engine-candidate/README.md)、[question-prior-contract](experiments/question-prior-contract/README.md) | 現CIの独立数値オラクル・凍結fixtureを使うため保持 |
 | [api-mixed-load](experiments/api-mixed-load/README.md) | 実EngineとAPIの能動的な再測定に使うため保持 |
+| [session-milestone-oracle](experiments/session-milestone-oracle/README.md) | #248の有界1係数fitを直接確率の70桁Decimalで照合する。履歴や本試験群は生成しない |
 | question-prior-proposal | [固定commitのtree](https://github.com/jogi-hack-2026-team/jogi-hack-2026/tree/77c71a5f248a4dce4ce9fb8af6619b41541be9d8/experiments/question-prior-proposal)へ。historical・reproduced・provenance・rawを一式で保持し、tracked 57件を作業ツリーから外す |
 | prediction-model-validation | [固定commitのtree](https://github.com/jogi-hack-2026-team/jogi-hack-2026/tree/77c71a5f248a4dce4ce9fb8af6619b41541be9d8/experiments/prediction-model-validation)へ。旧モデル比較・失敗と修正の根拠を一式で保持し、tracked 22件を作業ツリーから外す |
 | question-prior-ui-candidate、architecture-verification | 旧候補UI専用workflowに実行依存があるため今回保持。workflowと必要チェックの確認を含む整理を別途判断する |
