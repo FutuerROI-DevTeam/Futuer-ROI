@@ -24,11 +24,17 @@ export function mondayOf(date: Date): Date {
   return new Date(date.getTime() - offset * DAY_MS);
 }
 
-/** 「10月5日の週」。日数が null なら日付も補わず null にする。 */
+/**
+ * 日数が null なら日付を補わない。年付きの到達予定日と取り違えないよう、
+ * 週の月曜日が予測の today と違う年なら年を付ける（#278）。
+ */
 export function weekLabel(today: string, days: number | null): string | null {
   if (days === null) return null;
   const monday = mondayOf(addDays(today, days));
-  return `${monday.getUTCMonth() + 1}月${monday.getUTCDate()}日の週`;
+  const year = monday.getUTCFullYear() === parseLocalDate(today).getUTCFullYear()
+    ? ''
+    : `${monday.getUTCFullYear()}年`;
+  return `${year}${monday.getUTCMonth() + 1}月${monday.getUTCDate()}日の週`;
 }
 
 /** 「10/5」。図の短いラベル用。 */
