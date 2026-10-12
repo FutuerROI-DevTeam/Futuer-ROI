@@ -1,10 +1,13 @@
 // 図の座標だけを計算する（予測の数値は計算しない。Engine の日数と保存済みの記録をそのまま位置に変えるだけ）。
 // 座標は実際の表示幅（px）で計算する。viewBox で縮めると文字まで小さくなるため。
 import type { Log } from '@contracts';
-import { addDays, daysBetween, parseLocalDate, shortDate } from '../../copy/date.ts';
+import { addDays, DAY_MS, daysBetween, parseLocalDate, shortDate } from '../../copy/date.ts';
 
 /** 幅を測れるまでの仮の幅（デザインの基準幅）。 */
 export const DEFAULT_CHART_WIDTH = 350;
+
+/** 1か月の平均日数（365.25 ÷ 12）。目盛りの間隔を px に直すときの目安。 */
+const DAYS_PER_MONTH = 30.44;
 
 // ---- これからの見通し：今日から余裕をみた日付までを、実際の日付に比例した軸に置く（デザイン案5） ----
 
@@ -45,6 +48,14 @@ const MONTH_STEPS = [1, 2, 3, 6, 12] as const;
 
 const AXIS_LEFT = 20;
 const AXIS_RIGHT_PAD = 16;
+/** 軸に出す最短の期間（日）。短い見通しでも3週間分は見せる。 */
+const MIN_SPAN_DAYS = 21;
+/** 一番遠い印の右に取る余白（倍率と日数）。印が右端に張り付かないようにする。 */
+const SPAN_MARGIN_RATIO = 1.15;
+const SPAN_MARGIN_DAYS = 7;
+/** 印のラベルの縦位置（px）。近い2つの印は、2つ目を上にずらして重ならないようにする。 */
+const MARKER_LABEL_Y = 38;
+const MARKER_LABEL_RAISED_Y = 20;
 /**
  * 到達予定日が「10回中8回（なければ目安）」のこの倍数より先なら、軸を途中で省いて右端に置く（#187、案C）。
  * 比例のまま伸ばすと、印が「今日」に詰まって見分けられなくなるため。遠さは印の下のずれの文言で伝わる。
@@ -69,26 +80,26 @@ export function outlookAxis(today: string, p50Days: number, p80Days: number | nu
   const last = cut ? outlook : Math.max(outlook, target ?? 0);
   // 右端に少し余白を取り、短い期間でも3週間分は見せる。省いたときは、印が右端の到達予定日のラベルの下に入らないよう広げる
   const markerRoom = axisRight - CUT_LABEL_RESERVE - AXIS_LEFT;
-  const span = Math.max(21, Math.ceil(last * 1.15) + 7, cut && markerRoom > 0 ? Math.ceil((outlook * (plotRight - AXIS_LEFT)) / markerRoom) : 0);
+  const span = Math.max(MIN_SPAN_DAYS, Math.ceil(last * SPAN_MARGIN_RATIO) + SPAN_MARGIN_DAYS, cut && markerRoom > 0 ? Math.ceil((outlook * (plotRight - AXIS_LEFT)) / markerRoom) : 0);
   const x = (days: number) => AXIS_LEFT + ((plotRight - AXIS_LEFT) * days) / span;
 
-  const markers: AxisMarker[] = [{ x: x(p50Days), kind: 'p50', labelY: 38 }];
+  const markers: AxisMarker[] = [{ x: x(p50Days), kind: 'p50', labelY: MARKER_LABEL_Y }];
   if (p80Days !== null && !sameWeek) {
     const p80x = x(p80Days);
     const close = p80x - x(p50Days) < LABEL_GAP;
-    markers.push({ x: p80x, kind: 'p80', labelY: close ? 20 : 38 });
+    markers.push({ x: p80x, kind: 'p80', labelY: close ? MARKER_LABEL_RAISED_Y : MARKER_LABEL_Y });
   }
 
   // 月の初日に目盛りを置く。間隔は 1・2・3・6・12か月から、ラベルが重ならない一番細かいものを選び、
   // 暦にそろえる（3か月おきなら1・4・7・10月）。「今日」に近すぎる目盛りは出さない
   const start = parseLocalDate(today);
-  const pxPerMonth = ((plotRight - AXIS_LEFT) * 30.44) / span;
-  const step = MONTH_STEPS.find((s) => s * pxPerMonth >= TICK_GAP) ?? 12;
+  const pxPerMonth = ((plotRight - AXIS_LEFT) * DAYS_PER_MONTH) / span;
+  const step = MONTH_STEPS.find((months) => months * pxPerMonth >= TICK_GAP) ?? 12;
   const ticks: AxisTick[] = [];
   let lastYear = start.getUTCFullYear();
-  for (let i = 1; ; i += 1) {
-    const first = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, 1));
-    const days = Math.round((first.getTime() - start.getTime()) / 86_400_000);
+  for (let monthsAhead = 1; ; monthsAhead += 1) {
+    const first = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + monthsAhead, 1));
+    const days = Math.round((first.getTime() - start.getTime()) / DAY_MS);
     // cutのラベル余白でspanがtargetを越えても、右端より未来の月をその左に置かない。
     if (days > span || (cut && target !== null && days >= target)) break;
     if (first.getUTCMonth() % step !== 0) continue;
@@ -135,6 +146,12 @@ const PLOT_LEFT = 56;
 const PLOT_RIGHT_PAD = 14;
 const PLOT_TOP = 30;
 const PLOT_BOTTOM = 200;
+/** 縦軸の上端は実績の1.1倍にして、線が図の天井に張り付かないようにする。 */
+const ACTUAL_HEADROOM_RATIO = 1.1;
+/** 目盛りの本数の目安。実績の範囲をこの数で割って、きりのよい刻みを選ぶ。 */
+const GRID_LINE_COUNT = 4;
+/** きりのよい刻みの候補（×10のべき乗）。 */
+const NICE_STEPS = [1, 2, 5, 10] as const;
 
 export function cumulativeChart(
   logs: Log[],
@@ -148,23 +165,25 @@ export function cumulativeChart(
 ): CumulativeChart {
   const bounds: PlotBounds = { left: PLOT_LEFT, right: width - PLOT_RIGHT_PAD, top: PLOT_TOP, bottom: PLOT_BOTTOM };
   const days = Math.max(0, daysBetween(recordStartDate, today));
-  const doneByDate = new Map(logs.filter((l) => l.status === 'DONE').map((l) => [l.localDate, l.amount ?? 0]));
-  const actual = initialProgress + logs.filter(l => l.status === 'DONE' && l.localDate >= recordStartDate && l.localDate <= today).reduce((n, l) => n + (l.amount ?? 0), 0);
+  const doneByDate = new Map(logs.filter((log) => log.status === 'DONE').map((log) => [log.localDate, log.amount ?? 0]));
+  const actual = initialProgress + logs
+    .filter(log => log.status === 'DONE' && log.localDate >= recordStartDate && log.localDate <= today)
+    .reduce((sum, log) => sum + (log.amount ?? 0), 0);
   // 実績の範囲だけでniceな目盛りを決める。遠い総量で実績を潰さず、超過した実績も切り落とさない。
-  const rawStep = Math.max(gridUnit, actual * 1.1 / 4);
+  const rawStep = Math.max(gridUnit, actual * ACTUAL_HEADROOM_RATIO / GRID_LINE_COUNT);
   const magnitude = 10 ** Math.floor(Math.log10(rawStep));
-  const nice = [1, 2, 5, 10].find(n => n * magnitude >= rawStep) ?? 10;
+  const nice = NICE_STEPS.find(candidate => candidate * magnitude >= rawStep) ?? 10;
   const step = Math.max(gridUnit, Math.ceil(nice * magnitude / gridUnit) * gridUnit);
-  const maxValue = Math.max(step, Math.ceil(actual * 1.1 / step) * step);
+  const maxValue = Math.max(step, Math.ceil(actual * ACTUAL_HEADROOM_RATIO / step) * step);
   const y = (value: number) => bounds.bottom - ((bounds.bottom - bounds.top) * value) / maxValue;
-  const xAt = (d: number) => days === 0 ? (bounds.left + bounds.right) / 2 : bounds.left + ((bounds.right - bounds.left) * d) / days;
+  const xAt = (dayIndex: number) => days === 0 ? (bounds.left + bounds.right) / 2 : bounds.left + ((bounds.right - bounds.left) * dayIndex) / days;
 
   const points: { x: number; y: number }[] = [];
   let sum = initialProgress;
-  for (let d = 0; d <= days; d += 1) {
-    const date = addDays(recordStartDate, d).toISOString().slice(0, 10);
+  for (let dayIndex = 0; dayIndex <= days; dayIndex += 1) {
+    const date = addDays(recordStartDate, dayIndex).toISOString().slice(0, 10);
     sum += doneByDate.get(date) ?? 0;
-    points.push({ x: xAt(d), y: y(sum) });
+    points.push({ x: xAt(dayIndex), y: y(sum) });
   }
   const gridLines = Array.from({ length: Math.round(maxValue / step) }, (_, i) => ({ value: (i + 1) * step, y: y((i + 1) * step) }));
   return {

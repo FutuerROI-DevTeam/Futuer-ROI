@@ -9,6 +9,7 @@
 | 変えたいもの | 直す場所 |
 | --- | --- |
 | 色・文字の大きさ・余白・角丸・高さ・影（現行はlight-only） | [tokens.css](tokens.css) の `--fr-…` の値。Today専用の上書きは [today-dawn.css](../features/today/today-dawn.css) |
+| デスクトップ幅のしきい値（CSSの `@media (min-width: 960px)` と、JSで図の位置・開閉の初期値を切り替える幅） | CSSは各 `.css` の `@media`、JSは [layout.ts](layout.ts) の `WIDE_LAYOUT_QUERY`。両方を同じ値に保つ |
 | ボタン・記録の2択・下に固定する帯・データ不足／エラーの枠などの形 | [components/](components/) の各部品と同じ名前の `.css` |
 | 入力欄・単位の切り替え・項目ごとのエラー（Goal の作成・編集） | [FormField](components/FormField.tsx) と [FormField.css](components/FormField.css) |
 | 削除などの確認ダイアログ | [ConfirmDialog](components/ConfirmDialog.tsx)（ブラウザ標準の `<dialog>`。開くと「キャンセル」にフォーカスし、閉じたら元の場所へ戻す） |
