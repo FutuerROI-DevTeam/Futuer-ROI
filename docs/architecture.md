@@ -622,6 +622,7 @@ timezoneの日付境界（23:59 / 0:00）はEngineではなくAPI層のテスト
 | 早期のstaging確認 | 本番でしか見えない問題（Cookie・`BETTER_AUTH_URL`・proxy・migration・環境変数・DB接続・cold start・SPA fallback・HTTPS）を早く見つけるため、最終公開を待たずに2段階で確認する。①I-01：healthだけのコンテナ（当時の候補）をstagingへ出し、DBへ接続できる ②I-06：stagingで登録・ログイン・セッション維持ができる。I-14は最終確認・E2E・Demo Seed・仕上げを担う。現在の第一候補ではFunctionで同等のhealth／DB・SPA確認を行う。公開先の承認が遅れた場合の既存移管例外（[#70](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/70)のstaging項目を[#75](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/75)へ、#75のstaging確認を[#83](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/83)へ）に従い、移管先で未確認項目を追跡する。移管を公開確認済みと扱わない |
 | 環境変数 | `DATABASE_URL`（必須）、`BETTER_AUTH_SECRET`、`BETTER_AUTH_URL`。任意の`HOST`・`PORT`・`WEB_DIST`・`LOG_LEVEL`・`SHUTDOWN_TIMEOUT_MS`は[.env.example](../.env.example)を参照。実値はProviderのSecret設定に置き、Gitへ入れない。production／公開候補の名前・必要条件と未決設定は[配備前の照合表](operations/release-demo.md#配備前に照合する環境変数) |
 | デモ | Demo Seed（合成記録）を開発データと分けて投入。手順は[リリースとデモ](operations/release-demo.md) |
+| 自動配備（#275） | GitHub Actionsの`workflow_run`を起床に使い（同repoの手動CI完了も含む）、ロック取得後に最新mainとそのSHAの**push由来**Application／Foundation全job成功を照合してVercel CLIで配備する。別repoイベントは共通待機から隔離する。本番URLへ割り当てない候補のSHA・healthを確認してからpromoteする。候補作成は取消可能なjob、開始済み切替の終端・実alias照合と復旧は専用jobで行い、CLI失敗・取消後も非同期切替を照合する。確認不能なら後続CDを遮断して人が復旧する。migrationは承認付きで配備前に行い、DBは自動で戻さない。VercelのGit連携はCIを待たずにbuildし、Hobbyでコミット作者の制約もあるため採用しない。理由・時間予算・停止と再開・受入の残件は[リリース手順書の12](operations/release-guide.md#12-自動配備cd)。実環境受入は有効化前に担当者が行う |
 
 ### 第一候補の評価理由と代替案
 

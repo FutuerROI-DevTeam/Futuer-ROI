@@ -23,6 +23,7 @@
 | 初回リリース | 0 担当・承認 → 1 無料条件 → 2 SHA・ローカル確認 → 3 環境の分離 → 4 設定／メール準備 → 5 復旧方式の準備 → stagingの6・7・8 → 5の隔離復元試験を完了 → 本番の6・7・8 → 9 公開・引継ぎ |
 | 更新リリース | 0〜2を新SHAで再確認 → 10 差分と旧版互換性確認 → stagingで6〜8 → 本番の5〜8 → 9。既存Project／DBを作り直さない |
 | 失敗したとき | 後続工程を止める → 11 原因別対応。アプリの旧版への切替と、DBデータの復旧を区別する |
+| CD有効化後の更新 | PRをmainへSquash Merge → 12の自動配備がCI成功後に実行 → migrationがあれば12-Cで承認 → 12-Bの結果を確認。手動の工程7は使わない |
 
 以下のURL・Project名・メールアドレスは説明用です。`example.com`・`example.invalid`・`<...>`を実設定へコピーしません。成功欄が空、未確認、判定不能なら完了にしません。1人で判断しにくい箇所は担当者と一緒に進めます。
 
@@ -428,6 +429,71 @@ DBを変えない更新でもschemaの読取り確認と復旧記録を確認し
 | ログインloop／Cookie欠落 | 4の実origin、8-Bの全Set-Cookie・HTTPS・proxyを確認 | 別origin/CORSへの無断変更、trusted originの一括許可 |
 | メール未着／要求200 | 4のVerified／送信元／キー、8-CのResend結果・quota・受信箱を確認 | 200を配信成功にする、公開でlogへ切替える |
 | token／Secret漏えい | 11-Aで受付停止、担当者が失効・rotationとログ取扱いを判断 | 実tokenをIssueへ貼る、隠しただけで再開 |
+
+## 12. 自動配備（CD）
+
+**対象：** [#275](https://github.com/FutureROI-DevTeam/Future-ROI/issues/275)。2026-10-12の初回本番（`34d7497`、#83の公開記録）は工程2〜7をCLIで手動実施した。以後の更新は [Deploy production](../../.github/workflows/deploy-production.yml) が行う。判定ロジックは [deploy-gate.mjs](../../.github/scripts/deploy-gate.mjs)、回帰は [deploy-gate.test.mjs](../../.github/scripts/deploy-gate.test.mjs)（ApplicationのCIで実行）。
+
+### 12-A. 構成と採用理由
+
+Application／FoundationのmainでのCI完了を起床イベントとして、`workflow_run`で起動する。同repoの`workflow_dispatch`完了も最新mainの照合を起こす。配備を許すのは、ロック取得後に選んだSHAの**push由来Application（3 job）とFoundationが全job success**の場合だけで、手動CIの成功はその代わりにならない。
+
+| 順 | 処理 | 止まる条件 |
+| --- | --- | --- |
+| 1 | `gate`：直列化のロック取得後、**現在のmain先頭**とそのSHAのpush由来の必須4 jobを選び直す | `CD_ENABLED`がtrueでない、push CI失敗・skip・未完了、前回の切替失敗・取消が未確認 |
+| 2 | `schema`：Vercelから直結URLを実行中だけ取得し `db:check`（読取り） | 空DB・認証差分・checksum不一致・不明履歴・判定不能（stop） |
+| 3 | `migrate`：アプリの追加migrationだけが未適用なら、`production-migration` Environmentの承認後に `db:migrate` → `db:check` exit 0 | 承認なし、migration失敗、事後確認がokでない |
+| 4 | `deploy`：本番が既に対象SHAなら何もしない。`vercel deploy --prod --skip-domain` で本番設定のbuildを作り、**本番URLへはまだ割り当てない** | build失敗 |
+| 5 | 候補のdeploymentが対象SHA（`meta.cdSha`）・production・READYか確認し、health／`/`／`/api/goals` 401を確認 | どれか不一致・失敗。本番URLは前の版のまま |
+| 6 | 専用`switch` jobでmain先頭・実本番ID・既存の切替要求を再確認し、開始記録を残して`vercel promote` | main更新、候補準備以降の本番変更、既存要求がpending、Rolling Release使用時は切替前に停止 |
+| 7 | `lastAliasRequest`の時刻・対象ID・種別・終端状態を実本番aliasと照合し、SHA・smokeを確認 | CLI失敗・取消・検証失敗ならpromoteの終端を確認してからrollbackし、その終端・本番alias・smokeも確認。DBは戻さない |
+
+- **CIの前に配備しない：** VercelのGit連携は使わない。連携するとpushと同時にbuildが始まり、CIを待たない。Hobbyではチーム外のコミット作者の配備が止まり得て、初回もLogin Connection不足で連携できなかった。Vercel側の「checksを待つ」機能はHobbyでの可否が未確認のため採用しない。CIのjob内で直接 `--prod` 配備する案は、一部jobの失敗や確認前の本番切替を防げないため採用しない。
+- **待機イベントで配備を失わない：** 同repoのmain CI完了は`production-deploy`で直列化し、実行中は中断せず、待機は最新の到着イベント1件。古いAのCI再実行や手動CIの完了が待機Bを置換しても、gateをskipせず現在main BとBのpush CIを照合する。起床元のevent・SHA・成否を配備許可にしない。gateが拒否する別repoのイベントはrunごとの独立groupへ隔離して共通待機を置換させない。選択したSHAは全後続jobへ固定して渡し、migration前・候補作成前・promote前にもmain先頭を再確認する。
+- **取消と復旧の境界：** schema・migration・候補作成は通常のCancelで停止する。`switch`だけはjobの`always()`で通常取消後も終了処理を続けるが、promoteと検証stepは`!cancelled()`で停止する。promote要求の前に`attempted`・開始時刻・直前要求の時刻をstep outputへ記録し、専用の`always()`復旧stepが開始時に取消状態を再評価する。取消前に切替を試みていなければ本番操作をしない。開始後は、非同期promoteの終端を待って直前の版へ復旧する。
+- **CLI終了を成功の証拠にしない：** [promote](https://vercel.com/docs/cli/promote)と[rollback](https://vercel.com/docs/cli/rollback)のtimeoutはCLI待機だけで、サーバーの要求は継続する。CLI失敗後も[project API](https://vercel.com/docs/rest-api/projects/find-a-project-by-id-or-name)の`lastAliasRequest`を確認する。直前より新しい時刻・候補ID・`promote`・終端状態を確認するまでrollbackを競合させない。`pending`／状態不明は有限待機後に未検証として失敗し、次のCDのgateも停止する。CLIのstatus単体は古い要求や欠損でもexit 0になり得る。Rolling Releaseは非対応で、切替前に拒否する。
+- **時間の上限：** HTTPの接続5秒・転送15秒、smoke全体120秒。配備APIは応答body読取りまで15秒、CLI要求全体45秒（CLI待機30秒）、promote照合240秒、rollback照合180秒、alias反映確認30秒。通常検証stepは6分、復旧stepは14分。候補buildは8分、環境変数取得60秒。switchのcheckout・Node setup・CLI導入は各2分、head確認1分、promote step2分に制限し、準備の遅延も予算へ含める。30分のjobに対し全step上限の合計は29分で、検証中の応答停止でも復旧時間を残す。helperの復旧上限は最後のHTTP要求による超過も含め約13分15秒。前提はrunnerが生存しAPIが期限内に終端を報告すること。
+- **Secret：** DB接続値・認証Secret・メール設定はVercelのProduction環境変数のまま使う。GitHubに置くのは配備用Tokenとbypass値だけ。接続値は取得直後にmaskし、一時ファイルは即削除する。
+- **費用：** 公開repoのGitHub ActionsとVercel HobbyのCLI配備は無料枠内。1回のbuildは約1分。
+
+### 12-B. 初回の有効化（担当者の承認が必要）
+
+| 順 | 操作 | 担当 |
+| --- | --- | --- |
+| 1 | Vercel → Account Settings → Tokens で、範囲 `jogihuck2026`・期限付きの配備専用Tokenを作る | Vercelの所有者 |
+| 2 | Project `future-roi` → Settings → Deployment Protection → Protection Bypass for Automation で値を発行する（Hobbyで使えない場合は止めて相談） | Vercelの所有者 |
+| 3 | GitHub → Settings → Environments に `production`（Deployment branchesをmainだけ）と `production-migration`（同じ制限＋Required reviewers）を作る。両方にSecret `VERCEL_TOKEN`、`production` に `VERCEL_AUTOMATION_BYPASS_SECRET` を登録 | repo admin |
+| 4 | Repository variables に `VERCEL_ORG_ID`・`VERCEL_PROJECT_ID`・`PRODUCTION_URL`（`https://future-roi.vercel.app`）・`CD_ENABLED`（最初は `false`）を登録 | repo admin |
+| 5 | **mainが#258を含むため**、`RESEND_API_KEY` と `MAIL_FROM` をVercel Productionへ登録する（工程4のメール準備）。未設定だと起動時に失敗するが、12-Aの5で止まり本番URLは切り替わらない。2026-10-13の一時例外は下記 | メール担当 |
+| 6 | `CD_ENABLED` を `true` にし、Actions → Application の最新main実行を Re-run するか次のマージを待つ。Deploy productionのSummaryで候補・本番SHA・health結果を確認する | 運用担当 |
+
+**2026-10-13の一時例外（`MAIL_TRANSPORT=log`）：** 送信用ドメインがなく、公開は同日8:00（JST）までの利用に限るため、配備担当の判断でVercel Productionに `MAIL_TRANSPORT=log` を設定した。工程4の「公開でlogを使わない」に対する、期限付きの例外である。
+
+- 影響：パスワード再設定のメールは届かない（画面は送信済みと表示する）。宛先と再設定リンクがVercelのruntimeログに出る。ログはProjectの所有者だけが読め、Hobbyでは1時間保持される。
+- 他の案：ドメインを購入してResendを使う案は費用0円の方針に反し、当日中に承認を得られない。無料サブドメイン（is-a.dev等）は、Resendの所有要件を満たすか未確認で、承認待ちの時間もかかる。CDを止めて手動配備を続ける案は、CDを有効化する目的に合わない。
+- 終了（自動配備）：2026-10-13 8:00（JST）以降は、担当者が `CD_ENABLED=false` に戻し、Resendとドメインの準備・本番への設定反映を終えるまで自動配備を止める。この設定は以後のCDを止めるだけで、既存の公開アプリ、メール未配送、宛先・再設定リンクのruntimeログ出力は止まらない。
+- 終了（公開とメール）：メール例外の期限終了と公開継続の判断は別作業とする。担当者は、工程11-AのPause Projectで公開を止めるか、Resendとドメインを用意して `MAIL_TRANSPORT` を削除し、メール配送を確認して公開を継続するかを別途判断する。準備未了の公開継続には担当者の別承認が必要で、`CD_ENABLED=false` だけではメール例外を終了できない。
+
+### 12-C. migrationがあるリリース
+
+Deploy productionが `Production migration (approval required)` で承認待ちになる。承認者は承認前に、工程10の1・2（追加SQLの内容、旧アプリが新schemaで動くか）を確認する。既存SQLの変更・削除や破壊的変更を含むなら承認せず、Rejectして手動の段階移行を計画する。Summaryに記録されたmigration開始時刻は、Neonの履歴復元（工程11-C）で戻すときの基準になる。
+
+### 12-D. 止める・戻す
+
+| したいこと | 操作 |
+| --- | --- |
+| 自動配備を一時停止 | Repository variable `CD_ENABLED` を `false` にする（実行中のものは完了まで走る） |
+| 特定の実行を止める | Actions → Deploy production → Cancel workflow。promote要求前なら本番は変わらない。開始後はswitchの復旧stepの終了・実aliasを確認する。Force cancelは復旧も止めるため緊急時でも通常Cancelと区別する |
+| アプリを直前の版へ | 工程11-B（`vercel rollback` またはDashboardのInstant Rollback）。rollback後はVercelの自動割当てが止まるが、次のCDはpromoteで明示的に割り当てる |
+| DBを戻す | 自動では戻さない。工程11-Cに従う |
+| schemaがstopになった | 本番DBが想定外の状態。配備は止まっている。API／DB担当が工程6の表で原因を確認する |
+| 切替・復旧の失敗／取消、runner消失、状態不明 | 後続CDは`previous-switch-needs-review`で停止する。直前の失敗runの候補ID・旧本番ID・Summaryを参照し、担当者がVercelのpending要求の終端と実aliasを照合する。未完了promoteに競合するrollbackや新promoteを重ねない。終端後に必要な手動復旧・smokeを確認する。運用担当の承認後に**元のrun全体**をRe-runしてgateから最新main・CIを再評価する（新runやgate-only成功は遮断を解除しない）。`switch`単体のRe-runは旧snapshotを再利用するため行わない |
+
+### 12-E. 未確認
+
+この手順は #275 のPR作成時点で、実際のworkflow実行（Token・Environment・bypassを使う部分、`vercel env pull` で直結URLを取得できるか、promote／rollbackの挙動）を確認していない。初回の有効化で12-B 6の結果を #275 に記録してから確認済みとする。
+
+PR #276のレビュー修正では[切替回帰](../../.github/scripts/production-switch.test.mjs)のmock CLI／API／時計、[shell回帰](../../.github/scripts/smoke-deployment.test.mjs)のlocalhost HTTP server＋実curl、[gate回帰](../../.github/scripts/deploy-gate.test.mjs)をApplication CIへ追加する。成功、CLI通信断後の遅延完了、取消後の復旧、partial alias失敗、rollback失敗、未知状態、HTTP 200途中停止、古いイベントの待機置換を合成で確認する。通常のGitHub Cancelの実runner実行、Hobby上のAPI終端・直前版rollback、Secret・bypass・DB／メールは未実施で、担当者の承認後に有効化前受入として記録する。長時間のAPI障害・force cancel・runner消失で自動復旧を保証しない。CDは無効のまま保ち、手動確認の対象とする。
 
 ## 実施記録のひな形
 
