@@ -2,6 +2,7 @@
 # 配備先の最小確認（Issue #275）: health・トップ画面・未認証APIの401。
 # 使い方: smoke-deployment.sh BASE_URL
 # VERCEL_AUTOMATION_BYPASS_SECRET があれば保護された候補URLへbypass headerを付ける（値は出力しない）。
+# 1要求は接続5秒・全体20秒、確認全体は約3分で必ず終わる。promote後のrollbackに時間を残すため（PR #276 review P2）。
 set -euo pipefail
 
 base="${1:?usage: smoke-deployment.sh BASE_URL}"
@@ -13,9 +14,9 @@ trap 'rm -f "$body"' EXIT
 probe() { # path expected_status
   local status attempt
   for attempt in 1 2 3 4 5; do
-    status="$(curl -sS -o "$body" -w '%{http_code}' "${headers[@]}" "$base$1" || true)"
+    status="$(curl -sS --connect-timeout 5 --max-time 20 -o "$body" -w '%{http_code}' "${headers[@]}" "$base$1" || true)"
     [[ "$status" == "$2" ]] && return 0
-    sleep $((attempt * 3)) # cold start・DB休止復帰を待つ
+    sleep $((attempt * ${SMOKE_BACKOFF_SECONDS:-3})) # cold start・DB休止復帰を待つ
   done
   echo "NG $1: expected $2, got $status" >&2
   return 1

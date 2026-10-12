@@ -20,5 +20,6 @@ summaryは常時出力する。失敗artifactは既存のupload-artifact pinを�
 
 - `deploy-gate.mjs`：Deploy productionの判定器。CI成功・mainの先頭・schemaの分類・配備SHAの照合だけを行い、Secretや接続値は扱わない。
 - `with-production-db.sh`：Vercel Productionの直結URLを実行中だけ取得してmaskし、1コマンドへ`DATABASE_URL`として渡す。
-- `smoke-deployment.sh`：候補・本番URLのhealth・トップ・未認証401を確認する。
+- `smoke-deployment.sh`：候補・本番URLのhealth・トップ・未認証401を確認する。HTTP要求は接続5秒・1回20秒で打ち切る。
+- `reconcile-production.sh`：promote後に本番URLの実deploymentを照合し、確認失敗・未切替・状態不明なら直前の版へ戻す。回帰は`reconcile-production.test.sh`（stub、Container jobのshell testで実行）。
 - 回帰: node --test .github/scripts/deploy-gate.test.mjs（ApplicationのCIでも実行）。流れと停止・戻し方は[リリース手順書の12](../../docs/operations/release-guide.md#12-自動配備cd)。

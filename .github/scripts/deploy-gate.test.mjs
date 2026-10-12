@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { REQUIRED_JOBS, checkDeployment, classifySchema, decideGate, parseSchemaReport } from './deploy-gate.mjs';
+import { REQUIRED_JOBS, checkDeployment, classifySchema, decideGate, parseSchemaReport, productionState, recoveryAction } from './deploy-gate.mjs';
 
 const A = 'a'.repeat(40);
 const B = 'b'.repeat(40);
@@ -83,4 +83,20 @@ test('deploymentは対象SHA・production・READYのときだけok', () => {
   assert.equal(checkDeployment({ ...ok, target: null }, A), 'not-production:null');
   assert.equal(checkDeployment({ ...ok, readyState: 'ERROR' }, A), 'not-ready:ERROR');
   assert.equal(checkDeployment(null, A), 'missing');
+});
+
+test('promote後は本番URLの実際のdeploymentで状態を判断する（CLIの成否に依存しない）', () => {
+  const ids = { candidateId: 'dpl_new', previousId: 'dpl_old' };
+  assert.equal(productionState({ ...ids, productionId: 'dpl_new' }), 'candidate');
+  // CLIがタイムアウトしてもpromotionが後から完了した場合は候補として確認する。
+  assert.equal(productionState({ ...ids, productionId: 'dpl_old' }), 'previous');
+  assert.equal(productionState({ ...ids, productionId: 'dpl_other' }), 'unknown');
+  assert.equal(productionState({ ...ids, productionId: '' }), 'unknown');
+});
+
+test('候補が本番かつ確認成功のときだけ完了し、それ以外は直前の版へ戻す', () => {
+  assert.equal(recoveryAction('candidate', true), 'done');
+  assert.equal(recoveryAction('candidate', false), 'restore-previous');
+  assert.equal(recoveryAction('previous', true), 'restore-previous');
+  assert.equal(recoveryAction('unknown', true), 'restore-previous');
 });

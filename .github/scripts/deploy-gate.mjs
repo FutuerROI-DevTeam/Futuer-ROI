@@ -1,9 +1,10 @@
 // 本番CD（Issue #275）の判定器。配備してよいかの判断だけを行い、Secretや接続値は扱わない。
 // 使い方:
-//   node .github/scripts/deploy-gate.mjs gate     CI成功・main先頭・CD有効を確認しGITHUB_OUTPUTへdeploy/reasonを書く
+//   node .github/scripts/deploy-gate.mjs gate     ロック取得後のmain先頭について、CI成功・CD有効を確認しsha/deploy/reasonを書く
 //   node .github/scripts/deploy-gate.mjs head     対象SHAが今もmainの先頭かだけを確認する（promote直前）
 //   node .github/scripts/deploy-gate.mjs schema FILE EXIT   db:checkの出力を ok / pending / stop に分類する
 //   node .github/scripts/deploy-gate.mjs deployment FILE    Vercel deploymentのJSONが対象SHAの本番buildか確認する
+//   node .github/scripts/deploy-gate.mjs state PROD CAND PREV / recovery STATE SMOKE_OK   promote後の照合と復旧の判断
 import { appendFileSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
@@ -66,6 +67,20 @@ export function checkDeployment(deployment, targetSha) {
   return 'ok';
 }
 
+// promote後（CLIが失敗・タイムアウトした場合を含む）に、本番URLが実際に指しているdeploymentを分類する。
+// Vercelの --timeout はCLIの待機を止めるだけで、受理されたpromotionは後から完了し得る（PR #276 review P1）。
+export function productionState({ productionId, candidateId, previousId }) {
+  if (productionId && productionId === candidateId) return 'candidate';
+  if (productionId && productionId === previousId) return 'previous';
+  return 'unknown';
+}
+
+// 照合後の復旧。候補が本番かつ確認成功ならdone。それ以外は直前の版へ明示的に戻し（固定し）、jobは失敗にする。
+export function recoveryAction(state, smokeOk) {
+  if (state === 'candidate' && smokeOk) return 'done';
+  return 'restore-previous';
+}
+
 async function github(path) {
   const response = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}${path}`, {
     headers: { authorization: `Bearer ${process.env.GITHUB_TOKEN}`, accept: 'application/vnd.github+json',
@@ -86,14 +101,16 @@ function output(values) {
 async function main([mode, ...args]) {
   const targetSha = process.env.TARGET_SHA;
   if (mode === 'gate') {
+    // 対象は起動イベントのSHAではなく、ロック取得後のmainの先頭。古いSHAのイベントが最新mainの待機を
+    // 置き換えても、最新mainを配備できる（PR #276 review P2）。
     const enabled = process.env.CD_ENABLED === 'true';
     const mainSha = await mainHead();
-    const { workflow_runs: runs } = await github(`/actions/runs?head_sha=${targetSha}&event=push&branch=main&per_page=100`);
+    const { workflow_runs: runs } = await github(`/actions/runs?head_sha=${mainSha}&event=push&branch=main&per_page=100`);
     const jobsByRunId = {};
     for (const run of runs.filter(r => Object.hasOwn(REQUIRED_JOBS, r.name) && r.status === 'completed')) {
       jobsByRunId[run.id] = (await github(`/actions/runs/${run.id}/jobs?filter=latest&per_page=100`)).jobs;
     }
-    output(decideGate({ enabled, targetSha, mainSha, runs, jobsByRunId }));
+    output({ sha: mainSha, ...decideGate({ enabled, targetSha: mainSha, mainSha, runs, jobsByRunId }) });
   } else if (mode === 'head') {
     const mainSha = await mainHead();
     if (mainSha !== targetSha) { output({ head: 'false' }); process.exitCode = 1; return; }
@@ -105,8 +122,13 @@ async function main([mode, ...args]) {
     const result = checkDeployment(JSON.parse(readFileSync(args[0], 'utf8')), targetSha);
     output({ deployment: result });
     if (result !== 'ok') process.exitCode = 1;
+  } else if (mode === 'state') {
+    const [productionId, candidateId, previousId] = args;
+    output({ state: productionState({ productionId, candidateId, previousId }) });
+  } else if (mode === 'recovery') {
+    output({ action: recoveryAction(args[0], args[1] === 'true') });
   } else {
-    console.error('usage: deploy-gate.mjs gate|head|schema FILE EXIT|deployment FILE');
+    console.error('usage: deploy-gate.mjs gate|head|schema FILE EXIT|deployment FILE|state PROD CAND PREV|recovery STATE SMOKE_OK');
     process.exitCode = 2;
   }
 }

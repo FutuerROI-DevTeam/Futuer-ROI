@@ -440,15 +440,17 @@ mainへのpushで動いたApplication（3 job）とFoundationが、**同じSHA�
 
 | 順 | 処理 | 止まる条件 |
 | --- | --- | --- |
-| 1 | `gate`：CD有効、対象SHAがmainの先頭、必須4 jobがsuccess | `CD_ENABLED`がtrueでない、別SHA・古いSHA、失敗・skip・未完了 |
+| 1 | `gate`：ロック取得後の**mainの先頭**を対象にし、CD有効と、そのSHAの必須4 jobがsuccessかを確認（起動イベントのSHAは使わない） | `CD_ENABLED`がtrueでない、失敗・skip・未完了 |
 | 2 | `schema`：Vercelから直結URLを実行中だけ取得し `db:check`（読取り） | 空DB・認証差分・checksum不一致・不明履歴・判定不能（stop） |
 | 3 | `migrate`：アプリの追加migrationだけが未適用なら、`production-migration` Environmentの承認後に `db:migrate` → `db:check` exit 0 | 承認なし、migration失敗、事後確認がokでない |
 | 4 | `deploy`：本番が既に対象SHAなら何もしない。`vercel deploy --prod --skip-domain` で本番設定のbuildを作り、**本番URLへはまだ割り当てない** | build失敗 |
 | 5 | 候補のdeploymentが対象SHA（`meta.cdSha`）・production・READYか確認し、health／`/`／`/api/goals` 401を確認 | どれか不一致・失敗。本番URLは前の版のまま |
-| 6 | mainの先頭を再確認してから `vercel promote` → 本番URLのdeploymentとSHA・healthを確認 | 確認失敗なら直前のdeploymentへ `vercel rollback`（DBは戻さない） |
+| 6 | mainの先頭を再確認してから `vercel promote`。CLIの成否にかかわらず、本番URLが実際に指すdeploymentを最大4分照合し、候補ならSHA・healthを確認 | 候補の確認失敗、切り替わらない、状態不明なら直前のdeploymentへ `vercel rollback` で固定し直す（DBは戻さない）。戻ったことも確認できなければSummaryに手動対応を出す |
 
 - **CIの前に配備しない：** VercelのGit連携は使わない。連携するとpushと同時にbuildが始まり、CIを待たない。Hobbyではチーム外のコミット作者の配備が止まり得て、初回もLogin Connection不足で連携できなかった。Vercel側の「checksを待つ」機能はHobbyでの可否が未確認のため採用しない。CIのjob内で直接 `--prod` 配備する案は、一部jobの失敗や確認前の本番切替を防げないため採用しない。
-- **古い実行で上書きしない：** `concurrency: production-deploy`（実行中は中断しない、待機は最新1件）に加え、gate・migration前・promote前の3回、対象SHAがmainの先頭かを確認する。
+- **古い実行で上書きしない：** `concurrency: production-deploy`（実行中は中断しない、待機は最新1件）で直列化する。待機が古いSHAの完了イベントに置き換わっても、gateがその時点のmainの先頭を対象にするため、最新mainの配備を取りこぼさない。migration前・promote前にも、対象SHAがmainの先頭かを再確認する。
+- **promoteの非同期完了：** Vercelの `--timeout` はCLIの待機を止めるだけで、受理されたpromotionは後から完了し得る。そのため、promoteを試みた後は必ず実aliasを照合する（Cancel後も実行）。回帰は [reconcile-production.test.sh](../../.github/scripts/reconcile-production.test.sh)。
+- **時間の上限：** HTTP要求は接続5秒・1回20秒で打ち切り、stepごとにtimeoutを置いて、rollbackに使う時間を残す。
 - **Secret：** DB接続値・認証Secret・メール設定はVercelのProduction環境変数のまま使う。GitHubに置くのは配備用Tokenとbypass値だけ。接続値は取得直後にmaskし、一時ファイルは即削除する。
 - **費用：** 公開repoのGitHub ActionsとVercel HobbyのCLI配備は無料枠内。1回のbuildは約1分。
 
@@ -460,8 +462,14 @@ mainへのpushで動いたApplication（3 job）とFoundationが、**同じSHA�
 | 2 | Project `future-roi` → Settings → Deployment Protection → Protection Bypass for Automation で値を発行する（Hobbyで使えない場合は止めて相談） | Vercelの所有者 |
 | 3 | GitHub → Settings → Environments に `production`（Deployment branchesをmainだけ）と `production-migration`（同じ制限＋Required reviewers）を作る。両方にSecret `VERCEL_TOKEN`、`production` に `VERCEL_AUTOMATION_BYPASS_SECRET` を登録 | repo admin |
 | 4 | Repository variables に `VERCEL_ORG_ID`・`VERCEL_PROJECT_ID`・`PRODUCTION_URL`（`https://future-roi.vercel.app`）・`CD_ENABLED`（最初は `false`）を登録 | repo admin |
-| 5 | **mainが#258を含むため**、`RESEND_API_KEY` と `MAIL_FROM` をVercel Productionへ登録する（工程4のメール準備）。未設定だと起動時に失敗するが、12-Aの5で止まり本番URLは切り替わらない | メール担当 |
+| 5 | **mainが#258を含むため**、`RESEND_API_KEY` と `MAIL_FROM` をVercel Productionへ登録する（工程4のメール準備）。未設定だと起動時に失敗するが、12-Aの5で止まり本番URLは切り替わらない。2026-10-13の一時例外は下記 | メール担当 |
 | 6 | `CD_ENABLED` を `true` にし、Actions → Application の最新main実行を Re-run するか次のマージを待つ。Deploy productionのSummaryで候補・本番SHA・health結果を確認する | 運用担当 |
+
+**2026-10-13の一時例外（`MAIL_TRANSPORT=log`）：** 送信用ドメインがなく、公開は同日8:00（JST）までの利用に限るため、配備担当の判断でVercel Productionに `MAIL_TRANSPORT=log` を設定した。工程4の「公開でlogを使わない」に対する、期限付きの例外である。
+
+- 影響：パスワード再設定のメールは届かない（画面は送信済みと表示する）。宛先と再設定リンクがVercelのruntimeログに出る。ログはProjectの所有者だけが読め、Hobbyでは1時間保持される。
+- 他の案：ドメインを購入してResendを使う案は費用0円の方針に反し、当日中に承認を得られない。無料サブドメイン（is-a.dev等）は、Resendの所有要件を満たすか未確認で、承認待ちの時間もかかる。CDを止めて手動配備を続ける案は、CDを有効化する目的に合わない。
+- 終了：8:00以降も公開を続けるなら、Resendとドメインを用意して `MAIL_TRANSPORT` を削除するまで `CD_ENABLED=false` にする。続けないなら、工程11-AのPause Projectで公開を止める。
 
 ### 12-C. migrationがあるリリース
 
@@ -472,7 +480,7 @@ Deploy productionが `Production migration (approval required)` で承認待ち�
 | したいこと | 操作 |
 | --- | --- |
 | 自動配備を一時停止 | Repository variable `CD_ENABLED` を `false` にする（実行中のものは完了まで走る） |
-| 特定の実行を止める | Actions → Deploy production → Cancel workflow。promote前なら本番は変わらない |
+| 特定の実行を止める | Actions → Deploy production → Cancel workflow。promote前なら本番は変わらない。promote開始後のCancelでも、照合と復旧のstepは最後まで動く |
 | アプリを直前の版へ | 工程11-B（`vercel rollback` またはDashboardのInstant Rollback）。rollback後はVercelの自動割当てが止まるが、次のCDはpromoteで明示的に割り当てる |
 | DBを戻す | 自動では戻さない。工程11-Cに従う |
 | schemaがstopになった | 本番DBが想定外の状態。配備は止まっている。API／DB担当が工程6の表で原因を確認する |
