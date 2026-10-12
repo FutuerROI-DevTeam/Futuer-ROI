@@ -8,7 +8,11 @@
 export const REDACTED = '[REDACTED]';
 
 function decodedKey(key: string): string {
-  try { return decodeURIComponent(key.replaceAll('+', ' ')).toLowerCase(); } catch { return key.toLowerCase(); }
+  try {
+    return decodeURIComponent(key.replaceAll('+', ' ')).toLowerCase();
+  } catch {
+    return key.toLowerCase();
+  }
 }
 
 export function redactLogUrl(url: string): string {

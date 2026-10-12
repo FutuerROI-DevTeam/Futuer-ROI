@@ -63,7 +63,12 @@ test('R11 文脈変更: title/total/initial/timezoneは回答を保ち、unit/se
   for (const patch of [{ title: 'other' }, { totalRequired: 125 }, { initialProgress: 3 }, { timezone: 'UTC' }, { unit: input.unit, expectedAnswerRevision: 0 }]) {
     const result = await updateGoal(db.pool, 'owner', goal.id, { expectedGoalSettingsRevision: settingsRevision, ...patch }, () => NOW);
     assert.equal(result.kind, 'updated');
-    if (result.kind === 'updated') { settingsRevision = result.goal.goalSettingsRevision; assert.equal(result.goal.answerRevision, 0); assert.deepEqual(result.goal.questionPrior, answers); assert.equal(result.goal.recordStartDate, start); }
+    if (result.kind === 'updated') {
+      settingsRevision = result.goal.goalSettingsRevision;
+      assert.equal(result.goal.answerRevision, 0);
+      assert.deepEqual(result.goal.questionPrior, answers);
+      assert.equal(result.goal.recordStartDate, start);
+    }
   }
   const later = new Date('2026-10-07T12:00:00Z');
   assert.equal((await putLog(db.pool, 'owner', goal.id, '2026-10-07', { expectedGoalSettingsRevision: settingsRevision, status: 'DONE', amount: 7 }, () => later)).kind, 'saved');
@@ -111,7 +116,12 @@ test('R11 同時回答変更: Goal lock待機後に版を確認し、同じ古�
     const stored = (await getGoal(db.pool, 'owner', goal.id, () => NOW))!;
     if (winner.kind === 'updated') assert.deepEqual(stored, winner.goal);
     assert.equal(stored.answerRevision, 1);
-  } finally { await held.query('rollback').catch(() => {}); held.release(); await Promise.allSettled(writes); await patchPool.end(); }
+  } finally {
+    await held.query('rollback').catch(() => {});
+    held.release();
+    await Promise.allSettled(writes);
+    await patchPool.end();
+  }
 });
 
 test('R11 文脈変更と回答編集を両順序で固定し、古い回答を新しい単位・量へ保存しない', async t => {
@@ -136,11 +146,17 @@ test('R11 文脈変更と回答編集を両順序で固定し、古い回答を�
       assert.equal(results[0].kind, 'updated');
       assert.equal(results[1].kind, contextFirst ? 'settings_conflict' : 'updated');
       const stored = (await getGoal(db.pool, 'owner', goal.id, () => NOW))!;
-      assert.equal(stored.unit, 'sessions'); assert.equal(stored.sessionAmount, 4);
+      assert.equal(stored.unit, 'sessions');
+      assert.equal(stored.sessionAmount, 4);
       assert.deepEqual(stored.questionPrior, { a: null, b: null });
       assert.equal(stored.answerRevision, contextFirst ? 1 : 2);
       assert.equal(stored.title, input.title);
-    } finally { await held.query('rollback').catch(() => {}); held.release(); await Promise.allSettled([first, second]); await writePool.end(); }
+    } finally {
+      await held.query('rollback').catch(() => {});
+      held.release();
+      await Promise.allSettled([first, second]);
+      await writePool.end();
+    }
   }
 });
 
@@ -167,12 +183,17 @@ test('R11 Todayは途中の通常回答更新と記録commitを混ぜず、接�
         return Promise.resolve(result).then(async rows => {
           assert.equal((await updateGoal(db.pool, 'owner', goal.id, { expectedGoalSettingsRevision: 0, questionPrior: { a: 'LOW', b: 'HIGH' }, expectedAnswerRevision: 0 }, () => NOW)).kind, 'updated');
           assert.equal((await putLog(db.pool, 'owner', goal.id, '2026-10-07', { expectedGoalSettingsRevision: 0, status: 'DONE', amount: 7 }, () => NOW)).kind, 'saved');
-          writes++; return rows;
+          writes++;
+          return rows;
         });
       }
       return result;
     }) as typeof client.query;
-    client.release = (...args) => { client.query = query; client.release = release; Reflect.apply(release, client, args); };
+    client.release = (...args) => {
+      client.query = query;
+      client.release = release;
+      Reflect.apply(release, client, args);
+    };
     return client;
   } } as pg.Pool;
   const old = (await loadTodaySnapshot(interleaved, 'owner', goal.id, () => NOW))!;

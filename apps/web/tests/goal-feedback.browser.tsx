@@ -76,12 +76,31 @@ const root = createRoot(document.getElementById('app')!);
 const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 let visit = 0;
 function mount(mode: string) {
-  failure = null; hold = false; puts = []; creates = []; patches = [];
-  achievedVisible = true; historyFailure = null; historyHold = mode === 'list-loading';
-  base.unit = 'minutes'; base.totalRequired = 12000; base.sessionAmount = 30; base.goalSettingsRevision = 0; base.answerRevision = 0;
+  failure = null;
+  hold = false;
+  puts = [];
+  creates = [];
+  patches = [];
+  achievedVisible = true;
+  historyFailure = null;
+  historyHold = mode === 'list-loading';
+  base.unit = 'minutes';
+  base.totalRequired = 12000;
+  base.sessionAmount = 30;
+  base.goalSettingsRevision = 0;
+  base.answerRevision = 0;
   logs = Array.from({ length: 28 }, (_, i) => ({ localDate: shift(i - 28), status: i % 2 ? 'DONE' : 'SKIPPED', amount: i % 2 ? 30 : null }));
-  if (mode === 'today-small' || mode === 'list-small') { base.totalRequired = 18000; base.sessionAmount = 120; logs = [{ localDate: shift(-1), status: 'DONE', amount: 120 }]; }
-  if (mode === 'today-counts') { base.unit = 'sessions'; base.totalRequired = 4; base.sessionAmount = 1; logs = [{ localDate: date, status: 'DONE', amount: 3 }]; }
+  if (mode === 'today-small' || mode === 'list-small') {
+    base.totalRequired = 18000;
+    base.sessionAmount = 120;
+    logs = [{ localDate: shift(-1), status: 'DONE', amount: 120 }];
+  }
+  if (mode === 'today-counts') {
+    base.unit = 'sessions';
+    base.totalRequired = 4;
+    base.sessionAmount = 1;
+    logs = [{ localDate: date, status: 'DONE', amount: 3 }];
+  }
   if (mode === 'today-empty') logs = [];
   if (mode === 'edit') base.initialProgress = 1240; else base.initialProgress = 0;
   base.hasLogs = mode !== 'edit';

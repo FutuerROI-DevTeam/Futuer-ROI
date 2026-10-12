@@ -7,7 +7,13 @@ import { isGoalId } from './goal-id.ts';
 import { sameGoalSettings } from './settings-policy.ts';
 import { localDateIn } from './local-date.ts';
 import type { QuestionPriorAnswers } from '@futureroi/prediction';
-import { EMPTY_ANSWERS, makeQuestionSnapshot, sameAnswers, validateSavedQuestion, type QuestionRow } from '../questions/snapshot.ts';
+import {
+  EMPTY_ANSWERS,
+  makeQuestionSnapshot,
+  sameAnswers,
+  validateSavedQuestion,
+  type QuestionRow,
+} from '../questions/snapshot.ts';
 import { PredictionFailed } from '../prediction/engine.ts';
 import { questionContextChanged, questionAnswersChanged } from '../questions/update-policy.ts';
 
@@ -40,27 +46,35 @@ const BASE_GOAL_COLUMNS = `g.id, g.title, g.unit, g.total_required, g.session_am
 const GOAL_COLUMNS = `${BASE_GOAL_COLUMNS},
   exists (select 1 from action_log l where l.goal_id = g.id) as has_logs`;
 
-async function loadTodayStatuses(db: Queryable, pairs: { goalId: string; today: string }[]): Promise<Map<string, TodayStatus>> {
+async function loadTodayStatuses(
+  db: Queryable,
+  pairs: { goalId: string; today: string }[],
+): Promise<Map<string, TodayStatus>> {
   const statuses = new Map<string, TodayStatus>();
-  if (pairs.length === 0) return statuses;
+  if (pairs.length === 0) {
+    return statuses;
+  }
   // Goalごとに「今日」が違う（timezoneが違う）ため、(goal_id, local_date)の組で引く。
   const rows = await db.query<{ goal_id: string; status: 'DONE' | 'SKIPPED' }>(
     `select l.goal_id, l.status from action_log l
        join unnest($1::uuid[], $2::date[]) as t(goal_id, local_date) on l.goal_id = t.goal_id and l.local_date = t.local_date`,
     [pairs.map((p) => p.goalId), pairs.map((p) => p.today)],
   );
-  for (const r of rows.rows) statuses.set(r.goal_id, r.status);
+  for (const r of rows.rows) {
+    statuses.set(r.goal_id, r.status);
+  }
   return statuses;
 }
 
 /**
- * 記録した累計のうち、日々の記録（DONEの量）の合計。initialProgressを足したものがTodayの予測のprogress.doneと一致する
- * （Engineは渡した記録のDONEをすべて足す。記録APIは記録開始日より前・今日より後の行を作らない）。
- * Todayと同じく、応答時点の今日までに限って数える。
+ * 応答時点の今日までのDONE量。initialProgressを足すとTodayのprogress.doneに一致する。
+ * 記録APIは開始日前・今日より後の行を作らず、Engineは受け取ったDONEをすべて足す。
  */
 async function loadDoneTotals(db: Queryable, rows: { goalId: string; today: string }[]): Promise<Map<string, number>> {
   const totals = new Map<string, number>();
-  if (rows.length === 0) return totals;
+  if (rows.length === 0) {
+    return totals;
+  }
   const result = await db.query<{ goal_id: string; done: string }>(
     `select l.goal_id, sum(l.amount)::text as done from action_log l
        join unnest($1::uuid[], $2::date[]) as t(goal_id, today) on l.goal_id = t.goal_id
@@ -68,7 +82,9 @@ async function loadDoneTotals(db: Queryable, rows: { goalId: string; today: stri
       group by l.goal_id`,
     [rows.map((r) => r.goalId), rows.map((r) => r.today)],
   );
-  for (const r of result.rows) totals.set(r.goal_id, Number(r.done));
+  for (const r of result.rows) {
+    totals.set(r.goal_id, Number(r.done));
+  }
   return totals;
 }
 
@@ -78,24 +94,29 @@ async function loadGoalReadModels(db: Queryable, rows: GoalRow[], now: Date): Pr
   const statuses = await loadTodayStatuses(db, todays);
   const done = await loadDoneTotals(db, todays);
   return rows.map((r, i) => {
-    const saved = validateSavedQuestion(r, { unit: r.unit, sessionAmount: r.session_amount, recordStartDate: r.record_start_date });
+    const saved = validateSavedQuestion(r, {
+      unit: r.unit,
+      sessionAmount: r.session_amount,
+      recordStartDate: r.record_start_date,
+    });
     return {
-    id: r.id,
-    title: r.title,
-    unit: r.unit,
-    totalRequired: r.total_required,
-    sessionAmount: r.session_amount,
-    initialProgress: r.initial_progress,
-    timezone: r.timezone,
-    recordStartDate: r.record_start_date,
-    hasLogs: r.has_logs,
-    unitLocked: r.unit_history_locked || r.initial_progress > 0,
-    goalSettingsRevision: r.goal_settings_revision,
-    today: todays[i]!.today,
-    todayStatus: statuses.get(r.id) ?? 'UNRECORDED',
-    progressDone: r.initial_progress + (done.get(r.id) ?? 0),
-    targetDate: r.target_date,
-    questionPrior: saved.answers, answerRevision: saved.revision,
+      id: r.id,
+      title: r.title,
+      unit: r.unit,
+      totalRequired: r.total_required,
+      sessionAmount: r.session_amount,
+      initialProgress: r.initial_progress,
+      timezone: r.timezone,
+      recordStartDate: r.record_start_date,
+      hasLogs: r.has_logs,
+      unitLocked: r.unit_history_locked || r.initial_progress > 0,
+      goalSettingsRevision: r.goal_settings_revision,
+      today: todays[i]!.today,
+      todayStatus: statuses.get(r.id) ?? 'UNRECORDED',
+      progressDone: r.initial_progress + (done.get(r.id) ?? 0),
+      targetDate: r.target_date,
+      questionPrior: saved.answers,
+      answerRevision: saved.revision,
     };
   });
 }
@@ -128,7 +149,13 @@ export async function getGoal(pool: Pool, userId: string, goalId: string, now: (
 export type CreateResult = { kind: 'created' | 'replayed'; goal: GoalRead } | { kind: 'conflict' | 'deleted' };
 
 // unique制約待機後の別SELECTで勝者のcommitを見る。予約・Goal INSERTを同じtransactionで完了する。
-export async function createGoalOnce(pool: Pool, userId: string, input: GoalCreate, clock: () => Date, key: string): Promise<CreateResult> {
+export async function createGoalOnce(
+  pool: Pool,
+  userId: string,
+  input: GoalCreate,
+  clock: () => Date,
+  key: string,
+): Promise<CreateResult> {
   const client = await pool.connect();
   try {
     await client.query('begin isolation level read committed');
@@ -139,10 +166,16 @@ export async function createGoalOnce(pool: Pool, userId: string, input: GoalCrea
     if (reservation.rowCount === 0) {
       const operation = (await client.query<{ request_hash: string; goal_id: string | null }>(
         'select request_hash, goal_id from goal_create_operation where user_id = $1 and idempotency_key = $2::uuid for update', [userId, key])).rows[0]!;
-      if (operation.request_hash !== hash) { await client.query('rollback'); return { kind: 'conflict' }; }
+      if (operation.request_hash !== hash) {
+        await client.query('rollback');
+        return { kind: 'conflict' };
+      }
       const rows = operation.goal_id === null ? [] : (await client.query<GoalRow>(
         `select ${GOAL_COLUMNS} from goal g where g.user_id = $1 and g.id = $2`, [userId, operation.goal_id])).rows;
-      if (!rows[0]) { await client.query('commit'); return { kind: 'deleted' }; }
+      if (!rows[0]) {
+        await client.query('commit');
+        return { kind: 'deleted' };
+      }
       const goal = (await loadGoalReadModels(client, rows, clock()))[0]!;
       await client.query('commit');
       return { kind: 'replayed', goal };
@@ -160,7 +193,12 @@ export async function createGoalOnce(pool: Pool, userId: string, input: GoalCrea
          values ($1, $2, $3, $4, $5, $6, $7, $8::date, $9, $9, $10::jsonb, $11::jsonb, $12::date)
          returning *)
        select ${GOAL_COLUMNS} from inserted g`,
-      [userId, input.title, input.unit, input.totalRequired, input.sessionAmount, input.initialProgress ?? 0, input.timezone, recordStartDate, now, JSON.stringify(answers), snapshot === null ? null : JSON.stringify(snapshot), input.targetDate ?? null],
+      [
+        userId, input.title, input.unit, input.totalRequired, input.sessionAmount,
+        input.initialProgress ?? 0, input.timezone, recordStartDate, now,
+        JSON.stringify(answers), snapshot === null ? null : JSON.stringify(snapshot),
+        input.targetDate ?? null,
+      ],
     );
     const goal = (await loadGoalReadModels(client, rows.rows, now))[0]!;
     await client.query('update goal_create_operation set goal_id = $3 where user_id = $1 and idempotency_key = $2::uuid', [userId, key, goal.id]);
@@ -169,8 +207,11 @@ export async function createGoalOnce(pool: Pool, userId: string, input: GoalCrea
   } catch (error) {
     await client.query('rollback').catch(() => {});
     throw error;
-  } finally { client.release(); }
+  } finally {
+    client.release();
+  }
 }
+
 // 内部のfixture作成も同じtransaction経路を使う。HTTPでは必須headerからキーを受ける。
 export async function createGoal(pool: Pool, userId: string, input: GoalCreate, clock: () => Date): Promise<GoalRead> {
   const result = await createGoalOnce(pool, userId, input, clock, randomUUID());
@@ -179,12 +220,23 @@ export async function createGoal(pool: Pool, userId: string, input: GoalCreate, 
 }
 
 export type LockedField = 'timezone' | 'initialProgress';
-export type UpdateResult = { kind: 'updated'; goal: GoalRead } | { kind: 'not_found' } | { kind: 'locked'; fields: LockedField[] }
-  | { kind: 'settings_conflict' | 'unit_locked' | 'revision_exhausted' } | { kind: 'answer_conflict' } | { kind: 'invalid_question_patch'; field: 'questionPrior' | 'expectedAnswerRevision' };
+export type UpdateResult =
+  | { kind: 'updated'; goal: GoalRead }
+  | { kind: 'not_found' }
+  | { kind: 'locked'; fields: LockedField[] }
+  | { kind: 'settings_conflict' | 'unit_locked' | 'revision_exhausted' }
+  | { kind: 'answer_conflict' }
+  | { kind: 'invalid_question_patch'; field: 'questionPrior' | 'expectedAnswerRevision' };
 
 // 記録が1件でもあるGoalでは timezone と initialProgress を変更できない（R-02）。
 // 同じ値の再送は「変更」ではないので通す。行をロックして、同時の記録追加と判定がずれないようにする。
-export async function updateGoal(pool: Pool, userId: string, goalId: string, patch: GoalPatch, now: () => Date): Promise<UpdateResult> {
+export async function updateGoal(
+  pool: Pool,
+  userId: string,
+  goalId: string,
+  patch: GoalPatch,
+  now: () => Date,
+): Promise<UpdateResult> {
   if (!isGoalId(goalId)) return { kind: 'not_found' };
   const client = await pool.connect();
   try {
@@ -197,21 +249,36 @@ export async function updateGoal(pool: Pool, userId: string, goalId: string, pat
       return { kind: 'not_found' };
     }
     if (patch.expectedGoalSettingsRevision !== current.goal_settings_revision) {
-      await client.query('rollback'); return { kind: 'settings_conflict' };
+      await client.query('rollback');
+      return { kind: 'settings_conflict' };
     }
-    if ((current.unit_history_locked || current.initial_progress > 0) && patch.unit !== undefined && patch.unit !== current.unit) {
-      await client.query('rollback'); return { kind: 'unit_locked' };
+    if (
+      (current.unit_history_locked || current.initial_progress > 0) &&
+      patch.unit !== undefined && patch.unit !== current.unit
+    ) {
+      await client.query('rollback');
+      return { kind: 'unit_locked' };
     }
     // 到達予定日（#157）は、変更後のtimezoneの今日で検査する。違反は全体をrollbackして422
-    const invalid = checkTargetDate({ today: localDateIn(now(), patch.timezone ?? current.timezone), targetDate: patch.targetDate });
+    const invalid = checkTargetDate({
+      today: localDateIn(now(), patch.timezone ?? current.timezone),
+      targetDate: patch.targetDate,
+    });
     if (invalid.length) throw new GoalFieldsInvalid(invalid);
     const nextTargetDate = patch.targetDate === undefined ? current.target_date : patch.targetDate;
-    const saved = validateSavedQuestion(current, { unit: current.unit, sessionAmount: current.session_amount, recordStartDate: current.record_start_date });
+    const saved = validateSavedQuestion(current, {
+      unit: current.unit,
+      sessionAmount: current.session_amount,
+      recordStartDate: current.record_start_date,
+    });
     if (patch.questionPrior !== undefined && patch.expectedAnswerRevision === undefined) {
       await client.query('rollback');
       return { kind: 'invalid_question_patch', field: 'expectedAnswerRevision' };
     }
-    if (patch.expectedAnswerRevision !== undefined && patch.questionPrior === undefined && patch.unit === undefined && patch.sessionAmount === undefined) {
+    if (
+      patch.expectedAnswerRevision !== undefined && patch.questionPrior === undefined &&
+      patch.unit === undefined && patch.sessionAmount === undefined
+    ) {
       await client.query('rollback');
       return { kind: 'invalid_question_patch', field: 'expectedAnswerRevision' };
     }
@@ -233,15 +300,23 @@ export async function updateGoal(pool: Pool, userId: string, goalId: string, pat
     const revision = saved.revision + (answersChanged ? 1 : 0);
     // 同じ回答の再送は保存snapshotを保持し、最新mappingへ読み替えない。
     const questionSnapshot = contextChanged ? null : (!sameAnswers(answers, saved.answers)
-      ? makeQuestionSnapshot(answers, { unit: current.unit, sessionAmount: current.session_amount, recordStartDate: current.record_start_date })
+      ? makeQuestionSnapshot(answers, {
+        unit: current.unit,
+        sessionAmount: current.session_amount,
+        recordStartDate: current.record_start_date,
+      })
       : current.question_prior_snapshot);
     // READ COMMITTED takes a fresh snapshot after any Goal lock wait. A first log
     // committed by the shared-lock holder must be visible before checking R-02.
     const hasLogs = (await client.query<{ has_logs: boolean }>('select exists (select 1 from action_log where goal_id = $1) as has_logs', [goalId])).rows[0]!.has_logs;
     if (hasLogs) {
       const locked: LockedField[] = [];
-      if (patch.timezone !== undefined && patch.timezone !== current.timezone) locked.push('timezone');
-      if (patch.initialProgress !== undefined && patch.initialProgress !== current.initial_progress) locked.push('initialProgress');
+      if (patch.timezone !== undefined && patch.timezone !== current.timezone) {
+        locked.push('timezone');
+      }
+      if (patch.initialProgress !== undefined && patch.initialProgress !== current.initial_progress) {
+        locked.push('initialProgress');
+      }
       if (locked.length) {
         await client.query('rollback');
         return { kind: 'locked', fields: locked };
@@ -249,7 +324,8 @@ export async function updateGoal(pool: Pool, userId: string, goalId: string, pat
     }
     const sameGoal = sameGoalSettings(current, patch, nextTargetDate);
     if (!sameGoal && current.goal_settings_revision === 2_147_483_647) {
-      await client.query('rollback'); return { kind: 'revision_exhausted' };
+      await client.query('rollback');
+      return { kind: 'revision_exhausted' };
     }
     if (!answersChanged && sameGoal) {
       // 回答版付きの全同値再送はSQL UPDATEも省き、updated_atを含む保存metadataを保持する。
@@ -274,8 +350,13 @@ export async function updateGoal(pool: Pool, userId: string, goalId: string, pat
          where user_id = $1 and id = $2
          returning *)
        select ${GOAL_COLUMNS} from changed g`,
-      [userId, goalId, patch.title ?? null, patch.unit ?? null, patch.totalRequired ?? null, patch.sessionAmount ?? null, patch.initialProgress ?? null, patch.timezone ?? null,
-        JSON.stringify(answers), String(revision), questionSnapshot === null ? null : JSON.stringify(questionSnapshot), nextTargetDate, current.goal_settings_revision + (sameGoal ? 0 : 1)],
+      [
+        userId, goalId, patch.title ?? null, patch.unit ?? null, patch.totalRequired ?? null,
+        patch.sessionAmount ?? null, patch.initialProgress ?? null, patch.timezone ?? null,
+        JSON.stringify(answers), String(revision),
+        questionSnapshot === null ? null : JSON.stringify(questionSnapshot),
+        nextTargetDate, current.goal_settings_revision + (sameGoal ? 0 : 1),
+      ],
     );
     const goal = (await loadGoalReadModels(client, [updated.rows[0]!], now()))[0]!;
     await client.query('commit');

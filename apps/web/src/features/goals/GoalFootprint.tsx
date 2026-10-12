@@ -22,7 +22,10 @@ export function GoalFootprint({ sources, onRefresh }: { sources: readonly Footpr
     if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth;
   }, [footprint.today]);
   useEffect(() => {
-    if (keyboardFocus.current) { keyboardFocus.current = false; selectedButton.current?.focus(); }
+    if (keyboardFocus.current) {
+      keyboardFocus.current = false;
+      selectedButton.current?.focus();
+    }
   }, [date]);
   if (!footprint.today) return null;
   return <section className="fr-footprint" aria-labelledby="fr-footprint-title">
@@ -38,11 +41,16 @@ export function GoalFootprint({ sources, onRefresh }: { sources: readonly Footpr
           aria-pressed={day.date === date} tabIndex={day.date === date ? 0 : -1}
           onClick={() => setSelected(day.date)} onKeyDown={event => {
             const move = ARROW_KEY_STEPS[event.key];
-            const next = event.key === 'Home' ? 0 : event.key === 'End' ? footprint.days.length - 1 : move !== undefined ? index + move : null;
+            const next = event.key === 'Home' ? 0
+              : event.key === 'End' ? footprint.days.length - 1
+              : move !== undefined ? index + move : null;
             if (next === null) return;
             event.preventDefault();
             const target = footprint.days[Math.max(0, Math.min(footprint.days.length - 1, next))];
-            if (target) { keyboardFocus.current = true; setSelected(target.date); }
+            if (target) {
+              keyboardFocus.current = true;
+              setSelected(target.date);
+            }
           }}>
           <span className="fr-footprint__mark" aria-hidden="true">{day.kind === 'done' ? '✓' : day.kind === 'rest' ? '休' : day.kind === 'unconfirmed' ? '?' : ''}</span>
           <span>{shortDate(parseLocalDate(day.date))}</span>

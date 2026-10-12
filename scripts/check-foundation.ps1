@@ -14,12 +14,22 @@ try {
     $documents = @{}
     $count = 0
     foreach ($path in ($files | Sort-Object -Unique)) {
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
-        if ($path -notmatch '\.(md|ya?ml|toml|ps1)$|(^|/)(\.editorconfig|\.gitignore|\.env\.example)$') { continue }
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            continue
+        }
+        if ($path -notmatch '\.(md|ya?ml|toml|ps1)$|(^|/)(\.editorconfig|\.gitignore|\.env\.example)$') {
+            continue
+        }
         # Never read local environment files, tokens or CLI authentication files.
-        if ($path -match '(^|/)(\.env(\.|$)|\.doppler)' -and $path -notmatch '(^|/)\.env\.example$') { continue }
-        try { $content = [System.IO.File]::ReadAllText((Join-Path $root $path), $utf8) }
-        catch { $failures.Add("${path}: invalid UTF-8 or unreadable file"); continue }
+        if ($path -match '(^|/)(\.env(\.|$)|\.doppler)' -and $path -notmatch '(^|/)\.env\.example$') {
+            continue
+        }
+        try {
+            $content = [System.IO.File]::ReadAllText((Join-Path $root $path), $utf8)
+        } catch {
+            $failures.Add("${path}: invalid UTF-8 or unreadable file")
+            continue
+        }
         $count++
         if ($content -match '(?m)^(<{7} |={7}$|>{7} )') { $failures.Add("${path}: merge conflict marker") }
         if ($content.Length -gt 0 -and -not $content.EndsWith("`n")) { $failures.Add("${path}: missing final newline") }
@@ -44,7 +54,10 @@ try {
             $relative = [uri]::UnescapeDataString($parts[0])
             $full = if ($relative) { [System.IO.Path]::GetFullPath((Join-Path (Split-Path (Join-Path $root $path)) $relative)) } else { Join-Path $root $path }
             $linkCount++
-            if (-not (Test-Path -LiteralPath $full)) { $failures.Add("${path}: missing link target $target"); continue }
+            if (-not (Test-Path -LiteralPath $full)) {
+                $failures.Add("${path}: missing link target $target")
+                continue
+            }
             if ($parts.Count -eq 2 -and $full.EndsWith('.md') -and $parts[1]) {
                 $anchors = [System.Collections.Generic.List[string]]::new()
                 $seen = @{}
@@ -52,8 +65,13 @@ try {
                 $body = [regex]::Replace($body, '(?ms)^```[^\n]*\n.*?^```\s*$', '')
                 foreach ($heading in [regex]::Matches($body, '(?m)^#{1,6}\s+(.+?)\s*\r?$')) {
                     $slug = $heading.Groups[1].Value.ToLowerInvariant() -replace '[^\p{L}\p{N}_\-\s]', '' -replace '\s', '-'
-                    if ($seen.ContainsKey($slug)) { $seen[$slug]++; $anchors.Add("$slug-$($seen[$slug])") }
-                    else { $seen[$slug] = 0; $anchors.Add($slug) }
+                    if ($seen.ContainsKey($slug)) {
+                        $seen[$slug]++
+                        $anchors.Add("$slug-$($seen[$slug])")
+                    } else {
+                        $seen[$slug] = 0
+                        $anchors.Add($slug)
+                    }
                 }
                 if (-not $anchors.Contains([uri]::UnescapeDataString($parts[1]))) { $failures.Add("${path}: missing heading $target") }
             }
@@ -75,7 +93,7 @@ try {
         throw "$($failures.Count) foundation check(s) failed."
     }
     Write-Host "PASS: $count text files; $linkCount local links; environment examples; 7 ignore cases; working and staged diff whitespace."
-    Write-Host 'No current application stack is selected. This foundation check does not run application build, typecheck, lint, or tests.'
+    Write-Host 'This foundation check does not run application build, typecheck, lint, or tests.'
 } finally {
     Pop-Location
 }

@@ -41,8 +41,26 @@
 body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today > .fr-appbar { background: var(--dawn-sky-top); padding: 0 12px; }
 .fr-page--today .fr-appbar__title { font-size: 17px; }
-.fr-page--today .fr-today-layout { display: flex; flex-direction: column; gap: 0; padding-bottom: 0; min-width: 0; flex: 1; min-height: 0; }
-.fr-page--today .fr-today__scroll { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; scroll-padding-block: 12px; overscroll-behavior: contain; gap: 14px; padding-bottom: 14px; }
+.fr-page--today .fr-today-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 0;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+}
+.fr-page--today .fr-today__scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scroll-padding-block: 12px;
+  overscroll-behavior: contain;
+  gap: 14px;
+  padding-bottom: 14px;
+}
 .fr-page--today .fr-today__scroll > * { flex-shrink: 0; min-width: 0; }
 .fr-page--today .fr-today-layout > * { min-width: 0; }
 .fr-page--today .fr-today__top { padding: 0; gap: 0; }
@@ -56,7 +74,17 @@ body:has(.fr-page--today) { background: #eef3f5; }
   isolation: isolate;
   background: linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom));
 }
-.fr-page--today .fr-today__hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24px; z-index: -1; pointer-events: none; background: url('./assets/dawn-ridge.png') center bottom / 100% 100% no-repeat; }
+.fr-page--today .fr-today__hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 24px;
+  z-index: -1;
+  pointer-events: none;
+  background: url('./assets/dawn-ridge.png') center bottom / 100% 100% no-repeat;
+}
 .fr-page--today .fr-today__question { font-size: 22px; font-weight: 900; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
 .fr-page--today .fr-core { gap: 6px; }
 .fr-page--today .fr-core__label { font-size: 13px; }
@@ -64,7 +92,16 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-outlook__p50,
 .fr-page--today .fr-progress__percent { font-family: 'Zen Old Mincho', serif; font-weight: 900; }
 .fr-page--today .fr-core__value { font-size: 32px; }
-.fr-page--today .fr-today__basis { margin-top: -6px; position: relative; padding: 2px 22px 18px; background: var(--dawn-forest); color: var(--dawn-on-forest); display: flex; flex-direction: column; gap: 8px; }
+.fr-page--today .fr-today__basis {
+  margin-top: -6px;
+  position: relative;
+  padding: 2px 22px 18px;
+  background: var(--dawn-forest);
+  color: var(--dawn-on-forest);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .fr-page--today .fr-today__basis .fr-today__summary,
 .fr-page--today .fr-today__basis .fr-why__body { color: var(--dawn-forest-muted); font-size: 14px; line-height: 1.8; }
 .fr-page--today .fr-today__basis .fr-why { border-color: rgba(238, 243, 245, .35); border-bottom: 0; }
@@ -77,9 +114,29 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-recent__day > span:first-child { display: none; }
 .fr-page--today .fr-daymark { width: 32px !important; height: 32px !important; }
 .fr-page--today .fr-today__yesterday { border-radius: 20px; background: var(--fr-bg); }
-.fr-page--today .fr-today__yesterday > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; padding: 8px 16px; min-height: 40px; font-weight: 700; font-size: 15px; cursor: pointer; border-radius: 20px; }
+.fr-page--today .fr-today__yesterday > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 8px 16px;
+  min-height: 40px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 20px;
+}
 .fr-page--today .fr-today__yesterday > summary::-webkit-details-marker { display: none; }
-.fr-page--today .fr-today__yesterday-date { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--fr-ink-2); }
+.fr-page--today .fr-today__yesterday-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fr-ink-2);
+}
 .fr-page--today .fr-today__yesterday[open] > summary svg { transform: rotate(180deg); }
 .fr-page--today .fr-today__yesterday > .fr-yesterday { background: transparent; padding: 10px 12px; }
 .fr-page--today .fr-today__yesterday .fr-yesterday__head { display: none; }
@@ -87,8 +144,23 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-yesterday__head { flex-wrap: wrap; }
 .fr-page--today .fr-yesterday--summary { flex-wrap: wrap; }
 .fr-page--today .fr-first-day { padding: 0; }
-.fr-page--today .fr-today__details { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 24px; background: var(--fr-surface); }
-.fr-page--today .fr-today__right { display: flex; flex-direction: column; gap: 14px; margin: 0 16px; border: 0; border-radius: 0; overflow: visible; }
+.fr-page--today .fr-today__details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 24px;
+  background: var(--fr-surface);
+}
+.fr-page--today .fr-today__right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 16px;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
 .fr-page--today .fr-band,
 .fr-page--today .fr-section,
 .fr-page--today .fr-achieved-facts { background: var(--fr-surface); border-radius: 24px; padding: 18px; gap: 8px; }
@@ -107,7 +179,14 @@ body:has(.fr-page--today) { background: #eef3f5; }
  * 量の一行（◯◯量：1回・−／＋・量を変更）。狭い幅では文字を割らずに−／＋や「量を変更」を次の行へ送る（今日・昨日で同じ、#221）。
  * 文字だけで1行に入らないとき（文字拡大・大きな数）は、文字の中で折り返す。数と単位の間（値）では折り返さない。
  */
-.fr-page--today .fr-record__amount-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; width: 100%; }
+.fr-page--today .fr-record__amount-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
 .fr-page--today .fr-record__amount-text { flex: 0 1 auto; min-width: 0; font-size: 14px; line-height: 1.4; text-align: left; }
 .fr-page--today .fr-record__amount-value { white-space: nowrap; }
 .fr-page--today .fr-record__amount-controls .fr-btn--text { flex-shrink: 0; padding: 0 var(--fr-space-1); }
@@ -116,10 +195,42 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-outlook__assumption { font-size: 12px; }
 .fr-page--today .fr-progress-track { height: 12px; border-radius: 999px; overflow: hidden; background: var(--fr-bg); }
 .fr-page--today .fr-progress-track > span { display: block; height: 100%; background: var(--fr-rec); border-radius: inherit; }
-.fr-page--today .fr-today__dock { display: flex; flex-direction: column; flex-shrink: 0; max-height: 70dvh; min-height: 0; background: var(--fr-surface); border-radius: 28px 28px 0 0; box-shadow: var(--fr-shadow-sticky); z-index: 2; }
-.fr-page--today .fr-today__record-day { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; flex-shrink: 0; gap: 2px 8px; padding: 14px 16px 0; font-size: 13px; font-weight: 700; line-height: 1.5; }
+.fr-page--today .fr-today__dock {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  max-height: 70dvh;
+  min-height: 0;
+  background: var(--fr-surface);
+  border-radius: 28px 28px 0 0;
+  box-shadow: var(--fr-shadow-sticky);
+  z-index: 2;
+}
+.fr-page--today .fr-today__record-day {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: 2px 8px;
+  padding: 14px 16px 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
 .fr-page--today .fr-today__record-day time { font-size: 12px; font-weight: 500; color: var(--fr-ink-2); }
-.fr-page--today .fr-actionbar { min-height: 0; flex-shrink: 1; overflow-y: auto; position: static; bottom: auto; margin: 0; border-radius: 0; box-shadow: none; padding: 4px 16px max(20px, env(safe-area-inset-bottom)); gap: 6px; }
+.fr-page--today .fr-actionbar {
+  min-height: 0;
+  flex-shrink: 1;
+  overflow-y: auto;
+  position: static;
+  bottom: auto;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 4px 16px max(20px, env(safe-area-inset-bottom));
+  gap: 6px;
+}
 .fr-page--today .fr-actionbar__pair { gap: 12px; }
 /* 量の保存・失敗後の再試行は、文字拡大時にもラベル全体を読めるようにする。 */
 .fr-page--today .fr-amount__actions .fr-btn,
@@ -127,11 +238,24 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-choice { border-width: 2px; border-radius: 20px; font-size: 18px; }
 .fr-page--today .fr-choice[aria-pressed='true'] { box-shadow: inset 0 0 0 2px var(--fr-surface); border-color: var(--fr-dot); }
 /* 記録済み・選び直し中の上部。内容が短いので空白を詰める（#221） */
-.fr-page--today .fr-today__top:not(:has(.fr-today__hero)) { min-height: 200px; padding: 24px 22px 72px; gap: 16px; background: url('./assets/dawn-ridge.png') center bottom / 100% auto no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom)); }
+.fr-page--today .fr-today__top:not(:has(.fr-today__hero)) {
+  min-height: 200px;
+  padding: 24px 22px 72px;
+  gap: 16px;
+  background: url('./assets/dawn-ridge.png') center bottom / 100% auto no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom));
+}
 .fr-page--today .fr-achieved .fr-today__summary { color: var(--fr-ink); }
 .fr-page--today .fr-chart-box { min-width: 0; }
 .fr-page--today .fr-today__detail { font-size: 13px; color: var(--fr-ink-2); }
-.fr-page--today .fr-today__detail > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; list-style: none; cursor: pointer; }
+.fr-page--today .fr-today__detail > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  list-style: none;
+  cursor: pointer;
+}
 .fr-page--today .fr-today__detail > summary::-webkit-details-marker { display: none; }
 .fr-page--today .fr-today__detail[open] > summary svg { transform: rotate(180deg); }
 .fr-page--today .fr-today__detail > summary:focus-visible { outline: 2px solid var(--fr-dot); outline-offset: 2px; }
@@ -150,19 +274,36 @@ body:has(.fr-page--today) { background: #eef3f5; }
 @media (min-width: 960px) {
   .fr-page--today { max-width: 1200px; height: auto; overflow: visible; min-height: 0; padding: 24px 32px 40px; }
   .fr-page--today .fr-today__desknav { margin-bottom: 18px; }
-  .fr-page--today .fr-today-layout { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.35fr); grid-template-rows: auto auto auto 1fr; gap: 18px 28px; align-items: start; }
+  .fr-page--today .fr-today-layout {
+    display: grid;
+    grid-template-columns: minmax(340px, 1fr) minmax(0, 1.35fr);
+    grid-template-rows: auto auto auto 1fr;
+    gap: 18px 28px;
+    align-items: start;
+  }
   .fr-page--today .fr-today-layout > * { grid-column: 1; }
   .fr-page--today .fr-today__scroll { display: contents; }
   .fr-page--today .fr-today__scroll > * { grid-column: 1; }
 .fr-page--today .fr-today__scroll > .fr-today__primary { grid-row: 1; }
 .fr-page--today .fr-today__primary > .fr-today__top { border-radius: 24px; overflow: hidden; }
   /* PCの枠では山並みを以前の原画と同じく枠の高さの約1/4に収め、数字に重ねない */
-  .fr-page--today .fr-today__hero { padding: 24px 28px 80px; background: url('./assets/dawn-ridge.png') center bottom / 100% 24% no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom)); }
+  .fr-page--today .fr-today__hero {
+    padding: 24px 28px 80px;
+    background: url('./assets/dawn-ridge.png') center bottom / 100% 24% no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom));
+  }
   .fr-page--today .fr-today__hero::after { display: none; }
   .fr-page--today .fr-today__basis { padding: 12px 28px 20px; }
   .fr-page--today .fr-today__records { grid-row: 2; margin: 0; }
   /* 右は一つの落ち着いた面。予測と実績を区切り、同じ白カードの反復を避ける。 */
-  .fr-page--today .fr-today__scroll > .fr-today__right { grid-column: 2; grid-row: 1 / -1; margin: 0; background: var(--fr-surface); padding: 24px 28px; border-radius: 24px; gap: 24px; }
+  .fr-page--today .fr-today__scroll > .fr-today__right {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    margin: 0;
+    background: var(--fr-surface);
+    padding: 24px 28px;
+    border-radius: 24px;
+    gap: 24px;
+  }
   .fr-page--today .fr-today__right > .fr-today__details { padding: 0; border-radius: 0; background: transparent; border-top: 1px solid var(--fr-line); padding-top: 24px; }
   .fr-page--today .fr-today__right > .fr-band,
   .fr-page--today .fr-today__right > .fr-section,
@@ -173,40 +314,92 @@ body:has(.fr-page--today) { background: #eef3f5; }
   .fr-page--today .fr-today__right .fr-section-label { font-size: 18px; font-weight: 900; color: var(--fr-ink); }
   .fr-page--today .fr-today__detail > summary { font-size: 14px; padding-block: 6px; border-bottom: 1px solid var(--fr-line); }
   /* 今日の記録は左の列の下端まで場所を取り、右の列をスクロールしても画面に残す（#221） */
-  .fr-page--today .fr-today-layout > .fr-today__dock { max-height: none; grid-row: 4 / -1; align-self: start; position: sticky; top: 18px; margin: 0; border-radius: 24px; box-shadow: none; }
+  .fr-page--today .fr-today-layout > .fr-today__dock {
+    max-height: none;
+    grid-row: 4 / -1;
+    align-self: start;
+    position: sticky;
+    top: 18px;
+    margin: 0;
+    border-radius: 24px;
+    box-shadow: none;
+  }
   .fr-page--today .fr-today__record-day { padding: 12px 18px 0; }
   .fr-page--today .fr-actionbar { overflow: visible; padding: 4px 18px 18px; border-radius: 0 0 24px 24px; }
   .fr-page--today .fr-core__value { font-size: 32px; }
   .fr-page--today .fr-today-layout:not(:has(.fr-today__right)) { grid-template-columns: minmax(0, 1fr); }
   .fr-page--today .fr-actionbar__pair { gap: 12px; }
-  body:has(.fr-page--today) .fr-deskbar { background: #fff; color: #23303a; --fr-ink-2: #4f5f6a; --fr-dot: #2f6e8f; --fr-dot-soft: #e0edf4; --fr-on-dot: #fff; --fr-surface: #fff; --fr-line: #d8e2e5; }
+  body:has(.fr-page--today) .fr-deskbar {
+    background: #fff;
+    color: #23303a;
+    --fr-ink-2: #4f5f6a;
+    --fr-dot: #2f6e8f;
+    --fr-dot-soft: #e0edf4;
+    --fr-on-dot: #fff;
+    --fr-surface: #fff;
+    --fr-line: #d8e2e5;
+  }
 }
 
 /* 初期スマホで積み上げと未来の要約を同時に読める。詳細は既存Outlookで保持。 */
 .fr-page--today .fr-progress__header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
 .fr-page--today .fr-completion-brief { margin: 0; color: var(--fr-ink-2); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-@media (min-width: 960px) { .fr-page--today .fr-completion-brief { display: none; } }
+@media (min-width: 960px) {
+  .fr-page--today .fr-completion-brief { display: none; }
+}
 
 /* 昨日の問いかけ・訂正の中の量の行と2択（今日の記録と同じ部品、#221）。下の欄の余白・影・PCの角丸は付けない */
-.fr-page--today .fr-yesterday .fr-actionbar { position: static; min-height: 0; margin: 0; padding: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
+.fr-page--today .fr-yesterday .fr-actionbar {
+  position: static;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
 
 .fr-page--today .fr-today__history-chart { margin: 0 16px; padding: 18px; border-radius: 24px; background: var(--fr-surface); min-width: 0; }
 .fr-page--today .fr-today__history-chart h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
 .fr-page--today .fr-core__value, .fr-page--today .fr-outlook__p50, .fr-page--today .fr-progress__percent { font-family: inherit; font-weight: 700; }
 .fr-page--today .fr-today__question, .fr-page--today .fr-outlook__title, .fr-page--today .fr-today__right .fr-section-label { font-weight: 700; }
-.fr-save-feedback { min-height: calc(6.4em + 16px); padding: 8px 22px; box-sizing: border-box; font-size: 14px; line-height: 1.6; color: var(--fr-ink-2); }
+.fr-save-feedback {
+  min-height: calc(6.4em + 16px);
+  padding: 8px 22px;
+  box-sizing: border-box;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fr-ink-2);
+}
 .fr-save-feedback p { margin: 0; }
 .fr-save-feedback span { display: block; overflow-wrap: anywhere; }
 .fr-save-feedback__increase { color: var(--fr-rec); animation: fr-feedback-in .35s ease-out; }
-@keyframes fr-feedback-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { .fr-save-feedback__increase { animation: none; } }
-.fr-draft-preview { padding: 10px 12px; border: 1px solid var(--fr-line); border-radius: 12px; background: var(--fr-bg); color: var(--fr-ink); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+@keyframes fr-feedback-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fr-save-feedback__increase { animation: none; }
+}
+.fr-draft-preview {
+  padding: 10px 12px;
+  border: 1px solid var(--fr-line);
+  border-radius: 12px;
+  background: var(--fr-bg);
+  color: var(--fr-ink);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
 .fr-draft-preview p { margin: 0; }
 .fr-draft-preview__label { color: var(--fr-ink-2); }
 .fr-draft-preview__label span { display: inline-block; margin-left: 4px; font-weight: 700; }
 .fr-draft-preview__delta { font-weight: 700; }
 .fr-draft-preview--compact { display: none; }
-@media (max-width: 959px) { .fr-draft-preview--compact { display: block; margin: 0 16px 12px; flex-shrink: 0; } }
+@media (max-width: 959px) {
+  .fr-draft-preview--compact { display: block; margin: 0 16px 12px; flex-shrink: 0; }
+}
 @media (min-width: 960px) {
   .fr-page--today .fr-today__history-chart { grid-row: 3; margin: 0; }
   .fr-page--today .fr-today__basis .fr-why summary, .fr-page--today .fr-today__detail > summary { min-height: var(--fr-tap); }

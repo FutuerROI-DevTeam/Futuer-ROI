@@ -3,8 +3,14 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $directory = Join-Path (Split-Path $PSScriptRoot -Parent) 'docs/diagrams'
-function Number([string]$value) { [double]::Parse($value, [Globalization.CultureInfo]::InvariantCulture) }
-function Check([bool]$ok, [string]$message) { if (-not $ok) { throw $message } }
+function Number([string]$value) {
+    [double]::Parse($value, [Globalization.CultureInfo]::InvariantCulture)
+}
+function Check([bool]$ok, [string]$message) {
+    if (-not $ok) {
+        throw $message
+    }
+}
 function Style($cell) {
     $out = @{}
     foreach ($entry in $cell.GetAttribute('style').Split(';', [StringSplitOptions]::RemoveEmptyEntries)) {
@@ -17,8 +23,14 @@ function Numbers([string]$value) {
     return @([regex]::Matches($value, '-?\d+(?:\.\d+)?') | ForEach-Object { Number $_.Value })
 }
 function SameNumbers($a, $b) {
-    if ($a.Count -ne $b.Count) { return $false }
-    for ($i=0; $i -lt $a.Count; $i++) { if ([Math]::Abs($a[$i]-$b[$i]) -gt 0.001) { return $false } }
+    if ($a.Count -ne $b.Count) {
+        return $false
+    }
+    for ($i=0; $i -lt $a.Count; $i++) {
+        if ([Math]::Abs($a[$i]-$b[$i]) -gt 0.001) {
+            return $false
+        }
+    }
     return $true
 }
 function CheckArrow($svg, $style, $edge, [string]$side, [string]$context) {
@@ -40,7 +52,11 @@ function CheckArrow($svg, $style, $edge, [string]$side, [string]$context) {
     $paths = @($markers[0].SelectNodes('*[local-name()="path"]'))
     Check ($paths.Count -eq 1 -and $markers[0].ChildNodes.Count -eq 1) "$context unsupported $side arrow marker shape"
     $d = $paths[0].GetAttribute('d')
-    Check (($d -replace '[^A-Za-z]','') -ceq 'MLLZ' -and (SameNumbers (Numbers $d) @(1,1,9,5,1,9)) -and $paths[0].GetAttribute('fill') -notin @('','none')) "$context $side arrow marker is not a filled block"
+    Check (
+        ($d -replace '[^A-Za-z]','') -ceq 'MLLZ' -and
+        (SameNumbers (Numbers $d) @(1,1,9,5,1,9)) -and
+        $paths[0].GetAttribute('fill') -notin @('','none')
+    ) "$context $side arrow marker is not a filled block"
     Check ($markers[0].GetAttribute('orient') -ceq 'auto-start-reverse') "$context unsupported $side arrow marker orientation"
 }
 function Geometry($cell, [int]$depth=0) {
@@ -61,18 +77,31 @@ foreach ($name in @('system-architecture','user-flow')) {
     $svg = [xml][IO.File]::ReadAllText((Join-Path $directory "$name.svg"))
     $models = @($source.SelectNodes('/mxfile/diagram/mxGraphModel'))
     Check ($models.Count -eq 1) "$name needs one uncompressed page"
-    $model = $models[0]; $width = Number $model.GetAttribute('pageWidth'); $height = Number $model.GetAttribute('pageHeight')
+    $model = $models[0]
+    $width = Number $model.GetAttribute('pageWidth')
+    $height = Number $model.GetAttribute('pageHeight')
     Check ((Number $svg.DocumentElement.GetAttribute('width')) -eq $width -and (Number $svg.DocumentElement.GetAttribute('height')) -eq $height) "$name page sizes differ"
     Check (@($svg.SelectNodes('//*[local-name()="script" or local-name()="image" or local-name()="foreignObject"]')).Count -eq 0) "$name contains active or external SVG content"
     Check (@($svg.SelectNodes('//@*[local-name()="href"]')).Count -eq 0) "$name contains external SVG references"
-    $cells = @($model.SelectNodes('root/mxCell')); $byId = @{}
-    foreach ($cell in $cells) { $id=$cell.GetAttribute('id'); Check (-not $byId.ContainsKey($id)) "$name duplicate cell $id"; $byId[$id]=$cell }
-    $texts = @($svg.SelectNodes('//*[local-name()="text"]')); $usedText = [Collections.Generic.HashSet[string]]::new()
+    $cells = @($model.SelectNodes('root/mxCell'))
+    $byId = @{}
+    foreach ($cell in $cells) {
+        $id=$cell.GetAttribute('id')
+        Check (-not $byId.ContainsKey($id)) "$name duplicate cell $id"
+        $byId[$id]=$cell
+    }
+    $texts = @($svg.SelectNodes('//*[local-name()="text"]'))
+    $usedText = [Collections.Generic.HashSet[string]]::new()
     $vertices = @($model.SelectNodes('root/mxCell[@vertex="1"]'))
     foreach ($cell in $vertices) {
-        $id=$cell.GetAttribute('id'); $g=Geometry $cell; $style=Style $cell
+        $id=$cell.GetAttribute('id')
+        $g=Geometry $cell
+        $style=Style $cell
         Check ($style['html'] -eq '0') "$name unsupported HTML vertex $id"
-        $x=Number $g.GetAttribute('x');$y=Number $g.GetAttribute('y');$w=Number $g.GetAttribute('width');$h=Number $g.GetAttribute('height')
+        $x=Number $g.GetAttribute('x')
+        $y=Number $g.GetAttribute('y')
+        $w=Number $g.GetAttribute('width')
+        $h=Number $g.GetAttribute('height')
         Check ($x -ge 0 -and $y -ge 0 -and $w -gt 0 -and $h -gt 0 -and $x+$w -le $width -and $y+$h -le $height) "$name vertex outside page: $id"
         # Compare logical label lines; normalize optional escaped newlines.
         # This check does not execute the native draw.io editor.
@@ -82,7 +111,8 @@ foreach ($name in @('system-architecture','user-flow')) {
             foreach ($line in $value.Split("`n")) {
                 $candidates=@($texts | Where-Object { $_.InnerText -ceq $line -and [Math]::Abs((Number $_.GetAttribute('x'))-($x+$w/2)) -lt 0.001 -and (Number $_.GetAttribute('font-size')) -eq $font })
                 Check ($candidates.Count -eq 1) "$name label/font/center differs: $id ($line)"
-                $t=$candidates[0];$ty=Number $t.GetAttribute('y')
+                $t=$candidates[0]
+                $ty=Number $t.GetAttribute('y')
                 Check ($ty -ge $y -and $ty -le $y+$h) "$name text baseline outside source box: $id"
                 Check ($usedText.Add($t.OuterXml)) "$name reused SVG text: $id"
             }
@@ -102,13 +132,18 @@ foreach ($name in @('system-architecture','user-flow')) {
     }
     Check ($usedText.Count -eq $texts.Count) "$name extra/missing SVG labels"
     # Identify unfilled edge paths independently of their arrowheads.
-    $edges=@($model.SelectNodes('root/mxCell[@edge="1"]'));$svgEdges=@($svg.SelectNodes('/*[local-name()="svg"]/*[local-name()="path" and @fill="none"]'))
+    $edges=@($model.SelectNodes('root/mxCell[@edge="1"]'))
+    $svgEdges=@($svg.SelectNodes('/*[local-name()="svg"]/*[local-name()="path" and @fill="none"]'))
     Check ($edges.Count -eq $svgEdges.Count) "$name edge counts differ"
     foreach ($cell in $edges) {
         Check ($cell.GetAttribute('parent') -eq '1') "$name unsupported grouped edge waypoints"
-        $style=Style $cell;$from=Geometry $byId[$cell.GetAttribute('source')];$to=Geometry $byId[$cell.GetAttribute('target')]
+        $style=Style $cell
+        $from=Geometry $byId[$cell.GetAttribute('source')]
+        $to=Geometry $byId[$cell.GetAttribute('target')]
         $points=@(((Number $from.GetAttribute('x'))+(Number $style['exitX'])*(Number $from.GetAttribute('width'))),((Number $from.GetAttribute('y'))+(Number $style['exitY'])*(Number $from.GetAttribute('height'))))
-        foreach ($point in $cell.SelectNodes('mxGeometry/Array/mxPoint')) { $points+=@((Number $point.GetAttribute('x')),(Number $point.GetAttribute('y'))) }
+        foreach ($point in $cell.SelectNodes('mxGeometry/Array/mxPoint')) {
+            $points+=@((Number $point.GetAttribute('x')),(Number $point.GetAttribute('y')))
+        }
         $points+=@(((Number $to.GetAttribute('x'))+(Number $style['entryX'])*(Number $to.GetAttribute('width'))),((Number $to.GetAttribute('y'))+(Number $style['entryY'])*(Number $to.GetAttribute('height'))))
         $matches=@($svgEdges | Where-Object { SameNumbers (Numbers $_.GetAttribute('d')) $points })
         Check ($matches.Count -eq 1) "$name edge path differs: $($cell.GetAttribute('id'))"

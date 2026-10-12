@@ -17,14 +17,21 @@ import { launchBrowser } from './browser-startup.mjs';
 
 async function freePort() {
   const server = createServer();
-  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
   const port = server.address().port;
   await new Promise(resolve => server.close(resolve));
   return port;
 }
 async function until(read, accept, message) {
   const end = Date.now() + 15000;
-  while (Date.now() < end) { const result = await read(); if (accept(result)) return result; await delay(30); }
+  while (Date.now() < end) {
+    const result = await read();
+    if (accept(result)) return result;
+    await delay(30);
+  }
   throw new Error(message);
 }
 
@@ -39,7 +46,10 @@ test('#225 actual SPA + authenticated API + isolated synthetic DB: opt-in/captur
   t.after(async () => {
     try { await session?.stop(); }
     finally {
-      await app?.close(); await disabledApp?.close(); await authPool?.end(); await db.close();
+      await app?.close();
+      await disabledApp?.close();
+      await authPool?.end();
+      await db.close();
     }
     assert.equal(dirname(resolve(profileRoot)), resolve(tmpdir()));
     assert.ok(basename(profileRoot).startsWith('futureroi-evaluation-browser-'));
@@ -117,9 +127,12 @@ test('#225 actual SPA + authenticated API + isolated synthetic DB: opt-in/captur
   await until(text, value => value.includes('現在の記録と照合しました。'), 'assessment did not complete');
   const report = (await a.call('GET', `/api/goals/${goal.id}/evaluation`)).json;
   assert.equal(report.forecasts[0].remainingAmount, 10);
-  assert.equal(report.forecasts[0].p50Days, 1); assert.equal(report.forecasts[0].p80Days, 2);
-  assert.equal(report.forecasts[0].p50State, 'NOT_REACHED'); assert.equal(report.forecasts[0].p80State, 'REACHED');
-  assert.ok((await text()).includes('P50: 期限までに未到達')); assert.ok((await text()).includes('P80: 期限までに到達'));
+  assert.equal(report.forecasts[0].p50Days, 1);
+  assert.equal(report.forecasts[0].p80Days, 2);
+  assert.equal(report.forecasts[0].p50State, 'NOT_REACHED');
+  assert.equal(report.forecasts[0].p80State, 'REACHED');
+  assert.ok((await text()).includes('P50: 期限までに未到達'));
+  assert.ok((await text()).includes('P80: 期限までに到達'));
   await snapshot('390-assessed');
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await snapshot('1280-assessed');

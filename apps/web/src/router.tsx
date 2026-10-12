@@ -52,7 +52,9 @@ const authLayout = createRoute({
   // ログイン済みなら、ログイン画面を出さずに戻り先へ移る（履歴を置き換え、「戻る」でこの画面へ戻らない）。
   // 確認できなかった（通信の失敗）ときは、そのままログイン画面を出す
   beforeLoad: async ({ search }) => {
-    if ((await checkSession()).kind === 'signed-in') throw redirect({ href: search.redirect, replace: true });
+    if ((await checkSession()).kind === 'signed-in') {
+      throw redirect({ href: search.redirect, replace: true });
+    }
   },
   component: Outlet,
 });
@@ -102,8 +104,12 @@ const appLayout = createRoute({
   // 未ログインと取り違えずにエラーの画面（接続できませんでした）を出す
   beforeLoad: async ({ location }) => {
     const session = await checkSession();
-    if (session.kind === 'signed-out') throw redirect({ to: '/login', search: { redirect: location.href }, replace: true });
-    if (session.kind === 'unreachable') throw new SessionUnreachableError();
+    if (session.kind === 'signed-out') {
+      throw redirect({ to: '/login', search: { redirect: location.href }, replace: true });
+    }
+    if (session.kind === 'unreachable') {
+      throw new SessionUnreachableError();
+    }
   },
   // デスクトップ幅の上のバー（アプリ名とアカウント）を出す外側
   component: AppShell,

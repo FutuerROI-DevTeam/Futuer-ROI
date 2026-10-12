@@ -4,7 +4,18 @@ import { MutationObserver, QueryClient } from '@tanstack/react-query';
 import { isSaveFor, saveLogKey } from '../src/features/logs/useSaveLog.ts';
 import { ApiError } from '../src/api/client.ts';
 import { amountFormat } from '../src/copy/amount.ts';
-import { choiceFromLog, classifySaveError, describeChoice, editLocks, reachedDate, isCurrentToday, TodayDateChangedError, toLogPut, unlessLocked, yesterdayRecord } from '../src/features/logs/record-log.ts';
+import {
+  choiceFromLog,
+  classifySaveError,
+  describeChoice,
+  editLocks,
+  reachedDate,
+  isCurrentToday,
+  TodayDateChangedError,
+  toLogPut,
+  unlessLocked,
+  yesterdayRecord,
+} from '../src/features/logs/record-log.ts';
 
 test('DONEは表示量と設定版を明示し、SKIPPEDは設定版だけを送る', () => {
   assert.deepEqual(toLogPut({ status: 'DONE', amount: 20 }, 3), { status: 'DONE', amount: 20, expectedGoalSettingsRevision: 3 });

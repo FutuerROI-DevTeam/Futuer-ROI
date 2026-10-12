@@ -15,16 +15,20 @@ export function InsufficientNotice({ title, children, role }: { title?: string; 
   );
 }
 
-/** 通信・保存のエラー（琥珀の面＋切断アイコン）。「記録が足りない」と取り違えないよう、データ不足とは別の見た目にする。 */
+/** 通信・保存のエラー。データ不足と取り違えないよう、琥珀の面と切断アイコンで示す。 */
 export function ErrorPanel({ title, children, action, focusTitle = false }: {
   title: string;
   children: ReactNode;
   action?: ReactNode;
-  /** 表示時に見出しへフォーカスを移す。押したボタンがこのパネルに置き換わる場面（保存の失敗）で、フォーカスが body に落ちないようにする（#277）。 */
+  /** 保存ボタンがパネルに置き換わるとき、bodyへ落ちるフォーカスを見出しで受ける（#277）。 */
   focusTitle?: boolean;
 }) {
   const titleRef = useRef<HTMLParagraphElement>(null);
-  useEffect(() => { if (focusTitle) titleRef.current?.focus(); }, [focusTitle]);
+  useEffect(() => {
+    if (focusTitle) {
+      titleRef.current?.focus();
+    }
+  }, [focusTitle]);
   return (
     <section className="fr-error" role="alert">
       <p className="fr-error__title" tabIndex={focusTitle ? -1 : undefined} ref={titleRef}>

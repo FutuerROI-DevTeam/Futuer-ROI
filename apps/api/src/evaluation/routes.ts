@@ -2,13 +2,19 @@ import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { Type } from '@sinclair/typebox';
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
-import { ErrorBody, GoalParams, EvaluationPolicy, EvaluationReport, EvaluationForecast, EvaluationParticipation, EvaluationCapture } from '../contracts/index.ts';
+import {
+  ErrorBody, GoalParams, EvaluationPolicy, EvaluationReport,
+  EvaluationForecast, EvaluationParticipation, EvaluationCapture,
+} from '../contracts/index.ts';
 import { errorBody } from '../http/errors.ts';
 import { requireUserId } from '../http/guards.ts';
 import { evaluationPolicy, type EvaluationOptions } from './policy.ts';
 import { captureEvaluation, EvaluationConflict, evaluationReport, joinEvaluation, withdrawEvaluation } from './store.ts';
 
-export async function registerEvaluationRoutes(app: FastifyInstance, deps: { pool: Pool; now: () => Date; options?: EvaluationOptions | undefined }) {
+export async function registerEvaluationRoutes(
+  app: FastifyInstance,
+  deps: { pool: Pool; now: () => Date; options?: EvaluationOptions | undefined },
+) {
   const policy = evaluationPolicy(deps.options);
   await app.register(async instance => {
     requireUserId(instance);
@@ -39,8 +45,10 @@ export async function registerEvaluationRoutes(app: FastifyInstance, deps: { poo
     api.post(`${path}/forecasts`, { schema: { params: GoalParams, body: EvaluationCapture,
       response: { 200: EvaluationForecast, 201: EvaluationForecast, 404: ErrorBody, 409: ErrorBody } } }, async (request, reply) => {
       try {
-        const result = await captureEvaluation(deps.pool, request.userId, request.params.goalId,
-          request.body.expectedGoalSettingsRevision, deps.now, policy, deps.options!.buildVersion);
+        const result = await captureEvaluation(
+          deps.pool, request.userId, request.params.goalId,
+          request.body.expectedGoalSettingsRevision, deps.now, policy, deps.options!.buildVersion,
+        );
         return result ? reply.code(result.replayed ? 200 : 201).send(result.forecast) : reply.code(404).send(missing);
       } catch (error) {
         if (error instanceof EvaluationConflict) return reply.code(409).send(errorBody(error.code, error.message));

@@ -25,8 +25,11 @@ function* sourceFiles(directory, prefix = '') {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const name = prefix + entry.name;
     assert.ok(!entry.isSymbolicLink(), `Source audit cannot follow symlink: ${name}`);
-    if (entry.isDirectory()) yield* sourceFiles(new URL(entry.name + '/', directory), name + '/');
-    else if (entry.isFile() && name.endsWith('.ts')) yield name;
+    if (entry.isDirectory()) {
+      yield* sourceFiles(new URL(entry.name + '/', directory), name + '/');
+    } else if (entry.isFile() && name.endsWith('.ts')) {
+      yield name;
+    }
   }
 }
 
@@ -74,12 +77,16 @@ test('fixture audit: known recovery quantiles match independent integer factoria
   // Gamma関数の整数での階乗恒等式を固定参照値の確認だけに使う。本体計算は呼ばない。
   const factorial = n => {
     let result = 1n;
-    for (let i = 2; i <= n; i++) result *= BigInt(i);
+    for (let i = 2; i <= n; i++) {
+      result *= BigInt(i);
+    }
     return result;
   };
   for (const row of recoveryExamples) {
     for (const [key, multiplier] of [['g50', 2n], ['g80', 5n]]) {
-      if (!(key in row)) continue;
+      if (!(key in row)) {
+        continue;
+      }
       const reached = day => {
         const numerator = factorial(row.beta + day - 1) * factorial(row.alpha + row.beta - 1);
         const denominator = factorial(row.alpha + row.beta + day - 1) * factorial(row.beta - 1);

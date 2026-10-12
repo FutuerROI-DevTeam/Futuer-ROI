@@ -581,9 +581,13 @@ CIのcommand・層別集計・安全な失敗artifactは[診断手順](../.githu
 npm run typecheck
 npm test
 npm run build
+npm run verify:ci-reports
+npm run verify:foundation
 ```
 
 `npm test`は[Webの共通エラー回帰](../apps/web/tests/client.test.mjs)、APIテスト（`node:test`。`DATABASE_URL`があればそのPostgreSQLへ、なければ`embedded-postgres`で`apps/api/.local/`にローカルクラスタを起動し、テスト専用databaseを作成・削除）と[Engineの数値・候補回帰](../packages/prediction/README.md#検証ci)を実行します。`npm run build`は`apps/web/dist`（SPA）と`apps/api/dist`（JS）を作ります。
+
+`verify:ci-reports`は既存のCI集計・失敗判定・保存allowlistを検査し、`verify:foundation`はPowerShell 7で文書・設定・差分の空白を検査します。アプリのテストやブラウザを代行せず、各検査の失敗をそのまま返す入口です。予測入力の行変換は[純粋回帰](../apps/api/tests/prediction-snapshot.test.ts)、Goal入力の復元は[復旧境界回帰](../apps/web/tests/form-recovery.test.mjs)から追い、実DBのclock／CASや実DOMのowner・訪問回帰と併せて確認します。
 
 Webの[所有者境界の実hook回帰](../apps/web/tests/session-cache.browser-check.mjs)は`npm run test:browser --workspace=@futureroi/web`で実行します。既存Viteでテスト用bundleを作り、Chrome／Edge／Chromiumの専用一時profileで実DOMを確認します。Windows・macOSの一般的なインストール先とLinuxの`/usr/bin/`を探索します。別の場所なら`TEST_BROWSER`に実行ファイルの絶対pathを指定してください。GitHub Actionsの既存`npm test`から[CI入口](../apps/web/tests/session-browser-ci.test.mjs)で自動実行し、`ubuntu-latest`にあるChromeを使います。ブラウザがない場合は未実行の成功にせず失敗を報告します。ローカルの`npm test`はブラウザ回帰を明示的なskipとして報告し、Docker buildにもブラウザを要求しません。所有者切替の合成session回帰と、固定版Better Authの実client・合成HTTPによるfocus確認中／失敗／回復、空sessionの再取得ループ抑止を含みます。[ルート確認回帰](../apps/web/tests/session-confirm.test.mjs)も通常testで実行し、hookと共有する確認の置換・並行呼出し・429を検証します。[正常同一ownerのdraft回帰](../apps/web/tests/session-draft.browser.tsx)は実router・実SDK・合成HTTPで15操作と、短い中間owner／error・保存中・編集revisionの安全境界を検査します。[Todayの再確認回帰](../apps/web/tests/session-today.browser.tsx)は、同じ人の確認中に量の入力を保つこと、確認中の保存を確定後に1回だけ送ること、別の人・失敗では送らず画面を捨てることを検査します。実認証・API／DBのE2Eとは区別します。
 

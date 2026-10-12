@@ -5,11 +5,21 @@ export type Answers = Readonly<Record<Origin, Answer>>;
 export type Source = "NONE" | "QUESTION" | "QUESTION_AND_RECORDS" | "RECORDS";
 export type SufficientSource = Exclude<Source, "NONE">;
 export type Unit = "minutes" | "sessions";
-export interface ActualProgress { readonly done: number; readonly total: number; readonly unit: Unit }
-export interface Counts { readonly success: number; readonly total: number }
+export interface ActualProgress {
+  readonly done: number;
+  readonly total: number;
+  readonly unit: Unit;
+}
+export interface Counts {
+  readonly success: number;
+  readonly total: number;
+}
 export interface Plan {
-  readonly remainingAmount: number; readonly sessions: number;
-  readonly sessionAmount: number; readonly lastAmount: number; readonly unit: Unit;
+  readonly remainingAmount: number;
+  readonly sessions: number;
+  readonly sessionAmount: number;
+  readonly lastAmount: number;
+  readonly unit: Unit;
 }
 export type CorePresentation =
   | { readonly kind: "insufficient"; readonly message?: string }
@@ -17,11 +27,16 @@ export type CorePresentation =
 export type CompletionPresentation =
   | { readonly kind: "insufficient"; readonly message: string }
   | { readonly kind: "conditional"; readonly plan: Plan; readonly reason: string }
-  | { readonly kind: "estimate"; readonly scenario: "TODAY_DONE" | "CURRENT_STATE";
+  | {
+      readonly kind: "estimate";
+      readonly scenario: "TODAY_DONE" | "CURRENT_STATE";
       readonly sources: Readonly<Record<Origin, SufficientSource>>;
       // Keep Engine days for display geometry; never parse them from formatted week labels.
-      readonly p50Days: number | null; readonly p80Days: number | null;
-      readonly p50Label: string | null; readonly p80Label: string | null };
+      readonly p50Days: number | null;
+      readonly p80Days: number | null;
+      readonly p50Label: string | null;
+      readonly p80Label: string | null;
+    };
 export type CurrentStateCompletionPresentation =
   | Extract<CompletionPresentation, { kind: "conditional" | "insufficient" }>
   | (Omit<Extract<CompletionPresentation, { kind: "estimate" }>, "scenario"> & { readonly scenario: "CURRENT_STATE" });
@@ -29,10 +44,19 @@ export type ForecastPresentation =
   | { readonly kind: "loading" | "saved-refresh-failed" | "save-unknown" }
   | { readonly kind: "error"; readonly message: string }
   | { readonly kind: "completed"; readonly progress: ActualProgress }
-  | { readonly kind: "forecast"; readonly progress: ActualProgress; readonly core: CorePresentation;
-      readonly resumed: Counts; readonly completion: CompletionPresentation }
-  | { readonly kind: "today-recorded"; readonly progress: ActualProgress;
-      readonly resumed: Counts; readonly completion: CurrentStateCompletionPresentation };
+  | {
+      readonly kind: "forecast";
+      readonly progress: ActualProgress;
+      readonly core: CorePresentation;
+      readonly resumed: Counts;
+      readonly completion: CompletionPresentation;
+    }
+  | {
+      readonly kind: "today-recorded";
+      readonly progress: ActualProgress;
+      readonly resumed: Counts;
+      readonly completion: CurrentStateCompletionPresentation;
+    };
 export interface QuestionPriorFieldsProps {
   readonly value: Answers;
   readonly onChange: (next: Answers) => void;

@@ -22,8 +22,15 @@ test('uniform stays strictly inside endpoints', () => {
 });
 
 function moments(draw, count = 60000) {
-  let sum = 0, squares = 0;
-  for (let i = 0; i < count; i++) { const x = draw(); assert.ok(Number.isFinite(x) && x >= 0); sum += x; squares += x * x; }
+  let sum = 0;
+  let squares = 0;
+  for (let i = 0; i < count; i++) {
+    const x = draw();
+    assert.ok(Number.isFinite(x) && x >= 0);
+    sum += x;
+    squares += x * x;
+  }
+
   const mean = sum / count;
   return { mean, variance: squares / count - mean * mean };
 }
@@ -39,7 +46,11 @@ test('T15 Gamma and Beta moments including supported shape boundary', () => {
     const next = splitmix32(seedFor(20261012, alpha + betaShape));
     const expectedMean = alpha / (alpha + betaShape);
     const expectedVariance = alpha * betaShape / ((alpha + betaShape) ** 2 * (alpha + betaShape + 1));
-    const { mean, variance } = moments(() => { const x = beta(alpha, betaShape, next); assert.ok(x <= 1); return x; });
+    const { mean, variance } = moments(() => {
+      const x = beta(alpha, betaShape, next);
+      assert.ok(x <= 1);
+      return x;
+    });
     assert.ok(Math.abs(mean - expectedMean) < 0.025 * Math.sqrt(expectedVariance));
     assert.ok(Math.abs(variance - expectedVariance) < 0.045 * expectedVariance);
   }

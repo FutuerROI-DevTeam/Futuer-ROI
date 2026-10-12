@@ -3,7 +3,25 @@ import { test } from 'node:test';
 import { MutationObserver, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { ApiError } from '../src/api/client.ts';
 import { goalsCopy } from '../src/copy/goals.ts';
-import { answersLockReason, changesAnswerContext, emptyValues, errorCount, initialPriorChosen, priorChoiceError, fieldErrorsFromApi, isEditSaveResultUnknown, parseInteger, rebaseValues, reloadLatestGoal, targetDateChecks, toCreateBody, toPatchBody, validate, validateGoalForm, valuesFromGoal } from '../src/features/goals/goal-form.ts';
+import {
+  answersLockReason,
+  changesAnswerContext,
+  emptyValues,
+  errorCount,
+  initialPriorChosen,
+  priorChoiceError,
+  fieldErrorsFromApi,
+  isEditSaveResultUnknown,
+  parseInteger,
+  rebaseValues,
+  reloadLatestGoal,
+  targetDateChecks,
+  toCreateBody,
+  toPatchBody,
+  validate,
+  validateGoalForm,
+  valuesFromGoal,
+} from '../src/features/goals/goal-form.ts';
 
 const e = goalsCopy.errors;
 const valid = { title: '英単語アプリ', unit: 'minutes', totalRequired: '3000', sessionAmount: '20', initialProgress: '0', timezone: 'Asia/Tokyo', targetDate: '', questionPrior: { a: null, b: null } };
@@ -158,7 +176,10 @@ test('409後の再取得は通信中断・503の古いcacheを採用せず、成
     let failed = true;
     const observer = new QueryObserver(client, {
       queryKey: ['goal', failure.name], initialData: previous, retry: false,
-      queryFn: async () => { if (failed) throw failure; return latest; },
+      queryFn: async () => {
+        if (failed) throw failure;
+        return latest;
+      },
     });
     try {
       assert.equal(await reloadLatestGoal(() => observer.refetch()), undefined);

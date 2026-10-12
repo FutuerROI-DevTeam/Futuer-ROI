@@ -3,7 +3,8 @@ import test from 'node:test';
 import { signOutFixture } from './helpers/sign-out-fixture.ts';
 
 test('DELETE故障は503/Cookie保持、明示再試行の成功後だけ旧Cookieを拒否する', async (t) => {
-  const f = await signOutFixture(); t.after(() => f.app.close());
+  const f = await signOutFixture();
+  t.after(() => f.app.close());
   const cookie = await f.signUp();
   assert.equal((await f.replay(cookie)).statusCode, 200);
   f.state.deleteFailure = true;
@@ -25,7 +26,8 @@ test('DELETE故障は503/Cookie保持、明示再試行の成功後だけ旧Cook
 });
 
 test('削除前lookupの故障が削除を飛ばして成功に見えない', async (t) => {
-  const f = await signOutFixture(); t.after(() => f.app.close());
+  const f = await signOutFixture();
+  t.after(() => f.app.close());
   const cookie = await f.signUp();
   f.state.deleteLookupFailure = true;
   const response = await f.signOut(cookie);
@@ -41,7 +43,8 @@ for (const headers of [
   { origin: '', referer: 'http://evil.example/path' },
 ]) {
   test(`拒否するOrigin/RefererはhookのDELETEにも到達しない ${JSON.stringify(headers)}`, async (t) => {
-    const f = await signOutFixture(); t.after(() => f.app.close());
+    const f = await signOutFixture();
+    t.after(() => f.app.close());
     const cookie = await f.signUp();
     f.state.deleteFailure = true;
     const response = await f.signOut(cookie, headers);
@@ -54,7 +57,8 @@ for (const headers of [
 }
 
 test('不正callbackURLも削除前に拒否し、GET sign-outは削除しない', async (t) => {
-  const f = await signOutFixture(); t.after(() => f.app.close());
+  const f = await signOutFixture();
+  t.after(() => f.app.close());
   const cookie = await f.signUp();
   assert.equal((await f.signOut(cookie, {}, { callbackURL: 'http://evil.example' })).statusCode, 403);
   assert.equal((await f.signOut(cookie, {}, { callbackURL: 123 })).statusCode, 400);
@@ -64,7 +68,8 @@ test('不正callbackURLも削除前に拒否し、GET sign-outは削除しない
 });
 
 test('不許可media typeと壊れたJSONは署名Cookie付きでも削除前に拒否する', async (t) => {
-  const f = await signOutFixture(); t.after(() => f.app.close());
+  const f = await signOutFixture();
+  t.after(() => f.app.close());
   const cookie = await f.signUp();
   for (const [contentType, payload] of [['text/plain', '{}'], ['application/json', '{']] as const) {
     const response = await f.app.inject({ method: 'POST', url: '/api/auth/sign-out', headers: { origin: f.baseURL, cookie, 'content-type': contentType }, payload });
@@ -75,7 +80,8 @@ test('不許可media typeと壊れたJSONは署名Cookie付きでも削除前に
 });
 
 test('署名改ざん・Cookieなしは保存済みsessionを削除しない', async (t) => {
-  const f = await signOutFixture(); t.after(() => f.app.close());
+  const f = await signOutFixture();
+  t.after(() => f.app.close());
   const cookie = await f.signUp();
   const tampered = cookie.replace(/(session_token=)[^;]+/, '$1invalid.unsigned');
   assert.notEqual(tampered, cookie);
@@ -87,8 +93,10 @@ test('署名改ざん・Cookieなしは保存済みsessionを削除しない', a
 });
 
 test('https署名Cookieでも対象sessionだけを削除し、既削除tokenの再試行は冪等', async (t) => {
-  const f = await signOutFixture('https://app.test'); t.after(() => f.app.close());
-  const a = await f.signUp(); const b = await f.signUp('synthetic-b@example.test');
+  const f = await signOutFixture('https://app.test');
+  t.after(() => f.app.close());
+  const a = await f.signUp();
+  const b = await f.signUp('synthetic-b@example.test');
   assert.ok(a.includes('__Secure-better-auth.session_token='));
   assert.equal((await f.signOut(a)).statusCode, 200);
   assert.equal((await f.signOut(a)).statusCode, 200);
@@ -99,7 +107,8 @@ test('https署名Cookieでも対象sessionだけを削除し、既削除tokenの
 });
 
 test('同じuserの別ログインsessionも対象token以外は保持する', async (t) => {
-  const f = await signOutFixture(); t.after(() => f.app.close());
+  const f = await signOutFixture();
+  t.after(() => f.app.close());
   const a = await f.signUp();
   const second = await f.app.inject({ method: 'POST', url: '/api/auth/sign-in/email', headers: { origin: f.baseURL }, payload: { email: 'synthetic-a@example.test', password: 'synthetic-password-only' } });
   assert.equal(second.statusCode, 200);
@@ -114,7 +123,8 @@ test('同じuserの別ログインsessionも対象token以外は保持する', a
 });
 
 test('削除の応答喪失は503/Cookie保持、削除済みなら再試行で成功に収束する', async (t) => {
-  const f = await signOutFixture(); t.after(() => f.app.close());
+  const f = await signOutFixture();
+  t.after(() => f.app.close());
   const cookie = await f.signUp();
   f.state.lostDeleteReply = true;
   const uncertain = await f.signOut(cookie);
@@ -128,9 +138,11 @@ test('削除の応答喪失は503/Cookie保持、削除済みなら再試行で�
 });
 
 test('session読取も故障すると保護APIは500、DB復帰後に明示再試行する', async (t) => {
-  const f = await signOutFixture(); t.after(() => f.app.close());
+  const f = await signOutFixture();
+  t.after(() => f.app.close());
   const cookie = await f.signUp();
-  f.state.deleteFailure = true; f.state.readFailure = true;
+  f.state.deleteFailure = true;
+  f.state.readFailure = true;
   const failure = await f.signOut(cookie);
   assert.equal(failure.statusCode, 503);
   assert.equal(failure.headers['set-cookie'], undefined);
@@ -145,14 +157,27 @@ test('session読取も故障すると保護APIは500、DB復帰後に明示再�
 test('削除応答までCookieを消さず、同じtokenの同時sign-outも成功後に失効する', { timeout: 10000 }, async (t) => {
   const f = await signOutFixture();
   const cookie = await f.signUp();
-  let release!: () => void; let bothEntered!: () => void;
+  let release!: () => void;
+  let bothEntered!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
   const entered = new Promise<void>((resolve) => { bothEntered = resolve; });
-  f.state.beforeDelete = async () => { if (f.state.deletes === 2) bothEntered(); await gate; };
-  t.after(() => { release(); return f.app.close(); });
+  f.state.beforeDelete = async () => {
+    if (f.state.deletes === 2) bothEntered();
+    await gate;
+  };
+  t.after(() => {
+    release();
+    return f.app.close();
+  });
   let completed = 0;
-  const first = f.signOut(cookie).then((response) => { completed++; return response; });
-  const second = f.signOut(cookie).then((response) => { completed++; return response; });
+  const first = f.signOut(cookie).then((response) => {
+    completed++;
+    return response;
+  });
+  const second = f.signOut(cookie).then((response) => {
+    completed++;
+    return response;
+  });
   await entered;
   assert.equal(completed, 0);
   assert.equal((await f.replay(cookie)).statusCode, 200, 'a request authenticated before deletion can still succeed');

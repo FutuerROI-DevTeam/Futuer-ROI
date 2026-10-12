@@ -23,7 +23,10 @@ async function run() {
   transport.allowSignOut = true;
   transport.signOutFailure = true;
   transport.signOutHold = true;
-  await act(async () => { root.render(<QueryClientProvider client={client}><PrivateCacheGuard /><RouterProvider router={router} /></QueryClientProvider>); await tick(); });
+  await act(async () => {
+    root.render(<QueryClientProvider client={client}><PrivateCacheGuard /><RouterProvider router={router} /></QueryClientProvider>);
+    await tick();
+  });
   await act(async () => { void router.navigate({ to: '/goals' }); await tick(); }); await settle();
   await act(async () => { host.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')!.click(); await tick(); });
   ensure(logoutButton() && !logoutButton()!.disabled, 'logout must initially be available');
@@ -31,7 +34,12 @@ async function run() {
   ensure(logoutButton()!.disabled && logoutButton()!.getAttribute('aria-busy') === 'true', 'logout is not busy while pending');
   await act(async () => { logoutButton()!.click(); await tick(); });
   ensure(transport.signOutCalls === 1, 'busy click duplicated the request');
-  await act(async () => { transport.signOutHold = false; transport.signOutHeld.splice(0).forEach((release: () => void) => release()); await tick(); }); await settle();
+  await act(async () => {
+    transport.signOutHold = false;
+    transport.signOutHeld.splice(0).forEach((release: () => void) => release());
+    await tick();
+  });
+  await settle();
   ensure(router.state.location.pathname === '/goals', '503 navigated as if logout succeeded');
   ensure(host.querySelector('[role="alert"]')?.textContent?.includes('ログアウトを確認できませんでした'), '503 did not show the recovery message');
   ensure(!logoutButton()!.disabled && !logoutButton()!.hasAttribute('aria-busy'), '503 did not release busy for retry');

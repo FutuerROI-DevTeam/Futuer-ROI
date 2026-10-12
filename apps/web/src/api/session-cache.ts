@@ -14,11 +14,9 @@ export function sessionChanged(prev: string | null | undefined, next: string | n
 }
 
 /**
- * 画面が持つ表示状態（Today の「最後にそろっていた表示」など）は QueryClient の外にあり、キャッシュを消しても残る。
- * そこで「いまの利用者」と「その利用者のデータとして使ってよい取得の下限時刻（clearedAt）」を共有する。
- * - 利用者が変わった直後は clearedAt = Infinity（前の人の取得の中断が終わるまで、どのデータも使わない）
- * - 中断が終わった時刻を clearedAt にする。それより後に届いたデータは、新しい利用者の認証で始めた取得のもの
- * 画面はこの owner ごとに作り直し（保持していた表示を捨てる）、clearedAt より前のデータを表示に使わない。
+ * QueryClient 外の画面状態も破棄できるよう、owner と取得の採用下限（clearedAt）を共有する。
+ * 旧取得の中断・cache 消去が終わるまでは Infinity で全応答を拒否する。
+ * 画面は owner ごとに作り直し、clearedAt 以下のデータを使わない。
  */
 export type PrivateEpoch = { owner: string | null | undefined; clearedAt: number };
 
@@ -35,8 +33,15 @@ const waitingEpoch: PrivateEpoch = { owner: undefined, clearedAt: Number.POSITIV
 /** 非query回復GET向けの境界。現時点の製品callerはなく、#175併用候補と実hook回帰用。確認/owner変更は描画前にも無効にする。 */
 export function getPrivateEpoch(): PrivateEpoch {
   const session = authClient.$store?.atoms?.session?.get();
-  if (getPrivateGeneration() !== clearedGeneration || session?.isPending || session?.isRefetching || session?.error ||
-      (session && (session.data?.user.id ?? null) !== epoch.owner)) return waitingEpoch;
+  if (
+    getPrivateGeneration() !== clearedGeneration
+    || session?.isPending
+    || session?.isRefetching
+    || session?.error
+    || (session && (session.data?.user.id ?? null) !== epoch.owner)
+  ) {
+    return waitingEpoch;
+  }
   return epoch;
 }
 const listeners = new Set<() => void>();
@@ -58,7 +63,9 @@ export function usePrivateEpoch(): PrivateEpoch {
   // effect の消去を待つ前の描画でも、いま認識している session と照合する。
   // 取得失敗は未ログインと取り違えず、私的な表示・入力だけを停止する。
   // 再取得中は旧 data が残り isPending=false でも、Cookie の所有者と一致するとは限らない。
-  if (session.isPending || session.isRefetching || session.error || generation !== clearedGeneration) return { owner: undefined, clearedAt: Number.POSITIVE_INFINITY };
+  if (session.isPending || session.isRefetching || session.error || generation !== clearedGeneration) {
+    return { owner: undefined, clearedAt: Number.POSITIVE_INFINITY };
+  }
   return nextEpoch(stored, session.data?.user.id ?? null);
 }
 
@@ -68,25 +75,21 @@ export function privateDataReady(current: PrivateEpoch): boolean {
 }
 
 /**
- * 表示中の画面の利用者（shown）を、同じ人かの確認中に保ってよいか（#190）。
- * ウィンドウへ戻るたびの正常な再確認で、Today の入力中の状態を作り直さないために使う。
- * 保ってよいのは、確認中に残っている session の利用者が shown と同じで、失敗も初回読み込みもしていないときだけ。
- * 確認の後、旧取得の中断と消去が終わるまで（owner は同じで clearedAt が∞）も同じ確認の続きとして扱う。
- * 保っている間も、確認中に届いたデータは使わず、私的な送信もしない（画面側・useSaveLog）。
+ * 正常な同一 owner 再確認中は Today の入力を保つ（D-30）。失敗・初回読込は除外する。
+ * 確認後の中断・cache 消去待ち（clearedAt=∞）も含むが、新しい応答の採用と送信は止める。
  */
-export function checkingSameOwner(shown: string | undefined, current: PrivateEpoch,
-  session: { data: { user: { id: string } } | null; error: unknown; isPending: boolean }): shown is string {
-  return shown !== undefined && (current.owner === undefined || current.owner === shown) &&
-    !session.error && !session.isPending && session.data?.user.id === shown;
+export function checkingSameOwner(
+  shown: string | undefined,
+  current: PrivateEpoch,
+  session: { data: { user: { id: string } } | null; error: unknown; isPending: boolean },
+): shown is string {
+  return shown !== undefined && (current.owner === undefined || current.owner === shown)
+    && !session.error && !session.isPending && session.data?.user.id === shown;
 }
 
 /**
- * 利用者ごとの私的なデータ（Goal・Today・記録）を、ログインしている人が変わったときに止めて消す。
- * QueryClient は SPA の間ずっと共有されるため、消さないと、ログアウトして別の人がログインした後に
- * 前の人の Goal・記録・予測がキャッシュから見えてしまう（API の所有者チェックだけでは表示を防げない）。
- * - 取得の途中のものは中断する（queryFn が渡す AbortSignal で fetch を止める）
- * - ['goals'] の下を初期状態へ戻す（表示中のものは新しい利用者として取り直し、他人のものなら 404 になる）
- * - 画面が保持する表示状態のため、利用者と使ってよいデータの下限時刻（PrivateEpoch）を更新する
+ * SPA で共有される私的 cache を、owner 変更・確認時に中断して消去する。
+ * API の owner 検査だけでは旧 cache の表示を防げないため、画面用の PrivateEpoch も更新する。
  */
 export function PrivateCacheGuard() {
   const session = authClient.useSession();
@@ -117,7 +120,9 @@ export function PrivateCacheGuard() {
       void queryClient.cancelQueries({ queryKey: goalKeys.all }).then(() => {
         // 前の人の取得が止まった後なら、ここから先に届くデータは新しい利用者のもの
         // A→B→A のような連続切替でも、古い中断完了で新しい境界を開かない。
-        if (epoch !== transition || getPrivateGeneration() !== generation) return;
+        if (epoch !== transition || getPrivateGeneration() !== generation) {
+          return;
+        }
         // 先に消去する。時刻を公開してから reset すると、間に旧 cache を読めてしまう。
         const reset = queryClient.resetQueries({ queryKey: goalKeys.all });
         clearedGeneration = generation;

@@ -18,7 +18,9 @@ test('Demo handoff: two 30-day synthetic inputs isolate resumption patterns with
     assert.equal(input.logs.filter(log => log.status === 'DONE').length, 15);
     assert.ok(input.logs.every(log => log.amount === (log.status === 'DONE' ? 1 : null)));
     const result = predict(input);
-    for (const [key, value] of Object.entries(row.counts)) assert.equal(result.observations[key], value);
+    for (const [key, value] of Object.entries(row.counts)) {
+      assert.equal(result.observations[key], value);
+    }
     assert.equal(result.observations.effectiveTransitions, 29);
     assert.equal(result.observations.observedDays, 30);
     assert.equal(result.observations.recordedDays, 30);

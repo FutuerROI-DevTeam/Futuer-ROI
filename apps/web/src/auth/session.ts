@@ -21,7 +21,9 @@ let checking: Promise<SessionCheck> | undefined;
 
 /** ルートと画面で同じ確認結果を使う。並行するルート確認で再取得を互いに中断しない。 */
 export function checkSession(): Promise<SessionCheck> {
-  return checking ??= confirmSession().finally(() => { checking = undefined; });
+  return checking ??= confirmSession().finally(() => {
+    checking = undefined;
+  });
 }
 
 async function confirmSession(): Promise<SessionCheck> {
@@ -34,7 +36,10 @@ async function confirmSession(): Promise<SessionCheck> {
     // signin通知・focusが途中で新しい確認へ置き換えた場合も、その完了まで待つ。
     const result = await new Promise<ReturnType<typeof session.get>>((resolve) => {
       const settled = (value: ReturnType<typeof session.get>) => {
-        if (!value.isPending && !value.isRefetching) { stop(); resolve(value); }
+        if (!value.isPending && !value.isRefetching) {
+          stop();
+          resolve(value);
+        }
       };
       const stop = session.listen(settled);
       settled(session.get());

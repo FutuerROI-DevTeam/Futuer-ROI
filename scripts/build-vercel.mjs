@@ -6,7 +6,10 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const under = (parent, child) => { const p = relative(parent, child); return p === '' || (!p.startsWith(`..${sep}`) && p !== '..' && !isAbsolute(p)); };
+const under = (parent, child) => {
+  const p = relative(parent, child);
+  return p === '' || (!p.startsWith(`..${sep}`) && p !== '..' && !isAbsolute(p));
+};
 
 export async function inventory(directory) {
   const boundary = await realpath(directory);
@@ -19,11 +22,18 @@ export async function inventory(directory) {
     if (info.isDirectory()) {
       if (ancestors.has(target)) throw new Error('Bundle link cycle');
       ancestors.add(target);
-      try { for (const name of (await readdir(path)).sort()) await visit(join(path, name)); }
-      finally { ancestors.delete(target); }
+      try {
+        for (const name of (await readdir(path)).sort()) {
+          await visit(join(path, name));
+        }
+      } finally {
+        ancestors.delete(target);
+      }
     } else {
       const name = relative(boundary, path).split(sep).join('/');
-      if (/(^|\/)\.env(?:\.|$)|(^|\/)\.local(?:\/|$)|(^|\/)\.npmrc$/.test(name)) throw new Error('Local configuration in bundle');
+      if (/(^|\/)\.env(?:\.|$)|(^|\/)\.local(?:\/|$)|(^|\/)\.npmrc$/.test(name)) {
+        throw new Error('Local configuration in bundle');
+      }
       const bytes = await readFile(path);
       files.push({ path: name, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
     }
@@ -52,7 +62,9 @@ export async function verifyWebAssets(webDirectory) {
       const path = decodeURIComponent(url.split(/[?#]/)[0]);
       if (!path) continue;
       const target = resolve(path.startsWith('/') ? boundary : dirname(join(boundary, file.path)), path.replace(/^\//, ''));
-      if (!under(boundary, target) || !(await stat(target)).isFile()) throw new Error(`Missing/escaping Web asset: ${file.path}`);
+      if (!under(boundary, target) || !(await stat(target)).isFile()) {
+        throw new Error(`Missing/escaping Web asset: ${file.path}`);
+      }
       references++;
     }
   }
@@ -65,7 +77,10 @@ export async function buildBundle() {
   await mkdir(vercel, { recursive: true });
   if (await realpath(vercel) !== vercel) throw new Error('Refuse a linked .vercel directory');
   const output = join(vercel, 'output');
-  const prior = await lstat(output).catch(error => { if (error.code === 'ENOENT') return undefined; throw error; });
+  const prior = await lstat(output).catch(error => {
+    if (error.code === 'ENOENT') return undefined;
+    throw error;
+  });
   if (prior?.isSymbolicLink() || !under(workspace, output)) throw new Error('Refuse unsafe output target');
   // この専用生成先だけを更新する。project.jsonや通常checkout/DBは対象にしない。
   await rm(output, { recursive: true, force: true });
@@ -80,8 +95,11 @@ export async function buildBundle() {
   }
   // lock固定のAPI runtimeだけを取得。scriptsは実行せず、既存cacheを優先する。CLI login/deployを呼ばない。
   if (!process.env.npm_execpath) throw new Error('Use npm run build:vercel');
-  const installed = spawnSync(process.execPath, [process.env.npm_execpath, 'ci', '--workspace=@futureroi/api',
-    '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', '--prefer-offline'], { cwd: fn, stdio: 'inherit' });
+  const installed = spawnSync(process.execPath, [
+    process.env.npm_execpath,
+    'ci', '--workspace=@futureroi/api',
+    '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', '--prefer-offline',
+  ], { cwd: fn, stdio: 'inherit' });
   if (installed.error || installed.status !== 0) throw new Error('Runtime dependency install failed');
   const assetReferences = await verifyWebAssets(join(fn, 'apps/web/dist'));
   const files = await inventory(fn);

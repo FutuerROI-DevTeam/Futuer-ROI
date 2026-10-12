@@ -114,9 +114,18 @@ export function YesterdayCorrection({
     const failed = saver.failure.vars.choice;
     body = (
       <SaveFailure
-          settings={{ ready: saver.settingsReady, meaningChanged: saver.meaningChanged, loading: saver.reloadingSettings, failed: saver.settingsReloadFailed, reload: saver.reloadSettings }}
+        settings={{
+          ready: saver.settingsReady,
+          meaningChanged: saver.meaningChanged,
+          loading: saver.reloadingSettings,
+          failed: saver.settingsReloadFailed,
+          reload: saver.reloadSettings,
+        }}
         kind={classifySaveError(saver.failure.error)}
-        body={todayCopy.correctFailed(describeChoice(failed, sessionAmount, amountFormat({ unit: saver.failure.vars.unit }).record, todayCopy.recordedRest), currentText)}
+        body={todayCopy.correctFailed(
+          describeChoice(failed, sessionAmount, amountFormat({ unit: saver.failure.vars.unit }).record, todayCopy.recordedRest),
+          currentText,
+        )}
         localDate={target}
         onRetry={saver.retry}
         onReselect={saver.reset}

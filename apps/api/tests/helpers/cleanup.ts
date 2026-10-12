@@ -2,14 +2,20 @@
 export async function cleanupAll(actions: Array<() => Promise<unknown>>): Promise<void> {
   const errors: unknown[] = [];
   for (const action of actions) {
-    try { await action(); } catch (error) { errors.push(error); }
+    try {
+      await action();
+    } catch (error) {
+      errors.push(error);
+    }
   }
   if (errors.length === 1) throw errors[0];
   if (errors.length > 1) throw new AggregateError(errors, 'Multiple resource cleanup failures');
 }
 
 export async function cleanupAfterFailure(error: unknown, close: () => Promise<void>): Promise<never> {
-  try { await close(); } catch (cleanupError) {
+  try {
+    await close();
+  } catch (cleanupError) {
     const failures = cleanupError instanceof AggregateError ? cleanupError.errors : [cleanupError];
     throw new AggregateError([error, ...failures], 'Initialization and resource cleanup failed', { cause: error });
   }

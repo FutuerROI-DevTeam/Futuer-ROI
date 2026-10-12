@@ -13,4 +13,6 @@
 .fr-evaluation__records li { border-bottom: 1px solid var(--fr-line, #d5d1c8); padding: 12px 0; overflow-wrap: anywhere; }
 .fr-evaluation__metadata { font-size: .8rem; }
 .fr-evaluation__nav { display: block; padding: 8px 20px; }
-@media (max-width: 600px) { .fr-evaluation__summaries { grid-template-columns: 1fr; gap: 8px; } }
+@media (max-width: 600px) {
+  .fr-evaluation__summaries { grid-template-columns: 1fr; gap: 8px; }
+}

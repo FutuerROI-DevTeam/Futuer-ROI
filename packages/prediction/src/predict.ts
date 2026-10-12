@@ -3,7 +3,14 @@ import { observe } from './observations.js';
 import { recoveryQuantiles } from './recovery.js';
 import { completionFromValidatedState } from './completion-scenario.js';
 import { PredictionConfigError } from './errors.js';
-import type { Completion, CoreMetric, PredictionResult, PredictionConfig, PredictionInput, Posterior } from './types.js';
+import type {
+  Completion,
+  CoreMetric,
+  PredictionResult,
+  PredictionConfig,
+  PredictionInput,
+  Posterior,
+} from './types.js';
 
 function validateConfig(config: PredictionConfig): void {
   for (const field of ['prior', 'samples', 'horizonDays'] as const) {
@@ -24,8 +31,10 @@ function validateConfig(config: PredictionConfig): void {
 }
 
 export function predict(input: PredictionInput, config: PredictionConfig = DEFAULT_CONFIG): PredictionResult {
-  const prior = { a: { alpha: config.prior, beta: config.prior },
-    b: { alpha: config.prior, beta: config.prior } };
+  const prior = {
+    a: { alpha: config.prior, beta: config.prior },
+    b: { alpha: config.prior, beta: config.prior },
+  };
   const result = calculateWithPrior(input, config, prior);
   return { ...result, config: { prior: config.prior, ...result.config } };
 }
@@ -36,8 +45,11 @@ export type PriorCalculation = Omit<PredictionResult, 'config'> & {
   config: Omit<PredictionResult['config'], 'prior'>;
 };
 
-export function calculateWithPrior(input: PredictionInput, config: PredictionConfig,
-  prior: Posterior): PriorCalculation {
+export function calculateWithPrior(
+  input: PredictionInput,
+  config: PredictionConfig,
+  prior: Posterior,
+): PriorCalculation {
   validateConfig(config);
   const { counts, actualDone, todayStatus, observationWindow, recordedLogCount } = observe(input);
   const posterior = {
@@ -47,11 +59,15 @@ export function calculateWithPrior(input: PredictionInput, config: PredictionCon
   for (const parameter of ['a', 'b'] as const) {
     for (const shape of ['alpha', 'beta'] as const) {
       if (!Number.isSafeInteger(posterior[parameter][shape])) {
-        throw new PredictionConfigError('UNSAFE_POSTERIOR', ['posterior', parameter, shape],
-          'prior + transition count exceeds exact integer range for posterior shape');
+        throw new PredictionConfigError(
+          'UNSAFE_POSTERIOR',
+          ['posterior', parameter, shape],
+          'prior + transition count exceeds exact integer range for posterior shape',
+        );
       }
     }
   }
+
   const completed = actualDone >= input.goal.totalRequired;
   let coreMetric: CoreMetric;
   let completion: Completion;
@@ -75,14 +91,22 @@ export function calculateWithPrior(input: PredictionInput, config: PredictionCon
       completion = completionFromValidatedState(input.goal, actualDone, todayStatus, posterior, config);
     }
   }
+
   return {
-    modelVersion: config.modelVersion, today: input.today, todayStatus,
+    modelVersion: config.modelVersion,
+    today: input.today,
+    todayStatus,
     progress: { done: actualDone, total: input.goal.totalRequired, completed },
-    // step1の実際の観測窓を説明する。遷移を数える条件は変えない。
-    // 空の履歴だけは観測開始日がなく、そのため観測窓の暦日数も0になる。
-    observations: { ...counts, effectiveTransitions: counts.nDD + counts.nDS + counts.nSD + counts.nSS,
-      observedDays: observationWindow?.calendarSlots ?? 0, recordedDays: recordedLogCount },
-    posterior, coreMetric, completion,
+    // 空履歴は観測開始日がないため0日。UNKNOWNを含む実際の観測窓を説明する。
+    observations: {
+      ...counts,
+      effectiveTransitions: counts.nDD + counts.nDS + counts.nSD + counts.nSS,
+      observedDays: observationWindow?.calendarSlots ?? 0,
+      recordedDays: recordedLogCount,
+    },
+    posterior,
+    coreMetric,
+    completion,
     config: { samples: config.samples, horizonDays: config.horizonDays, seed: config.seed },
   };
 }

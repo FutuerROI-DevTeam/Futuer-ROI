@@ -41,4 +41,6 @@ test('Published connection examples distinguish UNKNOWN, recorded, insufficient,
 });
 
 // 新しい方式metadataは専用契約テストで検査し、既存の日数・状態の期待値を保持する。
-function completionValues({ computation, ...values }) { return values; }
+function completionValues({ computation, ...values }) {
+  return values;
+}

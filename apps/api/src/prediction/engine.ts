@@ -1,5 +1,15 @@
-import { PredictionConfigError, PredictionInputError, QuestionPriorError, predict, predictWithQuestionPrior,
-  type PredictionInput, type PredictionResult, type QuestionPriorPredictionInput, type QuestionPriorEvaluation, type QuestionPriorPredictionResult } from '@futureroi/prediction';
+import {
+  PredictionConfigError,
+  PredictionInputError,
+  QuestionPriorError,
+  predict,
+  predictWithQuestionPrior,
+  type PredictionInput,
+  type PredictionResult,
+  type QuestionPriorPredictionInput,
+  type QuestionPriorEvaluation,
+  type QuestionPriorPredictionResult,
+} from '@futureroi/prediction';
 import type { Static } from '@sinclair/typebox';
 import type { PredictionResultSchema } from '../contracts/log.ts';
 import type { PredictionR11 } from '../contracts/r11.ts';
@@ -11,9 +21,15 @@ import type { PredictionR11 } from '../contracts/r11.ts';
 type SchemaResult = Static<typeof PredictionResultSchema>;
 // schemaとEngineの型の双方向の代入互換を検査する。
 // 任意項目の追加などは両方向に代入できるため、項目集合まで完全一致を保証する検査ではない。
-export const predictionResultSchemaMatchesEngine: [SchemaResult extends PredictionResult ? true : false, PredictionResult extends SchemaResult ? true : false] = [true, true];
+export const predictionResultSchemaMatchesEngine: [
+  SchemaResult extends PredictionResult ? true : false,
+  PredictionResult extends SchemaResult ? true : false,
+] = [true, true];
 type R11SchemaResult = Static<typeof PredictionR11>;
-export const questionPredictionSchemaMatchesEngine: [R11SchemaResult extends QuestionPriorPredictionResult ? true : false, QuestionPriorPredictionResult extends R11SchemaResult ? true : false] = [true, true];
+export const questionPredictionSchemaMatchesEngine: [
+  R11SchemaResult extends QuestionPriorPredictionResult ? true : false,
+  QuestionPriorPredictionResult extends R11SchemaResult ? true : false,
+] = [true, true];
 
 export class PredictionFailed extends Error {
   readonly reason: string;
@@ -44,7 +60,9 @@ export function runPrediction(input: PredictionInput): PredictionResult {
     return { ...result, completion: toPublicCompletion(result.completion) };
   } catch (error) {
     // 保存済みデータから組み立てた入力の不正（未来日付・重複等）は利用者が直せないため、原因を記録して500にする。
-    if (error instanceof PredictionInputError || error instanceof PredictionConfigError) throw new PredictionFailed(error);
+    if (error instanceof PredictionInputError || error instanceof PredictionConfigError) {
+      throw new PredictionFailed(error);
+    }
     throw error;
   }
 }
@@ -54,11 +72,23 @@ export function runQuestionPredictionWithDiagnostics(input: QuestionPriorPredict
   try {
     return predictWithQuestionPrior(input);
   } catch (error) {
-    if (error instanceof PredictionInputError || error instanceof PredictionConfigError || error instanceof QuestionPriorError) throw new PredictionFailed(error);
+    if (
+      error instanceof PredictionInputError || error instanceof PredictionConfigError ||
+      error instanceof QuestionPriorError
+    ) {
+      throw new PredictionFailed(error);
+    }
     throw error;
   }
 }
+
 export function runQuestionPrediction(input: QuestionPriorPredictionInput): QuestionPriorEvaluation {
   const result = runQuestionPredictionWithDiagnostics(input);
-  return { ...result, prediction: { ...result.prediction, completion: toPublicCompletion(result.prediction.completion) } };
+  return {
+    ...result,
+    prediction: {
+      ...result.prediction,
+      completion: toPublicCompletion(result.prediction.completion),
+    },
+  };
 }

@@ -17,7 +17,10 @@ function ordinal(localDate: string, path: readonly (string | number)[]): number 
   const previousYear = year - 1;
   let days = 365 * previousYear + Math.floor(previousYear / 4) -
     Math.floor(previousYear / 100) + Math.floor(previousYear / 400) + day;
-  for (let index = 0; index < month - 1; index++) days += months[index]!;
+  for (let index = 0; index < month - 1; index++) {
+    days += months[index]!;
+  }
+
   return days;
 }
 
@@ -46,22 +49,39 @@ export function observe(input: PredictionInput): {
   const logs = input.logs.map((log, index) => {
     const datePath = ['logs', index, 'localDate'];
     const day = ordinal(log.localDate, datePath);
-    if (day > todayOrdinal) throw new PredictionInputError('FUTURE_LOG_DATE', datePath, 'Future log date');
-    if (seen.has(day)) throw new PredictionInputError('DUPLICATE_LOG_DATE', datePath, 'Duplicate log date');
+    if (day > todayOrdinal) {
+      throw new PredictionInputError('FUTURE_LOG_DATE', datePath, 'Future log date');
+    }
+    if (seen.has(day)) {
+      throw new PredictionInputError('DUPLICATE_LOG_DATE', datePath, 'Duplicate log date');
+    }
     seen.add(day);
+
     if (log.status === 'DONE') {
-      if (log.amount === null) throw new PredictionInputError('INVALID_LOG_AMOUNT', ['logs', index, 'amount'], 'DONE requires actual amount');
+      if (log.amount === null) {
+        throw new PredictionInputError(
+          'INVALID_LOG_AMOUNT',
+          ['logs', index, 'amount'],
+          'DONE requires actual amount',
+        );
+      }
       quantity(log.amount, 1, ['logs', index, 'amount']);
       actualDone += log.amount;
       if (!Number.isSafeInteger(actualDone)) {
-        throw new PredictionInputError('UNSAFE_PROGRESS', ['logs', index, 'amount'], 'Accumulated progress exceeds exact integer range');
+        throw new PredictionInputError(
+          'UNSAFE_PROGRESS',
+          ['logs', index, 'amount'],
+          'Accumulated progress exceeds exact integer range',
+        );
       }
     } else if (log.status !== 'SKIPPED') {
       throw new PredictionInputError('INVALID_LOG_STATUS', ['logs', index, 'status'], 'UNKNOWN is not a stored status');
     } else if (log.amount !== null) {
       throw new PredictionInputError('INVALID_LOG_AMOUNT', ['logs', index, 'amount'], 'SKIPPED requires null amount');
     }
-    if (day === todayOrdinal) todayStatus = log.status;
+    if (day === todayOrdinal) {
+      todayStatus = log.status;
+    }
     return { day, status: log.status };
   }).sort((left, right) => left.day - right.day);
 
@@ -70,13 +90,22 @@ export function observe(input: PredictionInput): {
     const before = logs[index - 1]!;
     const after = logs[index]!;
     // 記録のない暦日はUNKNOWN。欠けた日を跨いで前後の記録を隣接ペアにしない。
-    if (after.day !== before.day + 1) continue;
+    if (after.day !== before.day + 1) {
+      continue;
+    }
     if (before.status === 'DONE') {
-      if (after.status === 'DONE') counts.nDD++;
-      else counts.nDS++;
-    } else if (after.status === 'DONE') counts.nSD++;
-    else counts.nSS++;
+      if (after.status === 'DONE') {
+        counts.nDD++;
+      } else {
+        counts.nDS++;
+      }
+    } else if (after.status === 'DONE') {
+      counts.nSD++;
+    } else {
+      counts.nSS++;
+    }
   }
+
   const first = logs[0];
   const endOrdinal = todayOrdinal - (todayStatus === 'UNRECORDED' ? 1 : 0);
   const observationWindow = first ? {

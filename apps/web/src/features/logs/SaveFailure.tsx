@@ -24,7 +24,13 @@ export function SaveFailure({
   lockedNote,
 }: {
   kind: SaveFailureKind;
-  settings?: { ready: boolean; meaningChanged: boolean; loading: boolean; failed: boolean; reload: () => Promise<void> };
+  settings?: {
+    ready: boolean;
+    meaningChanged: boolean;
+    loading: boolean;
+    failed: boolean;
+    reload: () => Promise<void>;
+  };
   /** failed のときの本文（「やった・20分」はまだ記録されていません…など）。 */
   body: string;
   localDate: string;
@@ -37,15 +43,24 @@ export function SaveFailure({
   lockedNote?: string;
 }) {
   const location = useLocation();
-  if (kind === 'settings') return <ErrorPanel focusTitle title={todayCopy.settingsConflict.title} action={<div className="fr-savefail__actions">
-    <Button busy={settings?.loading ?? false} onClick={() => void settings?.reload()}>{todayCopy.settingsConflict.reload}</Button>
-    <Button disabled={!settings?.ready || settings.meaningChanged || retryLocked || settings.loading} onClick={onRetry}>{todayCopy.settingsConflict.retry}</Button>
-    <Button disabled={!settings?.ready || settings.loading} onClick={onReselect}>{todayCopy.reselect}</Button>
-  </div>}>
-    {body}<br />{todayCopy.settingsConflict.body}
-    {settings?.failed ? <p role="alert">{todayCopy.settingsConflict.reloadFailed}</p> : null}
-    {settings?.meaningChanged ? <p role="alert">{todayCopy.settingsConflict.meaningChanged}</p> : null}
-  </ErrorPanel>;
+  if (kind === 'settings') {
+    return (
+      <ErrorPanel focusTitle title={todayCopy.settingsConflict.title} action={
+        <div className="fr-savefail__actions">
+          <Button busy={settings?.loading ?? false} onClick={() => void settings?.reload()}>{todayCopy.settingsConflict.reload}</Button>
+          <Button
+            disabled={!settings?.ready || settings.meaningChanged || retryLocked || settings.loading}
+            onClick={onRetry}
+          >{todayCopy.settingsConflict.retry}</Button>
+          <Button disabled={!settings?.ready || settings.loading} onClick={onReselect}>{todayCopy.reselect}</Button>
+        </div>
+      }>
+        {body}<br />{todayCopy.settingsConflict.body}
+        {settings?.failed ? <p role="alert">{todayCopy.settingsConflict.reloadFailed}</p> : null}
+        {settings?.meaningChanged ? <p role="alert">{todayCopy.settingsConflict.meaningChanged}</p> : null}
+      </ErrorPanel>
+    );
+  }
   if (kind === 'signed-out') {
     return (
       <ErrorPanel focusTitle
