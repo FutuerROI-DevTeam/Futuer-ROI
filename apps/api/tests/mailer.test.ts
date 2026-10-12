@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createLogMailer, createResendMailer, MailDeliveryError, RESEND_ENDPOINT, type MailMessage } from '../src/auth/mailer.ts';
 import { resetPasswordMail } from '../src/auth/reset-mail.ts';
-import { loadMailConfig } from '../src/config.ts';
+import { loadMailConfig as loadPolicyMailConfig } from '../src/config.ts';
+
+// 再開時に使う送信設定の既存検査も、実送信せず明示的な有効状態で維持する。
+const loadMailConfig = (env: NodeJS.ProcessEnv) => loadPolicyMailConfig(env, true);
 
 const message: MailMessage = { to: 'user@example.test', subject: '件名', text: '本文 https://example.test/x?a=1&b=2', html: '<p>本文</p>' };
 

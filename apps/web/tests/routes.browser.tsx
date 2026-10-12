@@ -5,9 +5,10 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet
 import { router } from '../src/router.tsx';
 import { goalsHttp } from '../src/api/goals-http.ts';
 import { PrivateCacheGuard } from '../src/api/session-cache.ts';
-import { appCopy, authCopy } from '../src/copy/app.ts';
+import { appCopy } from '../src/copy/app.ts';
 import { NotFoundPage, RouteErrorPage } from '../src/routes/RouteStates.tsx';
 import { MainLandmark } from '../src/routes/MainLandmark.tsx';
+import { PASSWORD_RESET_UNAVAILABLE_MESSAGE } from '../../api/src/auth/password-reset-policy.ts';
 
 // ルートの移動と既定の画面（#146 完了条件②）を、実router・実SDKで検査する。
 // ログインの確認（/api/auth/get-session）とGoal一覧の取得だけを合成し、実DB/Cookieの受入とは区別する。
@@ -43,6 +44,8 @@ async function run() {
   ensure(path() === '/login', 'signed-out user reached a private route: ' + path());
   ensure((router.state.location.search as { redirect?: string }).redirect === '/goals/goal-123/history', 'login did not keep the original URL as the return target');
   ensure(listCalls === 0, 'private data was requested before login');
+  ensure(text().includes(PASSWORD_RESET_UNAVAILABLE_MESSAGE), 'login does not explain the reset pause');
+  ensure(!host.querySelector('a[href^="/forgot-password"]'), 'login still offers reset while paused');
   results.push('signed-out: private route redirects to login with the original URL and fetches nothing');
 
   // ログイン済みで /login を開くと、戻り先へ移り、履歴を置き換える（「戻る」でログイン画面へ戻らない）
@@ -56,26 +59,21 @@ async function run() {
   ensure(path() === '/', 'back after the login redirect returned to the login page: ' + path());
   results.push('signed-in: /login redirects to the return target with replace (back skips login)');
 
-  // ログイン中のブラウザで、メールの再設定リンク（?token=）を開いてもGoal一覧へ移さずフォームを出す
-  // （別端末から要求した・別アカウントでログイン中の場合。#258のレビュー）
-  await act(async () => { void router.navigate({ to: '/reset-password', search: { token: 'synthetic-reset-token' } } as never); await tick(); }); await settle();
-  ensure(path() === '/reset-password', 'signed-in user was moved away from the reset form: ' + path());
-  ensure((router.state.location.search as { token?: string }).token === 'synthetic-reset-token', 'reset token was dropped from the URL');
-  ensure(host.querySelector('input[name="password"]') && text().includes(authCopy.reset.newTitle), 'reset form missing for a signed-in user');
-  oneMain('reset form while signed in');
-  results.push('signed-in: a mail reset link (/reset-password?token=) shows the form instead of redirecting');
-  await go('/');
-
-  // 無効・期限切れ・使用済みリンクからの再要求も、ログイン中にGoal一覧へ移さず進める。
-  await act(async () => { void router.navigate({ to: '/reset-password', search: { error: 'INVALID_TOKEN' } } as never); await tick(); }); await settle();
-  ensure(text().includes(authCopy.reset.invalidTitle), 'invalid reset link message missing while signed in');
-  const requestAgain = [...host.querySelectorAll<HTMLAnchorElement>('a')].find((a) => a.textContent === authCopy.reset.requestAgain);
-  ensure(requestAgain, 'invalid reset link has no request-again action');
-  await act(async () => { requestAgain!.click(); await tick(); }); await settle();
-  ensure(path() === '/forgot-password', 'signed-in reset retry was redirected away: ' + path());
-  ensure(host.querySelector('input[name="email"]') && text().includes(authCopy.reset.requestTitle), 'reset request form missing while signed in');
-  oneMain('reset retry while signed in');
-  results.push('signed-in: invalid/expired/used reset link can request another email');
+  // 直URL・旧メールリンクはログインの有無に関係なく案内だけを出し、入力も送信もできない。
+  for (const owner of ['A', null]) {
+    transport.owner = owner;
+    for (const target of ['/forgot-password', '/reset-password?token=synthetic-reset-token', '/reset-password?error=INVALID_TOKEN', '/reset-password']) {
+      const writesBefore = transport.writes;
+      await go(target);
+      ensure(text().includes(PASSWORD_RESET_UNAVAILABLE_MESSAGE), 'reset pause message missing: ' + target);
+      ensure(!host.querySelector('input, form, button[type="submit"]'), 'reset input still available: ' + target);
+      ensure(host.querySelector('a[href^="/login"]'), 'reset pause has no way back to login');
+      ensure(transport.writes === writesBefore, 'reset page issued a request: ' + target);
+      oneMain('reset pause');
+    }
+  }
+  transport.owner = 'A';
+  results.push('signed-in/out: reset URLs and old/invalid links show the pause with no input or reset requests');
   await go('/');
 
   // 通信の失敗（例外・503）は未ログインと取り違えず、「接続できませんでした」を出してログインへ送らない

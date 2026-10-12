@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { PASSWORD_RESET_ENABLED } from './auth/password-reset-policy.ts';
 
 export type ApiConfig = {
   host: string;
@@ -23,8 +24,8 @@ export type AuthConfig = {
   resetMax: number;
 };
 
-/** パスワード再設定メールの送信手段。本番の既定はResend、開発・Compose・smoke testはログ出力。 */
-export type MailConfig = { transport: 'log' } | { transport: 'resend'; apiKey: string; from: string };
+/** 停止中はdisabled。再開後の既定は本番Resend、開発・Compose・smoke testはログ出力。 */
+export type MailConfig = { transport: 'disabled' } | { transport: 'log' } | { transport: 'resend'; apiKey: string; from: string };
 
 function integer(name: string, raw: string | undefined, fallback: number, min: number, max: number): number {
   if (raw === undefined || raw === '') return fallback;
@@ -113,7 +114,9 @@ export function loadAuthConfig(env: NodeJS.ProcessEnv, api: Pick<ApiConfig, 'por
 const MAIL_FROM_PATTERN = /^(?:[^<>@\n]+<[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>|[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)$/;
 
 // メール送信の設定。実値（APIキー）はエラーやログに出さない。
-export function loadMailConfig(env: NodeJS.ProcessEnv): MailConfig {
+export function loadMailConfig(env: NodeJS.ProcessEnv, passwordResetEnabled = PASSWORD_RESET_ENABLED): MailConfig {
+  // 停止中はメール設定を読まない。配送の資格情報不足で登録・ログインまで起動不能にしない。
+  if (!passwordResetEnabled) return { transport: 'disabled' };
   const production = env.NODE_ENV === 'production';
   const transport = env.MAIL_TRANSPORT || (production ? 'resend' : 'log');
   if (transport === 'log') return { transport: 'log' };

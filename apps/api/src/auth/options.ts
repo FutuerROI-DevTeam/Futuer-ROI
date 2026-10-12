@@ -2,7 +2,8 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import type { Pool } from 'pg';
 import type { Mailer } from './mailer.ts';
 import { resetPasswordMail } from './reset-mail.ts';
-import { confirmSignOut } from './sign-out.ts';
+import { createAuthBeforeHook } from './sign-out.ts';
+import { PASSWORD_RESET_ENABLED } from './password-reset-policy.ts';
 
 // 認証テーブルの形を決めるBetter Authの設定。migration（db:migrate:auth）と実行時の認証設定が
 // 同じ関数を使うことで、作成されるテーブルと実際に使う機能のずれを防ぐ。
@@ -34,6 +35,8 @@ export type AuthSettings = {
   signUpMax: number;
   /** パスワード再設定の要求・実行の、1 IPあたり60秒の上限。 */
   resetMax: number;
+  /** 合成テストで既存の再設定を検査するための明示指定。実行entryは共通の停止方針を使う。 */
+  passwordResetEnabled?: boolean;
   /** パスワード再設定メールの送信手段（[mailer.ts](./mailer.ts)）。 */
   mailer: Mailer;
   /**
@@ -45,6 +48,7 @@ export type AuthSettings = {
 
 export function createAuth(s: AuthSettings) {
   const schema = authSchemaOptions(s.pool);
+  const passwordResetEnabled = s.passwordResetEnabled ?? PASSWORD_RESET_ENABLED;
   return betterAuth({
     ...schema,
     emailAndPassword: {
@@ -57,9 +61,9 @@ export function createAuth(s: AuthSettings) {
       // SDKのrunInBackgroundOrAwaitは下のbackgroundTasks.handlerへ送信を預けて待たずに応答する。
       // 未登録の分岐は送信が無いため、送信を待つと外部APIの応答時間だけ登録済みが遅くなり、登録の有無を推測できてしまう。
       // 例外はSDKが自身のloggerへERRORで記録し、応答は200のまま（送信失敗は利用者へは見えず、サーバーログで気付く）。
-      sendResetPassword: async ({ user, url }) => {
+      ...(passwordResetEnabled ? { sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) => {
         await s.mailer({ to: user.email, ...resetPasswordMail({ url, expiresInMinutes: RESET_TOKEN_TTL_SECONDS / 60 }) });
-      },
+      } } : {}),
     },
     secret: s.secret,
     baseURL: s.baseURL,
@@ -79,7 +83,7 @@ export function createAuth(s: AuthSettings) {
       // 1.7.7でrunInBackgroundOrAwaitを使う処理（再設定メール送信、回数制限の期限切れ行の削除）を応答から切り離す。
       backgroundTasks: { handler: s.background },
     },
-    hooks: { before: confirmSignOut },
+    hooks: { before: createAuthBeforeHook(passwordResetEnabled) },
   });
 }
 
