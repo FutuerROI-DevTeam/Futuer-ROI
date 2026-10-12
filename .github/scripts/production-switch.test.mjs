@@ -94,7 +94,7 @@ test('acceptance journal precedes a CLI failure; failed preflight makes no attem
 // Evaluate the actual workflow step conditions with a synthetic runner status.
 // This checks our cancellation boundary, not GitHub runner/environment integration.
 function condition(name, { cancelled, success, steps }) {
-  const workflow = readFileSync(new URL('../workflows/deploy-production.yml', import.meta.url), 'utf8');
+  const workflow = readFileSync(new URL('../workflows/deploy-production.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const block = workflow.split(`- name: ${name}\n`)[1].split('\n      - ')[0];
   const lines = block.split('\n');
   const index = lines.findIndex(line => line.trim().startsWith('if:'));
@@ -207,7 +207,7 @@ test('a stalled CLI subprocess is terminated within an external deadline', async
 });
 
 test('workflow cancellation boundary permits migrate skip, stops new promote and preserves attempted recovery', () => {
-  const workflow = readFileSync(new URL('../workflows/deploy-production.yml', import.meta.url), 'utf8');
+  const workflow = readFileSync(new URL('../workflows/deploy-production.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const prepare = workflow.split('\n  deploy:')[1].split('\n  switch:')[0];
   const critical = workflow.split('\n  switch:')[1];
   assert.match(prepare, /if: >-\s+!cancelled\(\)/);

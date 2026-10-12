@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import { REQUIRED_JOBS, checkDeployment, classifySchema, decideGate, evaluateCurrentMain, parseSchemaReport, switchBlocks } from './deploy-gate.mjs';
 
 const A = 'a'.repeat(40);
@@ -130,4 +131,70 @@ test('失敗・取消された切替は後続CDを止め、gate-only/skipでは�
   assert.equal((await evaluateCurrentMain({ enabled: true, api, currentRunId: '99' })).deploy, true); // operator-approved full retry
   assert.deepEqual(await evaluateCurrentMain({ enabled: false, api: () => { throw new Error('must not call'); } }),
     { deploy: false, reason: 'cd-disabled' });
+});
+
+// Exercise the real workflow's trigger filters, workflow-level concurrency and
+// gate job condition together. Testing evaluateCurrentMain alone misses a skipped gate.
+const workflow = readFileSync(new URL('../workflows/deploy-production.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+function workflowEntry(run, id = 100) {
+  const values = key => workflow.match(new RegExp(`^    ${key}: \\[([^\\]]+)\\]`, 'm'))[1].split(',').map(v => v.trim());
+  if (!values('workflows').includes(run.name) || !values('branches').includes(run.head_branch)
+      || !values('types').includes('completed')) return null;
+  const github = { repository: 'FutureROI-DevTeam/Future-ROI', run_id: id, event: { workflow_run: run } };
+  const expression = text => Function('github', 'format', `return (${text})`)(github,
+    (pattern, ...args) => pattern.replace(/\{(\d+)\}/g, (_, index) => args[index]));
+  const group = workflow.match(/^  group: (.+)$/m)[1];
+  const condition = workflow.match(/\n  gate:[\s\S]*?\n    if: >-\n([\s\S]*?)\n    runs-on:/)[1].trim();
+  return { group: group.startsWith('${{') ? expression(group.replace(/^\$\{\{\s*|\s*\}\}$/g, '')) : group,
+    gate: expression(condition) };
+}
+
+test('workflow_dispatchの完了が待機Bを置換しても、実workflow条件から最新Bのpush CIを照合する', async () => {
+  const repo = { full_name: 'FutureROI-DevTeam/Future-ROI' };
+  const app = run('Application', { head_sha: B });
+  const foundation = run('Foundation', { head_sha: B });
+  const paths = [];
+  const api = async path => {
+    paths.push(path);
+    if (path === '/git/ref/heads/main') return { object: { sha: B } };
+    if (path.startsWith('/actions/workflows/')) return { workflow_runs: [] };
+    if (path.startsWith('/actions/runs?')) return { workflow_runs: [app, foundation] };
+    return { jobs: jobsFor(path.includes(`/${app.id}/`) ? 'Application' : 'Foundation') };
+  };
+  for (const name of ['Application', 'Foundation']) {
+    for (const [head_sha, conclusion] of [[A, 'success'], [B, 'failure'], [B, 'cancelled']]) {
+      const pending = new Map([['production-deploy', B]]); // X holds the common lock.
+      const manual = { ...run(name, { event: 'workflow_dispatch', head_sha, conclusion }), head_repository: repo };
+      const entry = workflowEntry(manual);
+      pending.set(entry.group, manual.head_sha); // GitHub replaces B with the manual wake-up.
+      assert.equal(pending.get('production-deploy'), head_sha);
+      assert.equal(entry.gate, true, 'the replacement must reach latest-main reconciliation');
+      assert.deepEqual(await evaluateCurrentMain({ enabled: true, api }), { sha: B, deploy: true, reason: 'ci-passed' });
+    }
+  }
+  assert.ok(paths.includes(`/actions/runs?head_sha=${B}&event=push&branch=main&per_page=100`));
+});
+
+test('手動CIの成功は起床だけを許し、push CIの未実行・失敗・未完了を代替しない', () => {
+  const { runs, jobsByRunId } = green();
+  const dispatch = run('Foundation', { event: 'workflow_dispatch' });
+  const allJobs = { ...jobsByRunId, [dispatch.id]: jobsFor('Foundation') };
+  assert.equal(decideGate(input({ runs: [runs[0], dispatch], jobsByRunId: allJobs })).reason, 'waiting:Foundation');
+  runs[1].conclusion = 'failure';
+  assert.equal(decideGate(input({ runs: [...runs, dispatch], jobsByRunId: allJobs })).reason, 'ci-failed:Foundation');
+  runs[1].status = 'in_progress';
+  assert.equal(decideGate(input({ runs: [...runs, dispatch], jobsByRunId: allJobs })).reason, 'waiting:Foundation');
+});
+
+test('gateが拒否する別repoイベントはworkflow-level共通待機を置換しない', () => {
+  const pending = new Map([['production-deploy', B]]);
+  const foreign = { ...run('Application', { event: 'pull_request' }), head_repository: { full_name: 'fork/Future-ROI' } };
+  const entry = workflowEntry(foreign, 200);
+  assert.equal(entry.gate, false);
+  assert.notEqual(entry.group, 'production-deploy');
+  pending.set(entry.group, A);
+  assert.equal(pending.get('production-deploy'), B);
+  assert.notEqual(workflowEntry(foreign, 201).group, entry.group);
+  assert.equal(workflowEntry({ ...foreign, head_branch: 'feature' }), null);
+  assert.equal(workflowEntry({ ...foreign, name: 'Unrelated workflow' }), null);
 });

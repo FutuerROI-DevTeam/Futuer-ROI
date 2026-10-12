@@ -13,9 +13,10 @@ permissions:
   contents: read
   actions: read
 
-# 本番配備は常に1つずつ。待機イベントは置換されるので、ロック取得後にgateが最新mainを選び直す。
+# 同repoのmain CI完了は起床イベントとして直列化する（手動CIも含む）。
+# gateで拒否する別repoのイベントは共通待機を置換しないよう、独立したgroupへ隔離する。
 concurrency:
-  group: production-deploy
+  group: ${{ github.event.workflow_run.head_repository.full_name == github.repository && 'production-deploy' || format('production-deploy-ignored-{0}', github.run_id) }}
   cancel-in-progress: false
 
 env:
@@ -25,9 +26,9 @@ env:
 jobs:
   gate:
     name: CI result for the current main head
+    # 起床元のeventは配備許可ではない。gate内で最新mainのpush CIだけを照合する。
     if: >-
-      github.event.workflow_run.event == 'push'
-      && github.event.workflow_run.head_repository.full_name == github.repository
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:

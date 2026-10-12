@@ -436,11 +436,11 @@ DBを変えない更新でもschemaの読取り確認と復旧記録を確認し
 
 ### 12-A. 構成と採用理由
 
-mainへのpushで動いたApplication（3 job）とFoundationが、**同じSHAで全job success**になった後に、`workflow_run` で起動する。
+Application／FoundationのmainでのCI完了を起床イベントとして、`workflow_run`で起動する。同repoの`workflow_dispatch`完了も最新mainの照合を起こす。配備を許すのは、ロック取得後に選んだSHAの**push由来Application（3 job）とFoundationが全job success**の場合だけで、手動CIの成功はその代わりにならない。
 
 | 順 | 処理 | 止まる条件 |
 | --- | --- | --- |
-| 1 | `gate`：直列化のロック取得後、**現在のmain先頭**とそのSHAの必須4 jobを選び直す | `CD_ENABLED`がtrueでない、CI失敗・skip・未完了、前回の切替失敗・取消が未確認 |
+| 1 | `gate`：直列化のロック取得後、**現在のmain先頭**とそのSHAのpush由来の必須4 jobを選び直す | `CD_ENABLED`がtrueでない、push CI失敗・skip・未完了、前回の切替失敗・取消が未確認 |
 | 2 | `schema`：Vercelから直結URLを実行中だけ取得し `db:check`（読取り） | 空DB・認証差分・checksum不一致・不明履歴・判定不能（stop） |
 | 3 | `migrate`：アプリの追加migrationだけが未適用なら、`production-migration` Environmentの承認後に `db:migrate` → `db:check` exit 0 | 承認なし、migration失敗、事後確認がokでない |
 | 4 | `deploy`：本番が既に対象SHAなら何もしない。`vercel deploy --prod --skip-domain` で本番設定のbuildを作り、**本番URLへはまだ割り当てない** | build失敗 |
@@ -449,7 +449,7 @@ mainへのpushで動いたApplication（3 job）とFoundationが、**同じSHA�
 | 7 | `lastAliasRequest`の時刻・対象ID・種別・終端状態を実本番aliasと照合し、SHA・smokeを確認 | CLI失敗・取消・検証失敗ならpromoteの終端を確認してからrollbackし、その終端・本番alias・smokeも確認。DBは戻さない |
 
 - **CIの前に配備しない：** VercelのGit連携は使わない。連携するとpushと同時にbuildが始まり、CIを待たない。Hobbyではチーム外のコミット作者の配備が止まり得て、初回もLogin Connection不足で連携できなかった。Vercel側の「checksを待つ」機能はHobbyでの可否が未確認のため採用しない。CIのjob内で直接 `--prod` 配備する案は、一部jobの失敗や確認前の本番切替を防げないため採用しない。
-- **待機イベントで配備を失わない：** `concurrency: production-deploy`は実行中を中断せず、待機は最新の到着イベント1件。古いAのCI再実行が待機Bを置換しても、ロック取得後のgateが現在main BとBのCIを照合する。イベントのSHAを配備対象にしない。選択したSHAは全後続jobへ固定して渡し、migration前・候補作成前・promote前にもmain先頭を再確認する。
+- **待機イベントで配備を失わない：** 同repoのmain CI完了は`production-deploy`で直列化し、実行中は中断せず、待機は最新の到着イベント1件。古いAのCI再実行や手動CIの完了が待機Bを置換しても、gateをskipせず現在main BとBのpush CIを照合する。起床元のevent・SHA・成否を配備許可にしない。gateが拒否する別repoのイベントはrunごとの独立groupへ隔離して共通待機を置換させない。選択したSHAは全後続jobへ固定して渡し、migration前・候補作成前・promote前にもmain先頭を再確認する。
 - **取消と復旧の境界：** schema・migration・候補作成は通常のCancelで停止する。`switch`だけはjobの`always()`で通常取消後も終了処理を続けるが、promoteと検証stepは`!cancelled()`で停止する。promote要求の前に`attempted`・開始時刻・直前要求の時刻をstep outputへ記録し、専用の`always()`復旧stepが開始時に取消状態を再評価する。取消前に切替を試みていなければ本番操作をしない。開始後は、非同期promoteの終端を待って直前の版へ復旧する。
 - **CLI終了を成功の証拠にしない：** [promote](https://vercel.com/docs/cli/promote)と[rollback](https://vercel.com/docs/cli/rollback)のtimeoutはCLI待機だけで、サーバーの要求は継続する。CLI失敗後も[project API](https://vercel.com/docs/rest-api/projects/find-a-project-by-id-or-name)の`lastAliasRequest`を確認する。直前より新しい時刻・候補ID・`promote`・終端状態を確認するまでrollbackを競合させない。`pending`／状態不明は有限待機後に未検証として失敗し、次のCDのgateも停止する。CLIのstatus単体は古い要求や欠損でもexit 0になり得る。Rolling Releaseは非対応で、切替前に拒否する。
 - **時間の上限：** HTTPの接続5秒・転送15秒、smoke全体120秒。配備APIは応答body読取りまで15秒、CLI要求全体45秒（CLI待機30秒）、promote照合240秒、rollback照合180秒、alias反映確認30秒。通常検証stepは6分、復旧stepは14分。候補buildは8分、環境変数取得60秒。switchのcheckout・Node setup・CLI導入は各2分、head確認1分、promote step2分に制限し、準備の遅延も予算へ含める。30分のjobに対し全step上限の合計は29分で、検証中の応答停止でも復旧時間を残す。helperの復旧上限は最後のHTTP要求による超過も含め約13分15秒。前提はrunnerが生存しAPIが期限内に終端を報告すること。
@@ -471,7 +471,8 @@ mainへのpushで動いたApplication（3 job）とFoundationが、**同じSHA�
 
 - 影響：パスワード再設定のメールは届かない（画面は送信済みと表示する）。宛先と再設定リンクがVercelのruntimeログに出る。ログはProjectの所有者だけが読め、Hobbyでは1時間保持される。
 - 他の案：ドメインを購入してResendを使う案は費用0円の方針に反し、当日中に承認を得られない。無料サブドメイン（is-a.dev等）は、Resendの所有要件を満たすか未確認で、承認待ちの時間もかかる。CDを止めて手動配備を続ける案は、CDを有効化する目的に合わない。
-- 終了：8:00以降も公開を続けるなら、Resendとドメインを用意して `MAIL_TRANSPORT` を削除するまで `CD_ENABLED=false` にする。続けないなら、工程11-AのPause Projectで公開を止める。
+- 終了（自動配備）：2026-10-13 8:00（JST）以降は、担当者が `CD_ENABLED=false` に戻し、Resendとドメインの準備・本番への設定反映を終えるまで自動配備を止める。この設定は以後のCDを止めるだけで、既存の公開アプリ、メール未配送、宛先・再設定リンクのruntimeログ出力は止まらない。
+- 終了（公開とメール）：メール例外の期限終了と公開継続の判断は別作業とする。担当者は、工程11-AのPause Projectで公開を止めるか、Resendとドメインを用意して `MAIL_TRANSPORT` を削除し、メール配送を確認して公開を継続するかを別途判断する。準備未了の公開継続には担当者の別承認が必要で、`CD_ENABLED=false` だけではメール例外を終了できない。
 
 ### 12-C. migrationがあるリリース
 
