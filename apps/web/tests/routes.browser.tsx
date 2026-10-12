@@ -66,6 +66,18 @@ async function run() {
   results.push('signed-in: a mail reset link (/reset-password?token=) shows the form instead of redirecting');
   await go('/');
 
+  // 無効・期限切れ・使用済みリンクからの再要求も、ログイン中にGoal一覧へ移さず進める。
+  await act(async () => { void router.navigate({ to: '/reset-password', search: { error: 'INVALID_TOKEN' } } as never); await tick(); }); await settle();
+  ensure(text().includes(authCopy.reset.invalidTitle), 'invalid reset link message missing while signed in');
+  const requestAgain = [...host.querySelectorAll<HTMLAnchorElement>('a')].find((a) => a.textContent === authCopy.reset.requestAgain);
+  ensure(requestAgain, 'invalid reset link has no request-again action');
+  await act(async () => { requestAgain!.click(); await tick(); }); await settle();
+  ensure(path() === '/forgot-password', 'signed-in reset retry was redirected away: ' + path());
+  ensure(host.querySelector('input[name="email"]') && text().includes(authCopy.reset.requestTitle), 'reset request form missing while signed in');
+  oneMain('reset retry while signed in');
+  results.push('signed-in: invalid/expired/used reset link can request another email');
+  await go('/');
+
   // 通信の失敗（例外・503）は未ログインと取り違えず、「接続できませんでした」を出してログインへ送らない
   for (const failure of ['network', '503']) {
     transport.failure = failure;

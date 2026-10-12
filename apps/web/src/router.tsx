@@ -19,9 +19,9 @@ import { EvaluationPage } from './features/evaluation/EvaluationPage.tsx';
  * ルートの構成（#146）。
  *
  *   /                          公開トップ（ログイン不要）
- *   [auth]                     ログイン・新規登録・再設定メールの要求。ログイン済みなら戻り先へ移る
+ *   [auth]                     ログイン・新規登録。ログイン済みなら戻り先へ移る
  *     /login, /register
- *     /forgot-password         再設定メールの要求
+ *   /forgot-password           再設定メールの要求（ログイン中でも無効リンクから再要求できる）
  *   /reset-password            メールのリンクから戻り、新しいパスワードを保存（?token= か ?error=INVALID_TOKEN）。
  *                              ログイン中のブラウザで開いても（別端末から要求した・別アカウントでログイン中）フォームを出す
  *   [app]                      ログインが必要な画面。ログインの確認はここ1か所で行う
@@ -76,8 +76,9 @@ const registerRoute = createRoute({
 });
 
 const forgotPasswordRoute = createRoute({
-  getParentRoute: () => authLayout,
+  getParentRoute: () => rootRoute,
   path: '/forgot-password',
+  validateSearch: authSearch,
   component: ForgotPasswordPage,
 });
 
@@ -152,7 +153,8 @@ const evaluationRoute = createRoute({
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
-  authLayout.addChildren([loginRoute, registerRoute, forgotPasswordRoute]),
+  authLayout.addChildren([loginRoute, registerRoute]),
+  forgotPasswordRoute,
   resetPasswordRoute,
   appLayout.addChildren([goalsRoute, goalNewRoute, goalEditRoute, todayRoute, historyRoute, evaluationRoute]),
   healthRoute,
