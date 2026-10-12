@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
-import type { Log } from '../contracts/log.ts';
-import type { TodaySnapshot } from '../prediction/store.ts';
+import {
+  toTodaySnapshot,
+  type SnapshotGoalRow,
+  type SnapshotLogRow,
+  type TodaySnapshot,
+} from '../prediction/snapshot.ts';
 import { isGoalId } from '../goals/goal-id.ts';
 import { localDateIn } from '../goals/local-date.ts';
 import { MILESTONE_POLICY_VERSION } from './policy.ts';
@@ -62,17 +66,7 @@ type State = {
   artifact: ArtifactRow | undefined;
   scope: Scope;
 };
-type GoalRow = {
-  total_required: number;
-  initial_progress: number;
-  session_amount: number;
-  timezone: string;
-  record_start_date: string;
-  unit: 'minutes' | 'sessions';
-  goal_settings_revision: number;
-  unit_history_locked: boolean;
-  milestone_consent_revision: number;
-} & TodaySnapshot['question'];
+type GoalRow = SnapshotGoalRow & { milestone_consent_revision: number };
 
 const plus90 = (at: Date) => new Date(at.getTime() + 90 * 86_400_000);
 const cutoff90 = (at: Date) => new Date(at.getTime() - 90 * 86_400_000);
@@ -96,11 +90,7 @@ async function state(
   }
 
   const now = clock();
-  const logs = (await client.query<{
-    local_date: string;
-    status: Log['status'];
-    amount: number | null;
-  }>(
+  const logs = (await client.query<SnapshotLogRow>(
     'select local_date::text as local_date,status,amount from action_log where goal_id=$1 order by local_date',
     [goalId],
   )).rows;
@@ -128,29 +118,7 @@ async function state(
     where goal_id=$1 and user_id=$2 and participation_id=$3 order by generation desc limit 1`,
     [goalId, userId, participation.id],
   )).rows[0] : undefined;
-  const snapshot: TodaySnapshot = {
-    now,
-    goal: {
-      totalRequired: goal.total_required,
-      initialProgress: goal.initial_progress,
-      sessionAmount: goal.session_amount,
-      timezone: goal.timezone,
-      recordStartDate: goal.record_start_date,
-      unit: goal.unit,
-      goalSettingsRevision: goal.goal_settings_revision,
-      unitLocked: goal.unit_history_locked || goal.initial_progress > 0,
-    },
-    question: {
-      question_prior: goal.question_prior,
-      answer_revision: goal.answer_revision,
-      question_prior_snapshot: goal.question_prior_snapshot,
-    },
-    logs: logs.map(log => ({
-      localDate: log.local_date,
-      status: log.status,
-      amount: log.amount,
-    })),
-  };
+  const snapshot = toTodaySnapshot(goal, logs, now);
   return {
     snapshot,
     consentRevision: goal.milestone_consent_revision,

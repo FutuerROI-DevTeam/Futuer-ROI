@@ -1,10 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import type { EvaluationPolicy, EvaluationReport } from '../contracts/evaluation.ts';
-import type { Log } from '../contracts/log.ts';
 import { isGoalId } from '../goals/goal-id.ts';
 import { localDateIn } from '../goals/local-date.ts';
-import { loadTodaySnapshot, type TodaySnapshot } from '../prediction/store.ts';
+import { loadTodaySnapshot } from '../prediction/store.ts';
+import {
+  toTodaySnapshot,
+  type SnapshotGoalRow,
+  type SnapshotLogRow,
+  type TodaySnapshot,
+} from '../prediction/snapshot.ts';
 import {
   assessEvaluation,
   countQuantiles,
@@ -27,16 +32,6 @@ type Participation = {
   joined_at: Date;
   expires_at: Date;
 };
-type GoalRow = {
-  total_required: number;
-  initial_progress: number;
-  session_amount: number;
-  timezone: string;
-  record_start_date: string;
-  unit: 'minutes' | 'sessions';
-  goal_settings_revision: number;
-  unit_history_locked: boolean;
-} & TodaySnapshot['question'];
 type OwnedState = {
   snapshot: TodaySnapshot;
   participation: Participation | undefined;
@@ -54,7 +49,7 @@ async function readState(
   policy: EvaluationPolicy,
   lock: boolean,
 ): Promise<OwnedState | null> {
-  const goal = (await client.query<GoalRow>(
+  const goal = (await client.query<SnapshotGoalRow>(
     `select total_required, initial_progress, session_amount, timezone, record_start_date::text as record_start_date,
      unit, goal_settings_revision, unit_history_locked, question_prior, answer_revision::text as answer_revision,
      question_prior_snapshot from goal where id=$1 and user_id=$2${lock ? ' for update' : ''}`,
@@ -65,11 +60,7 @@ async function readState(
   }
 
   const instant = now();
-  const logs = (await client.query<{
-    local_date: string;
-    status: Log['status'];
-    amount: number | null;
-  }>(
+  const logs = (await client.query<SnapshotLogRow>(
     'select local_date::text as local_date,status,amount from action_log where goal_id=$1 order by local_date',
     [goalId],
   )).rows;
@@ -83,29 +74,7 @@ async function readState(
   )).rows : [];
 
   return {
-    snapshot: {
-      now: instant,
-      goal: {
-        totalRequired: goal.total_required,
-        initialProgress: goal.initial_progress,
-        sessionAmount: goal.session_amount,
-        timezone: goal.timezone,
-        recordStartDate: goal.record_start_date,
-        unit: goal.unit,
-        goalSettingsRevision: goal.goal_settings_revision,
-        unitLocked: goal.unit_history_locked || goal.initial_progress > 0,
-      },
-      question: {
-        question_prior: goal.question_prior,
-        answer_revision: goal.answer_revision,
-        question_prior_snapshot: goal.question_prior_snapshot,
-      },
-      logs: logs.map(log => ({
-        localDate: log.local_date,
-        status: log.status,
-        amount: log.amount,
-      })),
-    },
+    snapshot: toTodaySnapshot(goal, logs, instant),
     participation,
     rows,
   };
