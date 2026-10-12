@@ -866,3 +866,32 @@ Alternatives / Reason: 既存Todayを再取得するだけでは発行値が残�
 Consequences / Invariants: 読み取り期限は物理削除の実施日を保証しない。mutableな業務記録で途中の訂正履歴すべてを復元できず、設定変更は保守的にcensorする。複数人の代表性・accuracy改善は得られない。migrationの既存checksum、既存Engine式・認証設定は維持する。実DB適用、有効化、公開やmergeは別承認とする。
 
 Evidence / 再検討条件: [対応表](change-map.md#本人向け評価225)、[検証・手順・限界](changes/issue-225-evaluation-verification.md)。人数横断の校正、学習利用、長期保存、全編集履歴、運用負荷が必要になった時に新しい判断を行う。現在の合成テストの成功で実利用のOPENを採択へ昇格しない。
+
+### D-248 途中到達による個人補正（#248）
+
+2026-10-12 / **CONDITIONAL：依頼者は独立worktreeでの実装・合成検証・Draft PRを承認。実DB適用、公開有効化、merge/deploy、実利用の運用はOPEN。** [Productの限定契約](product-spec.md#途中到達の個人補正比較248既定off)、[Issue #248](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/248)。
+
+Context / Reason: 元の質問priorとMarkov/Beta Engineを保ち、同じ本人×同じGoalの発行時に凍結した途中到達CDFの誤差だけを別係数で比較する。最終Goalの未達にも生存確率の情報はあり得るが、必要回数より短い窓ではCDF=0で情報がない。旧3完全H30窓を90日内に無理に収めず、成熟済みの部分リスク時間を含む別protocolを明示する。
+
+Decision:
+
+- [protocol/core](../apps/api/src/milestone/core.ts)は`session-milestone-survival-v1`、H=30、訂正待ち2暦日、直近3発行、`|u|≤log(1.25)`、損失はepisodeごとの生存NLLの平均＋`u²/2`。共通係数はこの実装に加えず、質問やposteriorをfitし直さない。1人Goalの総重みは1で、同一発行idの重複は加算しない。3発行は独立した3人・3到達の意味ではない。定数はこの比較実装の事前固定であり、合成成績から最適値を選んだものではない。
+- CDFのoddsを`exp(u)`倍し、0/1と単調性・残存tailを保つ。eventは`-log(Fu(d)-Fu(d-1))`、intervalは`-log(Fu(r)-Fu(l))`、右打切りは`-log(1-Fu(c))`。scoreは凍結元CDF＋凍結uから安定解析式で計算し、表示CDF差分の丸めによる微小正質量の消失と区別する。正則化で目的関数は強凸となり、有界1係数を二分法とKKTで検証する。構造的ゼロの到達・確率1後の未達はεで救済せずFAILED/u=0。詳細な導出と限界は[設計補助](prediction/milestone-calibration.md)。
+- [凍結CDF入口](../packages/prediction/src/frozen-completion-cdf.ts)は元の実completion methodを再現する。BETA_BINOMIALは元の事後積分、POSTERIOR_SAMPLINGは同じseed/sampleの全経路混合DPを使う。元Engineの既存`NUMERICAL_MARGIN=1e-10`内の境界/単調性roundoffだけをCDF表現へ射影し、表現版`bounded-monotone-roundoff-v1`を保存する。標準predict・元quantile式は変更しない。
+- [migration 0008](../apps/api/migrations/0008_session_milestone.sql)の参加・発行・係数3tableを既存R-12と分ける。owner付きGoal/参加世代の複合FK、現地日unique、最大90日、hashをDBでも制約する。保存payloadには必要な集計・prior/posterior・CDF・版・hashを入れ、全生ログや自由記述を複製しない。
+- `MILESTONE_CALIBRATION_ENABLED`未設定/`0`はOFF。保護された`GET /api/milestone-calibration`だけ能力を返し、OFFでは新tableを読まずGoal別routeを登録しない。有効時は明示buildまたはVercel SHAが必須。既存評価の同意とは別の`session-milestone-opt-in-v1`を明示PUTで確認する。
+- 同じGoal prefix `/api/goals/:goalId/milestone-calibration`にGET report、PUT/DELETE participation、POST forecasts、POST fits、GET compareを置く。期待設定版・回答版・参加UUID・fit世代、明示候補id/hashを検査し、ownerや生CDFや任意係数は受けない。auth・Origin・strict schema・no-storeを維持する。
+- [store](../apps/api/src/milestone/store.ts)はuser→Goalの短いlockで準備し、接続を返して計算、最終transactionでCASを再確認する。fit世代を予約し、参加ABA・現地日・文脈・選択id・凍結cutoffのlabel hashを照合する。後日の未来入力は旧fitへ加えず、旧cutoffの訂正は候補を無効にする。失敗時にGoal/記録は変更せず、再発行・再fitを自動で行わない。
+- 比較は保存候補id/hashを明示指定した場合だけで、標準Todayへ採用するpointerは置かない。最終残量CDFへの同じuは`finalExtrapolation:true`/`evidenceScope:milestone`で区別する。saved比較は発行時の歴史的値を維持し、後のINVALID表示や現在の候補失効とは区別する。
+- 読み取りは90日・期限・build/文脈・hashで除外する。参加期限は延長せず、撤回/owner/Goal削除はcascade、明示[purge CLI](../apps/api/src/milestone/purge-cli.ts)は期限切れ派生tableだけを削除する。read filterは物理TTLではなく、定期実行頻度・担当・バックアップ削除は未採択。
+
+Alternatives: 元priorまたはa/bへ追加観測として入れる案は同じログを二重に独立証拠へ数え、元モデル維持を崩す。全履歴/全利用者の学習基盤は同意と運用を拡大する。既存R-12同意を流用する案は記述的照合から学習利用へ目的を変える。別係数・別同意・凍結比較は既存Fastify/TypeBox/PostgreSQLだけで隔離できるため採用する。依存・queue・新しい恒久workerは追加しない。
+
+Consequences / Reconsideration: 未記録による打切り/区間の機構、離散実量と1回量のずれ、同一Goal内の依存、管理打切り後の同じ絶対閾値、条件付けとodds変換の非可換性は、合成テストだけで解決しない。最終到達への転移や実効用は未検証。同期計算の公開混合負荷は未測定で、D-28の再検討条件を維持する。[対応表](change-map.md#途中到達の個人補正248)と[検証記録](changes/issue-248-milestone-verification.md)から、独立oracle・合成DB・既存回帰・未確認範囲を確認する。
+
+
+### D-248の独立レビュー修正
+
+参加PUTはreportのconsentRevisionをexpectedConsentRevisionとして照合し、受理/撤回時にGoal上の単調CAS版を進める。古い受理要求の再送による撤回後・期限切れ/purge後の参加復活を拒否する。有効参加を作った同一要求だけを再送可能とし、期限は延ばさない。このGoal metadataには同意履歴や予測labelを残さず、Goal削除で消す。予測contextは編集可否markerのunitLockedを除き、意味を変える設定・質問・build・prefixを保持する。JS/SQLの90日上限は経過2160時間に統一し、DB session timezoneのDSTへ依存させない。詳細と回帰は[設計補助](prediction/milestone-calibration.md#同意cas予測文脈保持期間の追加確認)を参照する。
+
+D-248のGoal UUIDは既存Goal APIの大文字/小文字許可を保持し、補正route境界で正規表記へそろえてscopeを比較する。本人IDを大小変換せず、所有者・参加世代・hashの照合を維持する。

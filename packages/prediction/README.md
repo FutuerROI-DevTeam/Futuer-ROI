@@ -32,6 +32,8 @@
 
 ## metadata・公開エラーの契約
 
+#248の比較専用に`completionDistributionForFrozenState(posterior, initialState, requiredFutureDone, config)`と`frozenCompletionCdf(input, horizon=30)`を追加公開する。[D-248](../../docs/architecture.md#d-248-途中到達による個人補正248)に従い、発行時posterior/state/configと実completion methodから有界のCDF表現を再現する。元の`predict`/`predictWithQuestionPrior`・既定値・quantileは保持し、新しい個人係数fitやDB・同意をこの純粋packageに置かない。表現のroundoffと支持失敗は[設計補助](../../docs/prediction/milestone-calibration.md)へ追跡し、[API側の純粋回帰](../../apps/api/tests/milestone-core.test.ts)で元method/seed/境界を検証する。
+
 2026-10-04に、集計の具体定義とエラーの種類・理由・場所を区別する契約について、採用理由を説明したうえで依頼者が承認した。[正本](../../docs/architecture.md#集計metadataと計算エラー)へ反映した。M1、既存観測窓、数値計算、HTTP／DB応答の範囲は変えていない。
 
 - `observedDays`：最古の明示ログ日から、今日記録済みなら今日／未記録なら昨日まで、両端を含む暦日数。UNKNOWN日も含む。`recordedDays`：その窓の一意な明示DONE／SKIPPED数。ログなしは観測起点も明示記録もないため0／0。初期進捗、Goal作成日、記録開始日から観測期間を推測しない。metadataは不足判定や遷移数へ影響させない。

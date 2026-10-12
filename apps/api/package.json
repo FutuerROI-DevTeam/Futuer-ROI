@@ -15,7 +15,8 @@
     "db:migrate:app": "node --env-file-if-exists=../../.env src/db/migrate-cli.ts app",
     "db:check": "node --env-file-if-exists=../../.env src/db/schema-check-cli.ts",
     "db:seed:demo": "node --env-file-if-exists=../../.env src/db/seed-demo-cli.ts",
-    "evaluation:purge": "node --env-file-if-exists=../../.env src/evaluation/purge-cli.ts"
+    "evaluation:purge": "node --env-file-if-exists=../../.env src/evaluation/purge-cli.ts",
+    "milestone:purge": "node --env-file-if-exists=../../.env src/milestone/purge-cli.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.5",

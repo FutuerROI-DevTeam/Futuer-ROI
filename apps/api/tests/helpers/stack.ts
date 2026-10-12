@@ -93,7 +93,7 @@ export class Client {
 }
 
 export type Stack = { app: FastifyInstance; close: () => Promise<void> };
-export type StackOptions = { baseURL?: string; signInMax?: number; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation'] };
+export type StackOptions = { baseURL?: string; signInMax?: number; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation']; milestoneCalibration?: AppOptions['milestoneCalibration'] };
 
 type StackFactories = { createAuthPool: typeof createAuthPool; createAuth: typeof createAuth; buildApp: typeof buildApp };
 
@@ -120,6 +120,7 @@ export async function startStack(db: TestDatabase, o: StackOptions = {}, factori
       auth: { instance: auth, baseURL, allowedOrigins: [baseURL], trustProxyHops: o.trustProxyHops ?? 0 },
       ...(o.now ? { now: o.now } : {}),
       ...(o.evaluation ? { evaluation: o.evaluation } : {}),
+      ...(o.milestoneCalibration ? { milestoneCalibration: o.milestoneCalibration } : {}),
     });
     return { app, close };
   } catch (error) { return cleanupAfterFailure(error, close); }

@@ -9,9 +9,11 @@ import { recoveryExamples, unknownGapInput, unknownGapExpected, todayDoneInput,
   todayDoneExpected, dpBoundaryExample } from '../dist/tests/fixtures.js';
 
 test('package: documented defaults and a real pure calculation entry', () => {
-  assert.deepEqual(Object.keys(entry).sort(), ['DEFAULT_CONFIG', 'PredictionConfigError', 'PredictionInputError', 'QuestionPriorError', 'predict', 'predictWithQuestionPrior']);
+  assert.deepEqual(Object.keys(entry).sort(), ['DEFAULT_CONFIG', 'PredictionConfigError', 'PredictionInputError', 'QuestionPriorError', 'completionDistributionForFrozenState', 'frozenCompletionCdf', 'predict', 'predictWithQuestionPrior']);
   assert.equal(typeof entry.predict, 'function');
   assert.equal(typeof entry.predictWithQuestionPrior, 'function');
+  assert.equal(typeof entry.completionDistributionForFrozenState, 'function');
+  assert.equal(typeof entry.frozenCompletionCdf, 'function');
   assert.deepEqual(entry.DEFAULT_CONFIG, {
     modelVersion: 'behavior-persistence-m1-v1', prior: 2, samples: 200,
     horizonDays: 1095, seed: 20261012,
