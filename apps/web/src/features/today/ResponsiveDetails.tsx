@@ -9,7 +9,11 @@ export function ResponsiveDetails({ summary, children, ariaLabel }: { summary: s
   const chosenByUser = useRef(false);
   useEffect(() => {
     const media = window.matchMedia(WIDE_LAYOUT_QUERY);
-    const sync = () => { if (!chosenByUser.current) setOpen(media.matches); };
+    const sync = () => {
+      if (!chosenByUser.current) {
+        setOpen(media.matches);
+      }
+    };
     sync();
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);

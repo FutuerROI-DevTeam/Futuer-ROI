@@ -17,28 +17,32 @@ export function Home() {
       <PageTitle />
       {/* 名前・問い・登録の操作を、Todayと同じ朝焼けの空の上に置き、山並みを背景の下側に広げる（#221） */}
       <div className="fr-welcome-hero">
-      <header className="fr-auth__head">
-        <p className="fr-auth__name">{appCopy.name}</p>
-      </header>
-      <section className="fr-welcome" aria-labelledby="welcome-title">
-        <div className="fr-welcome__body">
-          <p className="fr-welcome__eyebrow">{c.eyebrow}</p>
-          <h1 id="welcome-title" className="fr-welcome__title">{c.titleFirst}<br />{c.titleSecond.map(phrase => <span className="fr-welcome__phrase" key={phrase}>{phrase}</span>)}</h1>
-          <p className="fr-auth__lead">{c.lead}</p>
-          {session.isPending ? (
-            <p className="fr-auth__status" role="status"><Spinner />{c.checking}</p>
-          ) : session.data ? (
-            <Link to="/goals" className="fr-btn fr-btn--primary fr-btn--block">{c.openGoals}</Link>
-          ) : (
-            <div className="fr-auth__actions">
-              <Link to="/register" search={{ redirect: '/goals' }} className="fr-btn fr-btn--primary fr-btn--block">{c.register}</Link>
-              <div className="fr-auth__returning">
-                <Link to="/login" search={{ redirect: '/goals' }} className="fr-btn fr-btn--secondary">{c.login}</Link>
+        <header className="fr-auth__head">
+          <p className="fr-auth__name">{appCopy.name}</p>
+        </header>
+        <section className="fr-welcome" aria-labelledby="welcome-title">
+          <div className="fr-welcome__body">
+            <p className="fr-welcome__eyebrow">{c.eyebrow}</p>
+            <h1 id="welcome-title" className="fr-welcome__title">
+              {c.titleFirst}<br />{c.titleSecond.map(phrase => (
+                <span className="fr-welcome__phrase" key={phrase}>{phrase}</span>
+              ))}
+            </h1>
+            <p className="fr-auth__lead">{c.lead}</p>
+            {session.isPending ? (
+              <p className="fr-auth__status" role="status"><Spinner />{c.checking}</p>
+            ) : session.data ? (
+              <Link to="/goals" className="fr-btn fr-btn--primary fr-btn--block">{c.openGoals}</Link>
+            ) : (
+              <div className="fr-auth__actions">
+                <Link to="/register" search={{ redirect: '/goals' }} className="fr-btn fr-btn--primary fr-btn--block">{c.register}</Link>
+                <div className="fr-auth__returning">
+                  <Link to="/login" search={{ redirect: '/goals' }} className="fr-btn fr-btn--secondary">{c.login}</Link>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </section>
+            )}
+          </div>
+        </section>
       </div>
       <ol className="fr-welcome__steps" aria-label={c.stepsLabel}>
         {c.steps.map((step, index) => <li key={step}><span aria-hidden="true">0{index + 1}</span>{step}</li>)}

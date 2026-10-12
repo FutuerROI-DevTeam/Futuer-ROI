@@ -29,7 +29,7 @@ export function targetDateState(today: string, targetDate: string): 'past' | 'to
   return targetDate === today ? 'today' : 'ahead';
 }
 
-/** 目安などの週（今日から days 日目を含む週）の月曜日と、到達予定日のずれ。日数がない（3年より先）とき、到達予定日が今日以前のときは null。 */
+/** days 日目を含む週の月曜日と到達予定日のずれ。日数なし・今日以前の予定日は null。 */
 export function targetGap(today: string, days: number | null, targetDate: string): TargetGap | null {
   if (days === null || targetDateState(today, targetDate) !== 'ahead') return null;
   const monday = isoOf(mondayOf(addDays(today, days)));

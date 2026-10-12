@@ -73,7 +73,13 @@ export function TextInput({ invalid = false, ...rest }: InputProps) {
 export function NumberInput({ suffix, invalid = false, ...rest }: InputProps & { suffix: string }) {
   return (
     <div className="fr-inwrap">
-      <input {...rest} type="text" inputMode="numeric" autoComplete="off" className={`fr-input fr-input--suffix${invalid ? ' fr-input--invalid' : ''}`} />
+      <input
+        {...rest}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        className={`fr-input fr-input--suffix${invalid ? ' fr-input--invalid' : ''}`}
+      />
       <span className="fr-inwrap__suffix" aria-hidden="true">
         {suffix}
       </span>
@@ -81,7 +87,11 @@ export function NumberInput({ suffix, invalid = false, ...rest }: InputProps & {
   );
 }
 
-export function SelectInput({ invalid = false, children, ...rest }: Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className' | 'style'> & { invalid?: boolean }) {
+export function SelectInput({
+  invalid = false,
+  children,
+  ...rest
+}: Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className' | 'style'> & { invalid?: boolean }) {
   return (
     <select {...rest} className={`fr-input fr-select${invalid ? ' fr-input--invalid' : ''}`}>
       {children}
@@ -106,7 +116,13 @@ export function SegmentedControl<T extends string>({
   return (
     <div className="fr-seg" role="group" aria-labelledby={labelledBy}>
       {options.map((option) => (
-        <button key={option.value} type="button" aria-pressed={option.value === value} disabled={disabled} onClick={() => onChange(option.value)}>
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={option.value === value}
+          disabled={disabled}
+          onClick={() => onChange(option.value)}
+        >
           {option.label}
         </button>
       ))}

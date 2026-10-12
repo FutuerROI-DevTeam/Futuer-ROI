@@ -82,7 +82,13 @@ const plainAxis = (unit: string): AmountAxis => ({ unit, label: integer, gridUni
 export function amountFormat(goal: AmountGoal): AmountFormat {
   if (goal.unit === 'sessions') {
     const times = (n: number) => `${integer(n)}回`;
-    return { total: times, record: times, recordUnit: '回', recordStep: (n) => recordStep('sessions', n), axis: () => plainAxis('回') };
+    return {
+      total: times,
+      record: times,
+      recordUnit: '回',
+      recordStep: (n) => recordStep('sessions', n),
+      axis: () => plainAxis('回'),
+    };
   }
   return {
     total: hoursMinutes,
@@ -91,6 +97,8 @@ export function amountFormat(goal: AmountGoal): AmountFormat {
     recordStep: (n) => recordStep('minutes', n),
     // 3時間以上なら1時間刻みの目盛りを時間の数で出す（目盛りは整数時間なので丸めは起きない）。短いGoalは分の目盛り
     axis: (total) =>
-      total >= 3 * MINUTES_PER_HOUR ? { unit: '時間', label: (n) => integer(n / MINUTES_PER_HOUR), gridUnit: MINUTES_PER_HOUR } : plainAxis('分'),
+      total >= 3 * MINUTES_PER_HOUR
+        ? { unit: '時間', label: (n) => integer(n / MINUTES_PER_HOUR), gridUnit: MINUTES_PER_HOUR }
+        : plainAxis('分'),
   };
 }

@@ -24,7 +24,7 @@ export function mondayOf(date: Date): Date {
   return new Date(date.getTime() - offset * DAY_MS);
 }
 
-/** 「10月5日の週」。日数が null（3年を超える）なら null を返す。 */
+/** 「10月5日の週」。日数が null なら日付も補わず null にする。 */
 export function weekLabel(today: string, days: number | null): string | null {
   if (days === null) return null;
   const monday = mondayOf(addDays(today, days));

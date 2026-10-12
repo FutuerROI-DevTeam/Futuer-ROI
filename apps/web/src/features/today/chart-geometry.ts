@@ -1,5 +1,5 @@
-// 図の座標だけを計算する（予測の数値は計算しない。Engine の日数と保存済みの記録をそのまま位置に変えるだけ）。
-// 座標は実際の表示幅（px）で計算する。viewBox で縮めると文字まで小さくなるため。
+// Engine の日数と保存済み実績を、実表示幅（px）の座標へ変換する。
+// viewBox で縮めると文字まで小さくなるため、実際の幅で計算する。
 import type { Log } from '@contracts';
 import { addDays, DAY_MS, daysBetween, parseLocalDate, shortDate } from '../../copy/date.ts';
 
@@ -69,18 +69,28 @@ const CUT_WIDTH = 40;
  */
 const CUT_LABEL_RESERVE = 170;
 
-export function outlookAxis(today: string, p50Days: number, p80Days: number | null, sameWeek: boolean, width: number, targetDays: number | null = null): OutlookAxis {
+export function outlookAxis(
+  today: string,
+  p50Days: number,
+  p80Days: number | null,
+  sameWeek: boolean,
+  width: number,
+  targetDays: number | null = null,
+): OutlookAxis {
   const axisRight = width - AXIS_RIGHT_PAD;
   const target = targetDays !== null && targetDays > 0 ? targetDays : null;
   const outlook = p80Days ?? p50Days;
-  // 到達予定日が見通しより先なら、軸をそこまで伸ばす。ただし大きく先なら、見通しまでの軸を右端の手前で省き、
-  // 到達予定日は右端に置く
+  // 遠い到達予定日は右端に置き、その手前で比例軸を省く。
   const cut = target !== null && target > outlook * CUT_RATIO;
   const plotRight = cut ? axisRight - CUT_WIDTH : axisRight;
   const last = cut ? outlook : Math.max(outlook, target ?? 0);
-  // 右端に少し余白を取り、短い期間でも3週間分は見せる。省いたときは、印が右端の到達予定日のラベルの下に入らないよう広げる
+  // 短い期間でも3週間分を表示する。軸を省く場合は右端ラベルとの重なりも防ぐ。
   const markerRoom = axisRight - CUT_LABEL_RESERVE - AXIS_LEFT;
-  const span = Math.max(MIN_SPAN_DAYS, Math.ceil(last * SPAN_MARGIN_RATIO) + SPAN_MARGIN_DAYS, cut && markerRoom > 0 ? Math.ceil((outlook * (plotRight - AXIS_LEFT)) / markerRoom) : 0);
+  const span = Math.max(
+    MIN_SPAN_DAYS,
+    Math.ceil(last * SPAN_MARGIN_RATIO) + SPAN_MARGIN_DAYS,
+    cut && markerRoom > 0 ? Math.ceil((outlook * (plotRight - AXIS_LEFT)) / markerRoom) : 0,
+  );
   const x = (days: number) => AXIS_LEFT + ((plotRight - AXIS_LEFT) * days) / span;
 
   const markers: AxisMarker[] = [{ x: x(p50Days), kind: 'p50', labelY: MARKER_LABEL_Y }];
@@ -101,12 +111,18 @@ export function outlookAxis(today: string, p50Days: number, p80Days: number | nu
     const first = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + monthsAhead, 1));
     const days = Math.round((first.getTime() - start.getTime()) / DAY_MS);
     // cutのラベル余白でspanがtargetを越えても、右端より未来の月をその左に置かない。
-    if (days > span || (cut && target !== null && days >= target)) break;
+    if (days > span || (cut && target !== null && days >= target)) {
+      break;
+    }
     if (first.getUTCMonth() % step !== 0) continue;
     const tickX = x(days);
     if (tickX - AXIS_LEFT < TICK_GAP) continue;
     const year = first.getUTCFullYear();
-    ticks.push({ x: tickX, label: `${first.getUTCMonth() + 1}月`, yearLabel: year !== lastYear ? `${year}年` : null });
+    ticks.push({
+      x: tickX,
+      label: `${first.getUTCMonth() + 1}月`,
+      yearLabel: year !== lastYear ? `${year}年` : null,
+    });
     lastYear = year;
   }
   return {
@@ -163,9 +179,16 @@ export function cumulativeChart(
   /** 目盛りの値をそろえる刻み（分のGoalは60分＝1時間刻みにして、目盛りを整数の時間にする。P-18）。 */
   gridUnit = 1,
 ): CumulativeChart {
-  const bounds: PlotBounds = { left: PLOT_LEFT, right: width - PLOT_RIGHT_PAD, top: PLOT_TOP, bottom: PLOT_BOTTOM };
+  const bounds: PlotBounds = {
+    left: PLOT_LEFT,
+    right: width - PLOT_RIGHT_PAD,
+    top: PLOT_TOP,
+    bottom: PLOT_BOTTOM,
+  };
   const days = Math.max(0, daysBetween(recordStartDate, today));
-  const doneByDate = new Map(logs.filter((log) => log.status === 'DONE').map((log) => [log.localDate, log.amount ?? 0]));
+  const doneByDate = new Map(logs
+    .filter((log) => log.status === 'DONE')
+    .map((log) => [log.localDate, log.amount ?? 0]));
   const actual = initialProgress + logs
     .filter(log => log.status === 'DONE' && log.localDate >= recordStartDate && log.localDate <= today)
     .reduce((sum, log) => sum + (log.amount ?? 0), 0);
@@ -176,7 +199,9 @@ export function cumulativeChart(
   const step = Math.max(gridUnit, Math.ceil(nice * magnitude / gridUnit) * gridUnit);
   const maxValue = Math.max(step, Math.ceil(actual * ACTUAL_HEADROOM_RATIO / step) * step);
   const y = (value: number) => bounds.bottom - ((bounds.bottom - bounds.top) * value) / maxValue;
-  const xAt = (dayIndex: number) => days === 0 ? (bounds.left + bounds.right) / 2 : bounds.left + ((bounds.right - bounds.left) * dayIndex) / days;
+  const xAt = (dayIndex: number) => days === 0
+    ? (bounds.left + bounds.right) / 2
+    : bounds.left + ((bounds.right - bounds.left) * dayIndex) / days;
 
   const points: { x: number; y: number }[] = [];
   let sum = initialProgress;
@@ -185,7 +210,10 @@ export function cumulativeChart(
     sum += doneByDate.get(date) ?? 0;
     points.push({ x: xAt(dayIndex), y: y(sum) });
   }
-  const gridLines = Array.from({ length: Math.round(maxValue / step) }, (_, i) => ({ value: (i + 1) * step, y: y((i + 1) * step) }));
+  const gridLines = Array.from({ length: Math.round(maxValue / step) }, (_, i) => ({
+    value: (i + 1) * step,
+    y: y((i + 1) * step),
+  }));
   return {
     points,
     targetY: total <= maxValue ? y(total) : null,

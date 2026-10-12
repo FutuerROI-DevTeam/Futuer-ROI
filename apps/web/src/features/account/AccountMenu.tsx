@@ -26,9 +26,8 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'email' }
   // 開く前にフォーカスがあった場所（アカウントボタン）。閉じたら戻す
   const returnTo = useRef<HTMLElement | null>(null);
 
-  // ログインが必要な画面の中に置くので、ここではログイン済み。通信の失敗から「再読み込み」で戻った直後は、
-  // useSession の状態が失敗のまま空になっている（ルートの確認は取り直しても、こちらは取り直されない）ので、1回だけ取り直す
-  // （取り直しても失敗したときに繰り返さないよう、きっかけは「空になった」ことだけにする）
+  // ルートの回復後も useSession が空のままの場合だけ、1回取り直す。
+  // 同じ欠落で繰り返さず、別タブ logout 後の再取得ループを防ぐ。
   const refetchSession = useRef(session.refetch);
   const attemptedMissing = useRef(false);
   refetchSession.current = session.refetch;
@@ -101,9 +100,12 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'email' }
         onClick={(event) => {
           // シートの外（背景）を押したら閉じる。シートの余白を押しても target は dialog になるので、位置で見分ける
           const dialog = ref.current;
-          if (!dialog || event.target !== dialog || busy) return;
+          if (!dialog || event.target !== dialog || busy) {
+            return;
+          }
           const box = dialog.getBoundingClientRect();
-          const inside = event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom;
+          const inside = event.clientX >= box.left && event.clientX <= box.right
+            && event.clientY >= box.top && event.clientY <= box.bottom;
           if (!inside) setOpen(false);
         }}
       >
