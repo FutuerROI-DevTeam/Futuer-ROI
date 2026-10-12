@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" version="24.7.17">
+  <diagram id="system-architecture" name="ローカル Docker の構成">
+    <mxGraphModel grid="1" gridSize="10" page="1" pageWidth="480" pageHeight="860">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="container" value="" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff4e9;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="82" y="244" width="378" height="354" as="geometry" />
+        </mxCell>
+        <mxCell id="http-edge" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="270" y="188" as="sourcePoint" />
+            <mxPoint x="270" y="244" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="engine-edge" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="270" y="400" as="sourcePoint" />
+            <mxPoint x="270" y="476" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="db-edge" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="100" y="350" as="sourcePoint" />
+            <mxPoint x="100" y="721" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="42" y="350" />
+              <mxPoint x="42" y="721" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="title" value="ローカル Docker の構成" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=24;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="440" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="browser" value="ブラウザ&#10;React + Vite&#10;Router / Query" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#eef5fb;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="76" width="340" height="112" as="geometry" />
+        </mxCell>
+        <mxCell id="container-title" value="app：単一 Node コンテナ" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="90" y="250" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="api" value="Fastify API / SPA 配信&#10;Better Auth / 所有者確認&#10;入出力検証 / pg" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="300" width="340" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="engine" value="Prediction Engine&#10;純粋 TypeScript・同期計算&#10;HTTP / DB / 時計を読まない" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f4ed;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="476" width="340" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="db" value="PostgreSQL 18&#10;Goal / 日々の記録 / 回答&#10;認証・session / volume保存" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#eef5fb;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="666" width="340" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="http" value="同一 origin の /api と SPA" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fafcfd;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="204" width="440" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="sync" value="同期呼出し → 結果をAPIへ" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff4e9;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="424" width="340" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="db-note" value="DB I/O は API が担当" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="614" width="440" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="scope" value="公開候補の Vercel / Neon は別計画" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=18;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="804" width="440" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" version="24.7.17">
+  <diagram id="prediction-data-flow" name="記録から予測表示まで">
+    <mxGraphModel grid="1" gridSize="10" page="1" pageWidth="480" pageHeight="1350">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p1" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="196" as="sourcePoint" />
+            <mxPoint x="240" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p2" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="382" as="sourcePoint" />
+            <mxPoint x="240" y="426" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="568" as="sourcePoint" />
+            <mxPoint x="240" y="612" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="754" as="sourcePoint" />
+            <mxPoint x="240" y="798" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p5" style="endArrow=block;endFill=1;strokeColor=#526976;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="940" as="sourcePoint" />
+            <mxPoint x="240" y="984" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="title" value="記録から予測表示まで" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#20323b;fontSize=24;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="440" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="save" value="記録を明示的に保存&#10;DONE は正の整数の量&#10;SKIPPED は量なし" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#eef5fb;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="76" width="400" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="snapshot" value="API が本人の DB snapshot を読む&#10;Goal / 正規ログ / 回答&#10;Goal timezone の「今日」&#10;GET だけで記録は増やさない" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="400" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="observations" value="純粋 Engine が観測を整理&#10;進捗 = 初期量 + DONE の実量&#10;隣接する既知2日だけ遷移を数える&#10;未記録 UNKNOWN を跨がない" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f4ed;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="426" width="400" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="posterior" value="2状態の確率分布を更新&#10;a：やった翌日にやる傾向&#10;b：休んだ翌日に再開する傾向&#10;任意回答の初期仮定 + 実遷移" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="612" width="400" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="calculate" value="別々の目安を計算&#10;b → 再開待ち g50（閉形式）&#10;a / b + 残量 + 設定量&#10;→ 完了 CDF と P50 / P80" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="798" width="400" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="display" value="API の DTO → React の表示&#10;出所：質問 / 記録 / 両方 / 不足&#10;記録済み・達成・範囲外を分ける&#10;保存・訂正後は取り直す" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff4e9;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="984" width="400" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="boundary" value="予測対象：自分で決めた累積量&#10;合格・点数・体重は予測しない&#10;LLM / 外部AI は予測に使わない" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#9aaab3;fontColor=#20323b;fontSize=20;fontFamily=Yu Gothic;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1170" width="400" height="120" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

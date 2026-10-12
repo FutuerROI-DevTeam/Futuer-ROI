@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="1350" viewBox="0 0 480 1350" role="img" aria-labelledby="prediction-data-flow-title" data-source-sha256="041ba5bebdae23d2340ef44f443f9ae8d43536d499f20eb20f423605f0ac2a85">
+<title id="prediction-data-flow-title">記録から予測表示まで</title>
+<desc>Future ROI main の説明図。編集元は同名 draw.io ファイル。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#526976"/></marker></defs>
+<rect width="100%" height="100%" rx="16" fill="#fafcfd"/>
+<g font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif">
+
+<polyline data-cell-id="p1" points="240,196 240,240" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="p2" points="240,382 240,426" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="p3" points="240,568 240,612" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="p4" points="240,754 240,798" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="p5" points="240,940 240,984" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<g data-cell-id="title"><rect x="20" y="12" width="440" height="40" rx="12" fill="none" stroke="none"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="32">記録から予測表示まで</tspan>
+</text>
+</g>
+<g data-cell-id="save"><rect x="40" y="76" width="400" height="120" rx="12" fill="#eef5fb" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="108">記録を明示的に保存</tspan>
+<tspan x="240" y="136">DONE は正の整数の量</tspan>
+<tspan x="240" y="164">SKIPPED は量なし</tspan>
+</text>
+</g>
+<g data-cell-id="snapshot"><rect x="40" y="240" width="400" height="142" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="269">API が本人の DB snapshot を読む</tspan>
+<tspan x="240" y="297">Goal / 正規ログ / 回答</tspan>
+<tspan x="240" y="325">Goal timezone の「今日」</tspan>
+<tspan x="240" y="353">GET だけで記録は増やさない</tspan>
+</text>
+</g>
+<g data-cell-id="observations"><rect x="40" y="426" width="400" height="142" rx="12" fill="#e9f4ed" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="455">純粋 Engine が観測を整理</tspan>
+<tspan x="240" y="483">進捗 = 初期量 + DONE の実量</tspan>
+<tspan x="240" y="511">隣接する既知2日だけ遷移を数える</tspan>
+<tspan x="240" y="539">未記録 UNKNOWN を跨がない</tspan>
+</text>
+</g>
+<g data-cell-id="posterior"><rect x="40" y="612" width="400" height="142" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="641">2状態の確率分布を更新</tspan>
+<tspan x="240" y="669">a：やった翌日にやる傾向</tspan>
+<tspan x="240" y="697">b：休んだ翌日に再開する傾向</tspan>
+<tspan x="240" y="725">任意回答の初期仮定 + 実遷移</tspan>
+</text>
+</g>
+<g data-cell-id="calculate"><rect x="40" y="798" width="400" height="142" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="827">別々の目安を計算</tspan>
+<tspan x="240" y="855">b → 再開待ち g50（閉形式）</tspan>
+<tspan x="240" y="883">a / b + 残量 + 設定量</tspan>
+<tspan x="240" y="911">→ 完了 CDF と P50 / P80</tspan>
+</text>
+</g>
+<g data-cell-id="display"><rect x="40" y="984" width="400" height="142" rx="12" fill="#fff4e9" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="1013">API の DTO → React の表示</tspan>
+<tspan x="240" y="1041">出所：質問 / 記録 / 両方 / 不足</tspan>
+<tspan x="240" y="1069">記録済み・達成・範囲外を分ける</tspan>
+<tspan x="240" y="1097">保存・訂正後は取り直す</tspan>
+</text>
+</g>
+<g data-cell-id="boundary"><rect x="40" y="1170" width="400" height="120" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="1202">予測対象：自分で決めた累積量</tspan>
+<tspan x="240" y="1230">合格・点数・体重は予測しない</tspan>
+<tspan x="240" y="1258">LLM / 外部AI は予測に使わない</tspan>
+</text>
+</g>
+</g>
+</svg>

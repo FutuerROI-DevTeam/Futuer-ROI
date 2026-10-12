@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="1150" viewBox="0 0 480 1150" role="img" aria-labelledby="today-meaning-title" data-source-sha256="dd802ffd61f69051e456101cd07b1271c79573ed881f3b8dee74c107f9607e3b">
+<title id="today-meaning-title">Today の2つの目安</title>
+<desc>Future ROI main の説明図。編集元は同名 draw.io ファイル。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#526976"/></marker></defs>
+<rect width="100%" height="100%" rx="16" fill="#fafcfd"/>
+<g font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif">
+
+<polyline data-cell-id="c1" points="240,170 240,220" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="c2" points="240,342 240,390" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="c3" points="240,536 240,584" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<polyline data-cell-id="c4" points="240,892 240,940" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
+<g data-cell-id="title"><rect x="20" y="12" width="440" height="40" rx="12" fill="none" stroke="none"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="32">Today の2つの目安</tspan>
+</text>
+</g>
+<g data-cell-id="condition"><rect x="40" y="76" width="400" height="94" rx="12" fill="#eef5fb" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="109">未達成・材料ありの目安</tspan>
+<tspan x="240" y="137">中心は今日未記録時に表示</tspan>
+</text>
+</g>
+<g data-cell-id="core"><rect x="40" y="220" width="400" height="122" rx="12" fill="#fff4e9" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="253">中心：今日休んだ後の再開待ち</tspan>
+<tspan x="240" y="281">G = 次の「やった」までの日数</tspan>
+<tspan x="240" y="309">g50 = G の中央値</tspan>
+</text>
+</g>
+<g data-cell-id="shift"><rect x="40" y="390" width="400" height="146" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="421">同じ継続傾向・設定量で</tspan>
+<tspan x="240" y="449">再開後の経路を時間シフトして共有</tspan>
+<tspan x="240" y="477">→ モデル上の追加遅れの中央値</tspan>
+<tspan x="240" y="505">として解釈できる</tspan>
+</text>
+</g>
+<g data-cell-id="distinction"><rect x="40" y="584" width="400" height="114" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="613">g50 と完了日の P50 差は別</tspan>
+<tspan x="240" y="641">実際の因果効果・将来の保証は</tspan>
+<tspan x="240" y="669">示さない</tspan>
+</text>
+</g>
+<g data-cell-id="completion"><rect x="40" y="746" width="400" height="146" rx="12" fill="#e9f4ed" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="777">補助：設定量で続ける完了時期</tspan>
+<tspan x="240" y="805">未記録：今日やると仮定</tspan>
+<tspan x="240" y="833">記録済み：今日の実状態から計算</tspan>
+<tspan x="240" y="861">P50 / P80 の週を表示</tspan>
+</text>
+</g>
+<g data-cell-id="limit"><rect x="40" y="940" width="400" height="116" rx="12" fill="#ffffff" stroke="#9aaab3"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="970">約3年の計算範囲に届かない値は</tspan>
+<tspan x="240" y="998">「範囲内の目安なし」</tspan>
+<tspan x="240" y="1026">材料不足・完了不能とは区別</tspan>
+</text>
+</g>
+<g data-cell-id="done"><rect x="20" y="1080" width="440" height="40" rx="12" fill="none" stroke="none"/>
+<text text-anchor="middle" dominant-baseline="central" font-size="17" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
+<tspan x="240" y="1100">記録済み：中心比較を外す / 達成：予測を外す</tspan>
+</text>
+</g>
+</g>
+</svg>
