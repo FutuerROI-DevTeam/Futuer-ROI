@@ -41,11 +41,19 @@ const ensure = (ok: unknown, message: string) => { if (!ok) throw new Error(mess
 const tick = () => new Promise(resolve => setTimeout(resolve, 5));
 const settle = async () => { for (let i = 0; i < 15; i++) await act(tick); };
 const input = () => host.querySelector<HTMLInputElement>('#goal-title');
-const values = () => ({ title: input()?.value, total: host.querySelector<HTMLInputElement>('#goal-totalRequired')?.value, amount: host.querySelector<HTMLInputElement>('#goal-sessionAmount')?.value, month: host.querySelector('h1')?.textContent });
+const totalMinutes = () => {
+  const hours = host.querySelector<HTMLInputElement>('#goal-totalRequired');
+  const minutes = host.querySelector<HTMLInputElement>('#goal-totalRequired-minutes');
+  return minutes ? String(Number(hours?.value) * 60 + Number(minutes.value)) : hours?.value;
+};
+const values = () => ({ title: input()?.value, total: totalMinutes(), amount: host.querySelector<HTMLInputElement>('#goal-sessionAmount')?.value, month: host.querySelector('h1')?.textContent });
 const set = async (selector: string, value: string) => act(async () => {
-  const target = host.querySelector<HTMLInputElement>(selector)!;
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(target, value);
-  target.dispatchEvent(new Event('input', { bubbles: true })); await tick();
+  const parts = selector === '#goal-totalRequired' && host.querySelector<HTMLInputElement>(selector + '-minutes');
+  for (const [id, raw] of parts ? [[selector, String(Math.floor(Number(value) / 60))], [selector + '-minutes', String(Number(value) % 60)]] : [[selector, value]]) {
+    const target = host.querySelector<HTMLInputElement>(id!)!;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(target, raw);
+    target.dispatchEvent(new Event('input', { bubbles: true })); await tick();
+  }
 });
 const navigate = async (to: string) => { await act(async () => { void router.navigate({ to }); await tick(); }); await settle(); };
 const click = async (selector: string) => act(async () => { host.querySelector<HTMLButtonElement>(selector)!.click(); await tick(); });

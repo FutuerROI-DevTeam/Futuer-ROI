@@ -4,7 +4,7 @@ import type { GoalUnit } from '@contracts';
  * 量の書き方（Product Spec P-18「整数分を保った時間＋分表示」、#121・#157）。
  * 量はAPI・Engine・入力とも分（回のGoalは回）の整数のまま扱い、ここで画面に出す文字にするだけ。
  * - 分のGoal：累計・総量・残量は正確な「時間＋分」（1240分 → 20時間40分）。小数へ丸めない（1分の差を隠さない）
- *   1回の量と日々の記録は分のまま（20分）
+ *   1回量・日々の記録は分のまま。累計・総量と混同しない（P-23）
  * - 回のGoal：すべて回
  * 表示の文字から量を逆算しない。FEで予測の数値は計算しない。
  */
@@ -48,6 +48,11 @@ const integer = (n: number) => n.toLocaleString('ja-JP');
 export function hoursMinutes(minutes: number): string {
   const hours = Math.floor(minutes / MINUTES_PER_HOUR);
   return `${integer(hours)}時間${minutes - hours * MINUTES_PER_HOUR}分`;
+}
+
+/** 日々の量は入力と同じ分／回。累計・総量の時間＋分表示とは分ける。 */
+export function recordDisplay(fmt: Pick<AmountFormat, 'record' | 'recordUnit'>, amount: number): string {
+  return fmt.record(amount);
 }
 
 export type AmountFormat = {

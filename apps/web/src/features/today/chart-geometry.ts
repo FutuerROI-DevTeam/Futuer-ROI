@@ -120,7 +120,9 @@ export interface PlotBounds {
 
 export interface CumulativeChart {
   points: { x: number; y: number }[];
-  targetY: number;
+  targetY: number | null;
+  maxValue: number;
+  singleDay: boolean;
   zeroY: number;
   gridLines: { y: number; value: number }[];
   startLabel: string;
@@ -145,10 +147,17 @@ export function cumulativeChart(
   gridUnit = 1,
 ): CumulativeChart {
   const bounds: PlotBounds = { left: PLOT_LEFT, right: width - PLOT_RIGHT_PAD, top: PLOT_TOP, bottom: PLOT_BOTTOM };
-  const days = Math.max(1, daysBetween(recordStartDate, today));
+  const days = Math.max(0, daysBetween(recordStartDate, today));
   const doneByDate = new Map(logs.filter((l) => l.status === 'DONE').map((l) => [l.localDate, l.amount ?? 0]));
-  const y = (value: number) => bounds.bottom - ((bounds.bottom - bounds.top) * Math.min(value, total)) / total;
-  const xAt = (d: number) => bounds.left + ((bounds.right - bounds.left) * d) / days;
+  const actual = initialProgress + logs.filter(l => l.status === 'DONE' && l.localDate >= recordStartDate && l.localDate <= today).reduce((n, l) => n + (l.amount ?? 0), 0);
+  // 実績の範囲だけでniceな目盛りを決める。遠い総量で実績を潰さず、超過した実績も切り落とさない。
+  const rawStep = Math.max(gridUnit, actual * 1.1 / 4);
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const nice = [1, 2, 5, 10].find(n => n * magnitude >= rawStep) ?? 10;
+  const step = Math.max(gridUnit, Math.ceil(nice * magnitude / gridUnit) * gridUnit);
+  const maxValue = Math.max(step, Math.ceil(actual * 1.1 / step) * step);
+  const y = (value: number) => bounds.bottom - ((bounds.bottom - bounds.top) * value) / maxValue;
+  const xAt = (d: number) => days === 0 ? (bounds.left + bounds.right) / 2 : bounds.left + ((bounds.right - bounds.left) * d) / days;
 
   const points: { x: number; y: number }[] = [];
   let sum = initialProgress;
@@ -157,13 +166,12 @@ export function cumulativeChart(
     sum += doneByDate.get(date) ?? 0;
     points.push({ x: xAt(d), y: y(sum) });
   }
-  const gridLines = [1 / 3, 2 / 3].map((r) => {
-    const value = Math.round((total * r) / gridUnit) * gridUnit;
-    return { y: y(value), value };
-  });
+  const gridLines = Array.from({ length: Math.round(maxValue / step) }, (_, i) => ({ value: (i + 1) * step, y: y((i + 1) * step) }));
   return {
     points,
-    targetY: y(total),
+    targetY: total <= maxValue ? y(total) : null,
+    maxValue,
+    singleDay: days === 0,
     zeroY: bounds.bottom,
     gridLines,
     startLabel: shortDate(parseLocalDate(recordStartDate)),

@@ -1,18 +1,20 @@
 import { useMutation, useMutationState, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import type { Goal } from '@contracts';
+import type { Goal, GoalR11, Log, TodayR11 } from '@contracts';
 import { goalKeys, goalsHttp } from '../../api/goals-http.ts';
 import { todayHttp, todayKeys } from '../../api/today-http.ts';
 import { getPrivateEpoch, privateDataReady, usePrivateEpoch } from '../../api/session-cache.ts';
 import { getDraftGeneration, isDraftOwner } from '../../api/session-draft.ts';
 import { authClient } from '../../auth/client.ts';
 import { classifySaveError, TodayDateChangedError, toLogPut, type RecordChoice } from './record-log.ts';
+import { confirmedSaveFeedback, createSavePeerGuard, type FeedbackSnapshot, type SaveFeedback } from './save-feedback.ts';
 
 export type RecordContext = Pick<Goal, 'id' | 'unit' | 'timezone' | 'goalSettingsRevision'>;
 export type SaveVars = { goalId: string; localDate: string; choice: RecordChoice;
   expectedGoalSettingsRevision: number; unit: Goal['unit']; timezone: string };
 export const saveLogKey = (goalId: string) => ['putLog', goalId] as const;
 export const isSaveFor = (localDate: string, vars: unknown) => (vars as SaveVars | undefined)?.localDate === localDate;
+let feedbackSequence = 0;
 
 // 再試行では現画面の既定量を参照しない。利用者が押した時点の意味と値を保存操作へ固定する。
 export function captureSave(context: RecordContext, localDate: string, choice: RecordChoice): SaveVars {
@@ -51,30 +53,76 @@ export function useSaveLog(goalId: string, { onSaved, localDate, canSaveDate, is
   const [reloadingSettings, setReloadingSettings] = useState(false);
   const [settingsReloadFailed, setSettingsReloadFailed] = useState(false);
   const reloadInFlight = useRef(false);
+  const [feedback, setFeedback] = useState<SaveFeedback | null>(null);
+  const peer = useRef<ReturnType<typeof createSavePeerGuard> | null>(null);
+  const retries = useRef(new WeakSet<SaveVars>());
+  const readFeedbackSnapshot = (): FeedbackSnapshot | null => {
+    const current = getPrivateEpoch();
+    const keys = [goalKeys.detail(goalId), todayKeys.today(goalId), todayKeys.logs(goalId)] as const;
+    if (!privateDataReady(current) || keys.some(key => {
+      const q = queryClient.getQueryState(key);
+      return !q || q.status !== 'success' || q.fetchStatus !== 'idle' || q.isInvalidated || q.dataUpdatedAt <= current.clearedAt;
+    })) return null;
+    const goal = queryClient.getQueryData<GoalR11>(keys[0]);
+    const today = queryClient.getQueryData<TodayR11>(keys[1]);
+    const logs = queryClient.getQueryData<Log[]>(keys[2]);
+    return goal && today && logs ? structuredClone({ goal, today, logs }) : null;
+  };
+  useEffect(() => {
+    setFeedback(null);
+    const guard = createSavePeerGuard(goalId, () => {
+      setFeedback(null);
+      void queryClient.invalidateQueries({ queryKey: goalKeys.all });
+    });
+    peer.current = guard;
+    return () => { guard.close(); if (peer.current === guard) peer.current = null; };
+  }, [goalId, owner, queryClient]);
   useEffect(() => {
     alive.current = true;
     return () => { alive.current = false; reloadRequest.current?.abort(); };
   }, []);
   useEffect(() => {
-    setLatest(null); setSettingsReloadFailed(false); setReloadingSettings(false);
+    setLatest(null); setSettingsReloadFailed(false); setReloadingSettings(false); setFeedback(null);
     return () => {
       reloadRequest.current?.abort(); reloadRequest.current = null;
       reloadInFlight.current = false;
     };
   }, [epoch, owner]);
+  useEffect(() => { setFeedback(null); }, [context?.goalSettingsRevision, context?.unit, context?.timezone, localDate]);
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 6000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
   const mutation = useMutation({
     mutationKey: saveLogKey(goalId), retry: false,
+    onMutate: (vars: SaveVars) => {
+      setFeedback(null);
+      const guard = peer.current;
+      const before = !retries.current.has(vars) && guard?.canCompare ? readFeedbackSnapshot() : null;
+      const evidence = { before, guard, version: guard?.version, epoch: getPrivateEpoch(), generation: getDraftGeneration() };
+      guard?.start();
+      return evidence;
+    },
     mutationFn: (vars: SaveVars) => {
       if (!dateAllowed(vars.localDate)) throw new TodayDateChangedError();
       return todayHttp.putLog(vars.goalId, vars.localDate, toLogPut(vars.choice, vars.expectedGoalSettingsRevision));
     },
-    onSuccess: async () => {
+    onSuccess: async (saved, vars, evidence) => {
       await queryClient.invalidateQueries({ queryKey: goalKeys.all });
       setRefreshFailed([todayKeys.today(goalId), todayKeys.logs(goalId)].some(key => queryClient.getQueryState(key)?.status === 'error'));
+      const after = readFeedbackSnapshot();
+      if (alive.current && after && evidence?.before && evidence.guard?.canCompare && evidence.guard.version === evidence.version &&
+        getPrivateEpoch() === evidence.epoch && getDraftGeneration() === evidence.generation &&
+        vars.expectedGoalSettingsRevision === evidence.before.goal.goalSettingsRevision &&
+        saved.status === vars.choice.status && saved.amount === (vars.choice.status === 'DONE' ? vars.choice.amount : null)) {
+        const confirmed = confirmedSaveFeedback(evidence.before, after, saved);
+        setFeedback(confirmed ? { ...confirmed, sequence: ++feedbackSequence } : null);
+      }
       onSaved?.();
     },
-    onError: () => setLatest(null),
-    onSettled: () => { inFlight.current = false; },
+    onError: () => { setLatest(null); setFeedback(null); },
+    onSettled: (_saved, _error, _vars, evidence) => { inFlight.current = false; evidence?.guard?.end(); },
   });
   const pending = useMutationState({ filters: { mutationKey: saveLogKey(goalId), status: 'pending' },
     select: m => m.state.variables as SaveVars | undefined });
@@ -115,12 +163,12 @@ export function useSaveLog(goalId: string, { onSaved, localDate, canSaveDate, is
     isStaleDate: dateStale,
     retry: () => {
       const vars = conflict ? rebased : mutation.variables;
-      if (vars) submit(vars);
+      if (vars) { retries.current.add(vars); submit(vars); }
     },
     // 409は取得成功まで消さない。意味が変わった場合、成功後に利用者が明示的に選び直す。
     reset: () => {
       if (conflict && !latest) return;
-      setHeld(null); mutation.reset(); setLatest(null); setSettingsReloadFailed(false);
+      setHeld(null); mutation.reset(); setLatest(null); setSettingsReloadFailed(false); setFeedback(null);
     },
     reloadSettings: async () => {
       if (!conflict || reloadInFlight.current || inFlight.current) return;
@@ -151,6 +199,7 @@ export function useSaveLog(goalId: string, { onSaved, localDate, canSaveDate, is
     meaningChanged: conflict && latest !== null && rebased === null,
     reloadingSettings, settingsReloadFailed,
     refreshFailed,
+    feedback,
     isSaving: mutation.isPending || pendingForDate !== undefined || held !== null,
     saving: mutation.isPending ? mutation.variables : pendingForDate ?? held?.vars,
     failure: mutation.isError ? { error: mutation.error, vars: mutation.variables } : undefined,

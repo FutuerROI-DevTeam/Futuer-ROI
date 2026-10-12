@@ -34,7 +34,7 @@ export type FieldName = keyof FormValues;
 export type FieldErrors = Partial<Record<FieldName, string>>;
 
 /** 画面に並ぶ順。エラーの件数を数え、最初のエラー項目へ移るときに使う。 */
-export const FIELD_ORDER: readonly FieldName[] = ['title', 'unit', 'totalRequired', 'sessionAmount', 'initialProgress', 'targetDate', 'timezone', 'questionPrior'];
+export const FIELD_ORDER: readonly FieldName[] = ['title', 'unit', 'totalRequired', 'sessionAmount', 'initialProgress', 'questionPrior', 'targetDate', 'timezone'];
 
 const INT4_MAX = 2_147_483_647;
 export const TITLE_MAX = 100;
@@ -68,8 +68,9 @@ export function parseInteger(raw: string): number | null {
   return Number.isSafeInteger(value) ? value : Number.POSITIVE_INFINITY;
 }
 
-function amountError(raw: string, minimum: 0 | 1): string | undefined {
-  const value = parseInteger(raw);
+function amountError(raw: string, minimum: 0 | 1, allowTime = false): string | undefined {
+  const value = allowTime ? parseGoalAmount(raw) : parseInteger(raw);
+  if (allowTime && raw.startsWith('@hm:') && value === null) return '時間は0以上の整数、分は0〜59の整数で入力してください。';
   if (value === null || value < minimum) return minimum === 1 ? e.positiveInteger : e.nonNegativeInteger;
   if (value > INT4_MAX) return e.tooLarge;
   return undefined;
@@ -88,7 +89,7 @@ export function validate(
   if (goal?.unitLocked && values.unit !== goal.unit) errors.unit = e.unitLocked;
   if (!/\S/.test(values.title)) errors.title = e.titleRequired;
   else if (titleLength(values.title) > TITLE_MAX) errors.title = e.titleTooLong;
-  const total = amountError(values.totalRequired, 1);
+  const total = amountError(values.totalRequired, 1, values.unit === 'minutes');
   if (total) errors.totalRequired = total;
   const session = amountError(values.sessionAmount, 1);
   if (session) errors.sessionAmount = session;
@@ -97,7 +98,7 @@ export function validate(
     errors.targetDate = e.targetDatePast;
   }
   if (!locked) {
-    const initial = amountError(values.initialProgress, 0);
+    const initial = amountError(values.initialProgress, 0, values.unit === 'minutes');
     if (initial) errors.initialProgress = initial;
     if (!isValidTimezone(values.timezone)) errors.timezone = e.timezone;
   }
@@ -122,7 +123,21 @@ export function validateGoalForm(
 
 export const errorCount = (errors: FieldErrors) => FIELD_ORDER.filter((name) => errors[name]).length;
 
-const int = (raw: string) => parseInteger(raw) ?? 0;
+/** FEの時間＋分draftだけを整数分へ変換する。不正な途中入力はnullで保持し、API bodyへ出さない。 */
+export function parseGoalAmount(raw: string): number | null {
+  if (!raw.startsWith('@hm:')) return parseInteger(raw);
+  try {
+    const parts: unknown = JSON.parse(raw.slice(4));
+    if (!Array.isArray(parts) || parts.length !== 2 || parts.some(p => typeof p !== 'string')) return null;
+    const hours = parseInteger(parts[0]);
+    const minutes = parseInteger(parts[1]);
+    if (hours === null || minutes === null || minutes > 59) return null;
+    const total = hours * 60 + minutes;
+    return Number.isSafeInteger(total) ? total : Number.POSITIVE_INFINITY;
+  } catch { return null; }
+}
+
+const int = (raw: string) => parseGoalAmount(raw) ?? 0;
 
 export function toCreateBody(values: FormValues): GoalCreate {
   return {
@@ -170,12 +185,17 @@ export function rebaseValues(values: FormValues, previous: GoalWithAnswers, late
   const before = valuesFromGoal(previous);
   const after = valuesFromGoal(latest);
   const pick = <K extends FieldName>(name: K, edited: boolean): FormValues[K] => (edited ? values[name] : after[name]);
+  const unit = pick('unit', values.unit !== before.unit);
+  const amount = (raw: string) => {
+    const parsed = parseGoalAmount(raw);
+    return unit === 'sessions' && raw.startsWith('@hm:') && parsed !== null && Number.isFinite(parsed) ? String(parsed) : raw;
+  };
   return {
     title: pick('title', values.title !== before.title),
-    unit: pick('unit', values.unit !== before.unit),
-    totalRequired: pick('totalRequired', int(values.totalRequired) !== previous.totalRequired),
-    sessionAmount: pick('sessionAmount', int(values.sessionAmount) !== previous.sessionAmount),
-    initialProgress: pick('initialProgress', int(values.initialProgress) !== previous.initialProgress),
+    unit,
+    totalRequired: amount(pick('totalRequired', parseGoalAmount(values.totalRequired) !== previous.totalRequired)),
+    sessionAmount: pick('sessionAmount', parseGoalAmount(values.sessionAmount) !== previous.sessionAmount),
+    initialProgress: amount(pick('initialProgress', parseGoalAmount(values.initialProgress) !== previous.initialProgress)),
     timezone: pick('timezone', values.timezone !== before.timezone),
     targetDate: pick('targetDate', values.targetDate !== before.targetDate),
     questionPrior: pick('questionPrior', !sameAnswers(values.questionPrior, before.questionPrior)),

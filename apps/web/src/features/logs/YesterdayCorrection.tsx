@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
 import type { Log } from '@contracts';
 import { longDate, parseLocalDate, shortDate } from '../../copy/date.ts';
-import { amountFormat, type AmountFormat } from '../../copy/amount.ts';
+import { recordDisplay, amountFormat, type AmountFormat } from '../../copy/amount.ts';
 import { todayCopy } from '../../copy/today.ts';
 import { Button } from '../../ui/components/Button.tsx';
 import { ErrorPanel } from '../../ui/components/Notice.tsx';
@@ -50,7 +50,7 @@ export function YesterdayCorrection({
   entryRef?: Ref<HTMLButtonElement>;
 }) {
   const current = choiceFromLog(log);
-  const currentText = describeChoice(current, sessionAmount, fmt.record, todayCopy.recordedRest);
+  const currentText = describeChoice(current, sessionAmount, n => recordDisplay(fmt, n), todayCopy.recordedRest);
   // 対象日。訂正中は、親（TodayPage）が訂正を始めた時点の記録を固定して渡す
   const target = log.localDate;
   const date = longDate(target);

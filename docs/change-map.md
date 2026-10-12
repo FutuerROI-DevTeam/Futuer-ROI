@@ -162,7 +162,7 @@ PR #131の実Engine混合負荷は[2026-10-07の訂正・追加報告](../experi
 
 ## 時間量の表示方針（#121）
 
-[P-18の限定採択・理由・他案・受入条件](product-spec.md#p-18-整数分を保った時間分表示)と[表示・入力の規則](product-spec.md#時間量の表示と整数分の保持)を正本とする。#157で実装した（C案の小数時間・記録の単位は[P-19](product-spec.md#p-19-到達予定日b案)で採用しない）。時間＋分への変換は[amount.ts](../apps/web/src/copy/amount.ts)の`hoursMinutes`・`amountFormat`だけで行い、[GoalListPage](../apps/web/src/features/goals/GoalListPage.tsx)、[ProgressSummary](../apps/web/src/features/today/ProgressSummary.tsx)、[RecordedSummary](../apps/web/src/features/today/RecordedSummary.tsx)、[OutlookPanel](../apps/web/src/features/today/OutlookPanel.tsx)の残量が使う。1回の量・日々の記録は分のまま。入力・編集の初期値と整数分の送信は[goal-form.ts](../apps/web/src/features/goals/goal-form.ts)。
+[P-18の限定採択・理由・他案・受入条件](product-spec.md#p-18-整数分を保った時間分表示)と[表示・入力の規則](product-spec.md#時間量の表示と整数分の保持)を正本とする。#157で実装した（C案の小数時間・記録の単位は[P-19](product-spec.md#p-19-到達予定日b案)で採用しない）。時間＋分への変換は[amount.ts](../apps/web/src/copy/amount.ts)の`hoursMinutes`・`amountFormat`だけで行い、[GoalListPage](../apps/web/src/features/goals/GoalListPage.tsx)、[ProgressSummary](../apps/web/src/features/today/ProgressSummary.tsx)、[RecordedSummary](../apps/web/src/features/today/RecordedSummary.tsx)、[OutlookPanel](../apps/web/src/features/today/OutlookPanel.tsx)の残量が使う。P-23では1回量・日々の量の表示に`recordDisplay`を使い、60分以上を時間＋分で出す。日々の入力は分のまま。総量・初期量の時間＋分入力、編集の初期値と整数分の送信は[goal-form.ts](../apps/web/src/features/goals/goal-form.ts)。
 
 P-18の0／1／59／60／61／1240分と達成まで残り1分（2999／3000分）の固定例は[amount.test.mjs](../apps/web/tests/amount.test.mjs)、1240分の初期量を整数分の入力欄に出し未変更なら送らないこと・小数を受け付けないことは[goal-form.test.mjs](../apps/web/tests/goal-form.test.mjs)で確認する。達成判定・予測はAPI・Engineの整数分のままで、表示の文字から逆算しない。狭い画面での折返しと累計・総量・残量の区別は機能QAで確認する。
 
@@ -198,3 +198,12 @@ TodayのP80計算範囲の文言（[#154](https://github.com/jogi-hack-2026-team
 材料不足と計算範囲外の補足訂正（[#198](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/198)）も同じ表示仕様・copy・回帰で追跡する。P50範囲外ラベルと50%／80%未到達の説明を出所によらずそろえ、実APIの純粋[buildR11Today](../apps/api/src/prediction/r11.ts)から未回答・不明・片方回答の材料不足と、両方回答・必要回数が計算上限を超える範囲外を実Engine→FE→部品SSRで区別する。DB/HTTP・実ユーザーの予測精度はこの合成回帰の検証範囲外。画面配置とAPI契約は変更しない。
 
 #187のcut軸で月目盛りが右端の到達予定日より未来になる回帰（PR212）は、[target-gap.test.mjs](../apps/web/tests/target-gap.test.mjs)で4反例・有限/範囲外P80・短期/長期・年越し/うるう年・幅別の日付順とboundsを検査する。[outlook-axis.native.tsx](../apps/web/tests/outlook-axis.native.tsx)を[既存native Chrome入口](../apps/web/tests/responsive-details.browser-check.mjs)で描き、製品の11px書体の実SVG・文字bounds・重なりを検査する。予測数値・API・非cut軸の変更を含めない。
+
+
+## GoalとTodayの量入力・保存後表示（#244）
+
+[Product P-23](product-spec.md#p-23-goalの量入力と保存後の増分244) → [量入力](../apps/web/src/features/goals/form/TimeAmountField.tsx)・[draftと整数変換](../apps/web/src/features/goals/goal-form.ts) → [増分確認](../apps/web/src/features/logs/save-feedback.ts)・[保存hook](../apps/web/src/features/logs/useSaveLog.ts) → [Today配置](../apps/web/src/features/today/TodayPage.tsx)・[グラフ座標](../apps/web/src/features/today/chart-geometry.ts)で追跡する。保存済み実績・設定量・未保存入力を分ける。API・DB・Engine・CI設定は変更しない。
+
+[純粋境界回帰](../apps/web/tests/goal-feedback.test.mjs)、[実Chromeの画面・操作回帰](../apps/web/tests/goal-feedback.browser-check.mjs)、[検証範囲と残判断](changes/issue-244-goal-feedback.md)へ参照する。P-18採択当時の入力限定をP-23が追加する。既存の[#157検証](changes/issue-157-review-regression.md)は当時の記録として保ち、同日並行上書きの差分保証や人間の受入を完了扱いにしない。
+
+10月12日の追加は[未保存試算とsnapshot固定](../apps/web/src/features/logs/draft-preview.ts) → [試算表示](../apps/web/src/features/today/DraftProgressPreview.tsx)、[共通足跡の集計](../apps/web/src/features/goals/footprint.ts) → [日付選択UI](../apps/web/src/features/goals/GoalFootprint.tsx) → [一覧で既存全件履歴を取得](../apps/web/src/features/goals/GoalListPage.tsx)、[小さい進捗率の表示](../apps/web/src/copy/progress.ts)で追う。[足跡境界回帰](../apps/web/tests/footprint.test.mjs)は未確認・timezone・訂正・削除・重複・日付境界を検査する。新規API・保存先・量の合算は設けない。

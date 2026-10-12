@@ -1,11 +1,13 @@
 import { Link } from '@tanstack/react-router';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { browserTimezone } from '../../../calendar.ts';
 import { goalsCopy } from '../../../copy/goals.ts';
 import { longDate } from '../../../copy/date.ts';
 import { Button } from '../../../ui/components/Button.tsx';
-import { Field, fieldAria, NumberInput, SegmentedControl, SelectInput, TextInput } from '../../../ui/components/FormField.tsx';
+import { Field, fieldAria, NumberInput, SelectInput, TextInput } from '../../../ui/components/FormField.tsx';
 import { Icon } from '../../../ui/components/Icon.tsx';
+import { TimeAmountField, timeParts } from './TimeAmountField.tsx';
+import { parseGoalAmount } from '../goal-form.ts';
 import { QuestionPriorFields } from '../../prior/QuestionPriorFields.tsx';
 import { NO_ANSWERS, TITLE_MAX, titleLength, type FieldErrors, type FieldName, type FormValues, type GoalWithAnswers, type answersLockReason } from '../goal-form.ts';
 
@@ -34,6 +36,21 @@ type Props = {
 export function GoalFormFields({ mode, goal, values, errors, count, unit, timezones,
   discardedDraft, pendingCreate, refreshNotice, inputDisabled, locked, priorOpen, latestAnswers,
   answersLock, update, onPriorToggle, onDeleteOpen }: Props) {
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === 'fr-goalform-prior') {
+      onPriorToggle(true);
+      document.getElementById('fr-goalform-prior-summary')?.focus();
+    } else if (hash === 'goal-sessionAmount') document.getElementById(hash)?.focus();
+  }, [onPriorToggle]);
+  const incompleteTime = values.unit === 'minutes' && [values.totalRequired, values.initialProgress].some(v => v.startsWith('@hm:') && !Number.isFinite(parseGoalAmount(v) ?? NaN));
+  const hasPriorAnswers = values.questionPrior.a !== null || values.questionPrior.b !== null;
+  const switchUnit = (next: FormValues['unit']) => {
+    for (const field of ['totalRequired', 'initialProgress'] as const) {
+      if (values[field].startsWith('@hm:')) update(field, String(parseGoalAmount(values[field])));
+    }
+    update('unit', next);
+  };
   return (
     <div className="fr-goalform__fields">
       {discardedDraft ? <p role="status">別の更新があったため最新のGoalを表示しています。未保存の入力は復元していません。</p> : null}
@@ -71,16 +88,11 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
               <Link to="/goals/new" className="fr-goalform__new-goal">{f.createNewGoal}</Link>
             </>
           ) : undefined}>
-            <SegmentedControl
-              labelledBy="goal-unit-label"
-              options={[
-                { value: 'minutes', label: f.units.minutes },
-                { value: 'sessions', label: f.units.sessions },
-              ]}
-              value={values.unit}
-              onChange={(value) => update('unit', value)}
-              disabled={inputDisabled || (mode === 'edit' && goal.unitLocked)}
-            />
+            <fieldset id="goal-unit" className="fr-unit-radio" aria-labelledby="goal-unit-label" {...fieldAria('goal-unit', { help: mode === 'edit' && goal.unitLocked, error: errors.unit })} disabled={inputDisabled || incompleteTime || (mode === 'edit' && goal.unitLocked)} tabIndex={-1}>
+              <label><input type="radio" name="goal-unit" value="minutes" checked={values.unit === 'minutes'} onChange={() => switchUnit('minutes')} />時間</label>
+              <label><input type="radio" name="goal-unit" value="sessions" checked={values.unit === 'sessions'} onChange={() => switchUnit('sessions')} />回数</label>
+            </fieldset>
+            {incompleteTime ? <p className="fr-goals__help">時間と分の入力を直すと単位を切り替えられます。</p> : null}
           </Field>
         </div>
       </section>
@@ -93,9 +105,26 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
         <div className="fr-goalform__group-fields">
           {/* デスクトップ幅では2列に並べる（デザイン Desk-create）。スマートフォン幅では1列のまま */}
           <div className="fr-goalform__pair">
-            <AmountField id="goal-totalRequired" label={f.totalRequired} unit={unit} value={values.totalRequired} error={errors.totalRequired} disabled={inputDisabled} onChange={(v) => update('totalRequired', v)} />
+            {values.unit === 'minutes' ? <TimeAmountField id="goal-totalRequired" label={f.totalRequired} value={values.totalRequired} error={errors.totalRequired} disabled={inputDisabled} onChange={v => update('totalRequired', v)} /> :
+              <AmountField id="goal-totalRequired" label={f.totalRequired} unit={unit} value={values.totalRequired} error={errors.totalRequired} disabled={inputDisabled} onChange={(v) => update('totalRequired', v)} />}
             <AmountField id="goal-sessionAmount" label={f.sessionAmount} unit={unit} value={values.sessionAmount} error={errors.sessionAmount} disabled={inputDisabled} onChange={(v) => update('sessionAmount', v)} />
           </div>
+          {values.unit === 'minutes' ? (
+          <TimeAmountField
+            id="goal-initialProgress"
+            label={f.initialProgress}
+            value={values.initialProgress}
+            error={errors.initialProgress}
+            disabled={inputDisabled || locked}
+            onChange={(v) => update('initialProgress', v)}
+            help={
+              <>
+                <p>{goal ? f.initialProgressHelp(longDate(goal.recordStartDate)) : f.initialProgressHelpNew}</p>
+                {locked ? <LockedNote>{f.lockedInitialProgress}</LockedNote> : null}
+              </>
+            }
+          />
+          ) : (
           <AmountField
             id="goal-initialProgress"
             label={f.initialProgress}
@@ -111,8 +140,43 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
               </>
             }
           />
+          )}
         </div>
       </section>
+
+      {/* 量設定直後の任意質問。未回答の新規作成は初期展開し、回答を強制しない。 */}
+      <details
+        id="fr-goalform-prior"
+        className="fr-goalform__prior"
+        open={priorOpen || Boolean(errors.questionPrior) || latestAnswers !== null || answersLock !== null}
+        onToggle={(event) => onPriorToggle(event.currentTarget.open)}
+      >
+        <summary id="fr-goalform-prior-summary" className="fr-goalform__prior-summary">
+          <h2 id="fr-goalform-prior-title" className="fr-goalform__prior-title">
+            あなたに合う最初の見通しをつくる <span>（任意）</span>
+          </h2>
+          <Icon name="chevronDown" size={20} />
+        </summary>
+        <p className="fr-goals__help">最近の取り組み方を2問だけ教えてください。続けやすさ・再開しやすさを最初の見通しに使い、その後は本人の記録で更新します。回答しないまま進むこともできます。</p>
+        {latestAnswers ? (
+          <p className="fr-goalform__latest" role="status">
+            {f.latestAnswers(answerLabel(latestAnswers.a), answerLabel(latestAnswers.b))}
+          </p>
+        ) : null}
+        <QuestionPriorFields
+          externalHeadingId="fr-goalform-prior-title"
+          value={answersLock ? NO_ANSWERS : values.questionPrior}
+          onChange={(next) => update('questionPrior', next)}
+          disabled={inputDisabled || answersLock !== null}
+          fieldErrors={errors.questionPrior ? { a: errors.questionPrior } : {}}
+        />
+        {answersLock ? <LockedNote>{answersLock === 'withdrawn' ? f.answersWithdrawn : f.answersNotSavedWithContext}</LockedNote> : null}
+        <p className="fr-goals__help">{f.answersNotRecords}</p>
+        {mode === 'create' ? <>
+          {hasPriorAnswers ? <p className="fr-goals__help">欄を閉じても選んだ回答は保存されます。取り消すときは各問の「回答しない」を選んでください。</p> : null}
+          <Button variant="text" disabled={inputDisabled || answersLock !== null} onClick={() => { onPriorToggle(false); document.getElementById('fr-goalform-prior-summary')?.focus(); }}>{hasPriorAnswers ? '回答欄を閉じる' : '回答せずに進む'}</Button>
+        </> : null}
+      </details>
 
       <section className="fr-goalform__group fr-goalform__group--schedule" aria-labelledby="fr-goalform-schedule-title">
         <header className="fr-goalform__group-head">
@@ -169,34 +233,7 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
         </div>
       </section>
 
-      {/* 初期質問は任意なので、開閉できる形で閉じて置く（デザイン C1・R1）。回答・エラー・お知らせがあるときは開いておく */}
-      <details
-        className="fr-goalform__prior"
-        open={priorOpen || Boolean(errors.questionPrior) || latestAnswers !== null || answersLock !== null}
-        onToggle={(event) => onPriorToggle(event.currentTarget.open)}
-      >
-        <summary className="fr-goalform__prior-summary">
-          <h2 id="fr-goalform-prior-title" className="fr-goalform__prior-title">
-            {f.priorTitleLead}
-            <span className="fr-goalform__nowrap">{f.priorTitleTail}</span>
-          </h2>
-          <Icon name="chevronDown" size={20} />
-        </summary>
-        {latestAnswers ? (
-          <p className="fr-goalform__latest" role="status">
-            {f.latestAnswers(answerLabel(latestAnswers.a), answerLabel(latestAnswers.b))}
-          </p>
-        ) : null}
-        <QuestionPriorFields
-          externalHeadingId="fr-goalform-prior-title"
-          value={answersLock ? NO_ANSWERS : values.questionPrior}
-          onChange={(next) => update('questionPrior', next)}
-          disabled={inputDisabled || answersLock !== null}
-          fieldErrors={errors.questionPrior ? { a: errors.questionPrior } : {}}
-        />
-        {answersLock ? <LockedNote>{answersLock === 'withdrawn' ? f.answersWithdrawn : f.answersNotSavedWithContext}</LockedNote> : null}
-        <p className="fr-goals__help">{f.answersNotRecords}</p>
-      </details>
+
 
       {mode === 'edit' ? (
         <div className="fr-goalform__delete-mobile">
@@ -228,9 +265,11 @@ function AmountField({
   onChange: (value: string) => void;
   help?: ReactNode;
 }) {
+  const retained = value.startsWith('@hm:') ? timeParts(value) : null;
+  const fieldHelp = retained ? <>{help}<p>以前の未保存の時間入力：{retained[0]}時間 {retained[1]}分。新しい単位で量を入力してください。</p></> : help;
   return (
-    <Field id={id} label={label} error={error} help={help}>
-      <NumberInput id={id} suffix={unit} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} invalid={Boolean(error)} {...fieldAria(id, { help, error })} />
+    <Field id={id} label={label} error={error} help={fieldHelp}>
+      <NumberInput id={id} suffix={unit} value={retained ? '' : value} onChange={(event) => onChange(event.target.value)} disabled={disabled} invalid={Boolean(error)} {...fieldAria(id, { help: fieldHelp, error })} />
     </Field>
   );
 }

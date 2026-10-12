@@ -33,3 +33,8 @@
 - **トレードオフ**：クラス名の衝突は接頭辞で避けているだけで、仕組みで防いではいない。部品が増えて衝突が問題になったら CSS Modules（Vite 標準）への切り替えを検討する。
 - **書体**：Zen Maru Gothic（SIL Open Font License）を `@fontsource/zen-maru-gothic` でビルドに含め、同じ origin から配信する（外部へ通信しない、#146）。本文の400・500・700に加え、Todayでは900も使う。文字の範囲ごとに分かれたファイルのうち画面で使う分だけをブラウザが取得する。
 - **現行配色と残る確認**：P-21の実装では背景・面・面2を分け、OS暗色指定でもlight-onlyで表示する。Todayには専用overrideがある。旧#121の「すべて白」を現行の事実として扱わず、区切り・コントラスト・本人UX受入は[画面設計の論点](../../../../docs/design.md#論点既知の制約)で追う。明朝数字の固定版資産・同梱理由・更新手順は[資産README](../features/today/assets/README.md)を参照する。
+
+
+#244のGoal量入力・Today配置と差分表示は[Product P-23](../../../../docs/product-spec.md#p-23-goalの量入力と保存後の増分244)に従う。総量・初期量の時間＋分は整数分へ変換し、TodayのグラフはPCの週履歴下／スマホの見通し後に一つだけ置く。主数字・見出しは既存Gothicの700、本文の大きさと行間は共有tokensを保つ。差分通知には「保存前の表示との差」を常に示し、今回のPUTの原子的増分とは表現しない。減少や不確かな再試行に増加演出を付けない。質問は未回答で進む操作と、選択を保持して欄を閉じる操作を区別する。
+
+10月12日の[未保存試算](../features/today/DraftProgressPreview.tsx)は保存済み実績と別の枠に条件・未保存を示す。日々の量は[amount](../copy/amount.ts)の分／回、累計・総量は時間＋分／回、率の細かい表示は[progress](../copy/progress.ts)で調整する。[共通足跡](../features/goals/GoalFootprint.tsx)は一覧見出しの下に一つだけ置き、44pxの日付button・矢印キー移動・選択日のGoal入口を持つ。取得はPage、集計は[footprint](../features/goals/footprint.ts)に置く。色だけでDONE・休み・未確認を区別しない。画像案のbitmapを画面へ埋め込まず、既存tokens・部品・字体を保つ。

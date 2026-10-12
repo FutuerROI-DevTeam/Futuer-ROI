@@ -15,7 +15,12 @@
     flex: 1;
     font-size: 20px;
     font-weight: 700;
+    color: inherit;
+    text-decoration: none;
   }
+  .fr-deskbar__name:visited { color: inherit; }
+  .fr-deskbar__name:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .fr-deskbar__name:focus-visible { outline: 2px solid var(--fr-dot); outline-offset: 4px; border-radius: 4px; }
   .fr-deskbar .fr-btn--text {
     color: var(--fr-ink-2);
   }

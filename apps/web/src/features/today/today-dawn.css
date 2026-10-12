@@ -97,7 +97,7 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-outlook__p50 { font-size: 28px; color: var(--fr-dot); overflow-wrap: anywhere; }
 .fr-page--today .fr-outlook__label,
 .fr-page--today .fr-outlook__p80 { font-size: 13px; }
-.fr-page--today .fr-progress__percent { font-size: 40px; }
+.fr-page--today .fr-progress__percent { font-size: 40px; overflow-wrap: anywhere; min-width: 0; }
 .fr-page--today .fr-progress__percent small { font-size: 1em; margin-left: 0; }
 .fr-page--today .fr-progress__amount { font-size: 14px; }
 .fr-page--today .fr-progress__balance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; padding: 0; }
@@ -152,7 +152,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
   .fr-page--today .fr-today-layout > * { grid-column: 1; }
   .fr-page--today .fr-today__scroll { display: contents; }
   .fr-page--today .fr-today__scroll > * { grid-column: 1; }
-  .fr-page--today .fr-today__scroll > .fr-today__top { grid-row: 1; border-radius: 24px; overflow: hidden; }
+.fr-page--today .fr-today__scroll > .fr-today__primary { grid-row: 1; }
+.fr-page--today .fr-today__primary > .fr-today__top { border-radius: 24px; overflow: hidden; }
   /* PCの枠では山並みを以前の原画と同じく枠の高さの約1/4に収め、数字に重ねない */
   .fr-page--today .fr-today__hero { padding: 24px 28px 80px; background: url('./assets/dawn-ridge.png') center bottom / 100% 24% no-repeat, linear-gradient(var(--dawn-sky-top), var(--dawn-sky-bottom)); }
   .fr-page--today .fr-today__hero::after { display: none; }
@@ -170,7 +171,7 @@ body:has(.fr-page--today) { background: #eef3f5; }
   .fr-page--today .fr-today__right .fr-section-label { font-size: 18px; font-weight: 900; color: var(--fr-ink); }
   .fr-page--today .fr-today__detail > summary { font-size: 14px; padding-block: 6px; border-bottom: 1px solid var(--fr-line); }
   /* 今日の記録は左の列の下端まで場所を取り、右の列をスクロールしても画面に残す（#221） */
-  .fr-page--today .fr-today-layout > .fr-today__dock { max-height: none; grid-row: 3 / -1; align-self: start; position: sticky; top: 18px; margin: 0; border-radius: 24px; box-shadow: none; }
+  .fr-page--today .fr-today-layout > .fr-today__dock { max-height: none; grid-row: 4 / -1; align-self: start; position: sticky; top: 18px; margin: 0; border-radius: 24px; box-shadow: none; }
   .fr-page--today .fr-today__record-day { padding: 12px 18px 0; }
   .fr-page--today .fr-actionbar { overflow: visible; padding: 4px 18px 18px; border-radius: 0 0 24px 24px; }
   .fr-page--today .fr-core__value { font-size: 32px; }
@@ -186,3 +187,30 @@ body:has(.fr-page--today) { background: #eef3f5; }
 
 /* 昨日の問いかけ・訂正の中の量の行と2択（今日の記録と同じ部品、#221）。下の欄の余白・影・PCの角丸は付けない */
 .fr-page--today .fr-yesterday .fr-actionbar { position: static; min-height: 0; margin: 0; padding: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
+
+.fr-page--today .fr-today__history-chart { margin: 0 16px; padding: 18px; border-radius: 24px; background: var(--fr-surface); min-width: 0; }
+.fr-page--today .fr-today__history-chart h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.fr-page--today .fr-core__value, .fr-page--today .fr-outlook__p50, .fr-page--today .fr-progress__percent { font-family: inherit; font-weight: 700; }
+.fr-page--today .fr-today__question, .fr-page--today .fr-outlook__title, .fr-page--today .fr-today__right .fr-section-label { font-weight: 700; }
+.fr-save-feedback { min-height: calc(6.4em + 16px); padding: 8px 22px; box-sizing: border-box; font-size: 14px; line-height: 1.6; color: var(--fr-ink-2); }
+.fr-save-feedback p { margin: 0; }
+.fr-save-feedback span { display: block; overflow-wrap: anywhere; }
+.fr-save-feedback__increase { color: var(--fr-rec); animation: fr-feedback-in .35s ease-out; }
+@keyframes fr-feedback-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .fr-save-feedback__increase { animation: none; } }
+.fr-draft-preview { padding: 10px 12px; border: 1px solid var(--fr-line); border-radius: 12px; background: var(--fr-bg); color: var(--fr-ink); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.fr-draft-preview p { margin: 0; }
+.fr-draft-preview__label { color: var(--fr-ink-2); }
+.fr-draft-preview__label span { display: inline-block; margin-left: 4px; font-weight: 700; }
+.fr-draft-preview__delta { font-weight: 700; }
+.fr-draft-preview--compact { display: none; }
+@media (max-width: 959px) { .fr-draft-preview--compact { display: block; margin: 0 16px 12px; flex-shrink: 0; } }
+@media (min-width: 960px) {
+  .fr-page--today .fr-today__history-chart { grid-row: 3; margin: 0; }
+  .fr-page--today .fr-today__basis .fr-why summary, .fr-page--today .fr-today__detail > summary { min-height: var(--fr-tap); }
+  /* 左の入力へスクロールしても、試算と比較元の進捗を同時に読めるようにする。 */
+  .fr-page--today .fr-today__right:has(.fr-draft-preview) { align-self: stretch; }
+  .fr-page--today .fr-today__right > .fr-section:has(.fr-draft-preview) { position: sticky; top: 18px; z-index: 1; background: var(--fr-surface); }
+  /* 右の見通しをキーボードで読む間は固定を外し、focus先を試算で覆わない。 */
+  .fr-page--today .fr-today__right:focus-within > .fr-section:has(.fr-draft-preview) { position: static; }
+}

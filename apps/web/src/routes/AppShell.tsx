@@ -1,4 +1,4 @@
-import { Outlet } from '@tanstack/react-router';
+import { Link, Outlet } from '@tanstack/react-router';
 import { appCopy } from '../copy/app.ts';
 import { AccountMenu } from '../features/account/AccountMenu.tsx';
 import { MainLandmark } from './MainLandmark.tsx';
@@ -14,7 +14,7 @@ export function AppShell() {
   return (
     <>
       <header className="fr fr-deskbar">
-        <p className="fr-deskbar__name">{appCopy.name}</p>
+        <Link to="/" className="fr-deskbar__name">{appCopy.name}</Link>
         <AccountMenu variant="email" />
       </header>
       <MainLandmark>

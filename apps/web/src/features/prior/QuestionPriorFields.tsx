@@ -5,7 +5,7 @@ import type { Answer, Origin, QuestionPriorFieldsProps } from "./presentation-ty
 const options: readonly Readonly<{ value: Answer; label: string }>[] = [
   { value: "LOW", label: "少なかった（4回に1回くらい）" },
   { value: "MID", label: "半分くらい（4回に2回くらい）" },
-  { value: "HIGH", label: "多かった（4回に3回くらい）" },
+  { value: "HIGH", label: "多かった（ほぼ毎回・毎回も含む）" },
   { value: "UNKNOWN", label: "経験がない・思い出せない" },
   { value: null, label: "回答しない" },
 ];
@@ -22,15 +22,17 @@ export function QuestionPriorFields({ value, onChange, disabled = false, fieldEr
   // A stable per-instance prefix also separates two copies for the same Goal.
   const id = useId();
   const helpId = `${id}-help`;
+  const unansweredId = `${id}-unanswered`;
   return (
     <section className={["r11-qp", className].filter(Boolean).join(" ")} aria-labelledby={externalHeadingId ?? `${id}-title`}>
       {externalHeadingId === undefined && <h2 id={`${id}-title`}>最初の見通しを調整する（任意）</h2>}
       <p id={helpId}>記録開始前の、今回に近い行動・量・生活状況を思い出して選んでください。これからの意欲や理想ではなく、過去の取り組み方を答えてください。少量でも取り組めた日を含みます。答えられなくても大丈夫です。各問を回答しないまま進められます。</p>
+      <p id={unansweredId}>「経験がない・思い出せない」はその回答を保存します。「回答しない」は未回答のまま進む操作です。どちらも、その質問の回数を見通しの材料には使いません。</p>
       {origins.map(origin => {
         const error = fieldErrors[origin];
         const errorId = `${id}-${origin}-error`;
         return (
-          <fieldset key={origin} disabled={disabled} aria-describedby={error ? `${helpId} ${errorId}` : helpId}>
+          <fieldset key={origin} disabled={disabled} aria-describedby={error ? `${helpId} ${unansweredId} ${errorId}` : `${helpId} ${unansweredId}`}>
             <legend>{questions[origin]}</legend>
             {options.map(option => {
               const raw = option.value ?? "";

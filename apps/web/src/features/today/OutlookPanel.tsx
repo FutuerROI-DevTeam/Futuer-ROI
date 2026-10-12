@@ -1,7 +1,7 @@
 import { Band } from '../../ui/components/Section.tsx';
 import { ResponsiveDetails } from './ResponsiveDetails.tsx';
 import { InsufficientNotice } from '../../ui/components/Notice.tsx';
-import type { AmountFormat } from '../../copy/amount.ts';
+import { recordDisplay, type AmountFormat } from '../../copy/amount.ts';
 import { completionNoteFor, todayCopy } from '../../copy/today.ts';
 import { useElementWidth } from '../../ui/useElementWidth.ts';
 import { DEFAULT_CHART_WIDTH, outlookAxis } from './chart-geometry.ts';
@@ -14,7 +14,9 @@ import type { CompletionPresentation, Plan } from '../prior/presentation-types.t
 export function CompletionBrief({ completion }: { completion: CompletionPresentation }) {
   return <p className="fr-completion-brief">{completion.kind === 'estimate'
     ? completion.p50Label ? todayCopy.completionBrief(completion.p50Label) : todayCopy.completionBriefOutside
-    : todayCopy.completionBriefUnavailable}</p>;
+    : todayCopy.completionBriefUnavailable}
+    {completion.kind === 'estimate' ? <span>{' · '}{completion.p80Label ? todayCopy.completionP80(completion.p80Label) : todayCopy.completionP80Over3Years}</span> : null}
+  </p>;
 }
 
 /** これからの見通し（補助指標2）。目安と「10回中8回」の日付を、実際の日付に比例した軸に置く。 */
@@ -44,7 +46,7 @@ export function OutlookPanel({
       {/* 材料が足りないときも、到達予定日だけは出す（ずれは出さない） */}
       {targetDate ? <TargetDateRow today={today} targetDate={targetDate} /> : null}
       {completion.kind === 'estimate' ? (
-        <Estimate completion={completion} today={today} targetDate={targetDate} session={fmt.record(sessionAmount)} showDetails={showDetails} />
+        <Estimate completion={completion} today={today} targetDate={targetDate} session={recordDisplay(fmt, sessionAmount)} showDetails={showDetails} />
       ) : completion.kind === 'insufficient' ? (
         <InsufficientNotice>{completion.message}</InsufficientNotice>
       ) : (
@@ -160,7 +162,7 @@ function PlanView({ plan, reason, fmt }: { plan: Plan; reason: string; fmt: Amou
     <div className="fr-plan">
       <p className="fr-plan__title">{todayCopy.planTitle}</p>
       <p className="fr-plan__value">{todayCopy.planSessions(plan.sessions)}</p>
-      <p className="fr-note">{todayCopy.planNote(fmt.total(plan.remainingAmount), fmt.record(plan.sessionAmount), fmt.record(plan.lastAmount))}</p>
+      <p className="fr-note">{todayCopy.planNote(fmt.total(plan.remainingAmount), recordDisplay(fmt, plan.sessionAmount), recordDisplay(fmt, plan.lastAmount))}</p>
       <InsufficientNotice>{reason}</InsufficientNotice>
     </div>
   );
