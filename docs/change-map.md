@@ -104,8 +104,8 @@ FE結合は[#137](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/1
 
 | #137の変更 | 実装 | 確認 |
 | --- | --- | --- |
-| Goalの作成・編集で初期質問に答える・撤回する、回答版の競合（409）を読み込み直す | [goals-http.ts](../apps/web/src/api/goals-http.ts)（`?view=r11`）、[goal-form.ts](../apps/web/src/features/goals/goal-form.ts)（送る本文と回答版の規則）、[GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)、[QuestionPriorFields](../apps/web/src/features/prior/QuestionPriorFields.tsx) | [goal-form.test.mjs](../apps/web/tests/goal-form.test.mjs)（回答・撤回・回答版の付け方、422の項目対応、409後の通信中断・503で旧cacheを採用せず取得成功後に最新の版を使う回帰）、合成DBの実ブラウザで409→GET503／中断→入力・競合保持→再取得成功→再保存を確認する |
-| 中心の数字の材料が足りず、まだ質問に答えていないGoalのTodayに、質問に答える任意の導線を出す（出所・planの表示と、予測に使った設定の照合はPR #129（#81）へ移した） | [TodayPage](../apps/web/src/features/today/TodayPage.tsx) | ローカル実ブラウザ |
+| Goalの作成・編集で初期質問に答える（2問とも選ぶまで保存しない、#259・P-24）・撤回する、回答版の競合（409）を読み込み直す | [goals-http.ts](../apps/web/src/api/goals-http.ts)（`?view=r11`）、[goal-form.ts](../apps/web/src/features/goals/goal-form.ts)（送る本文と回答版の規則）、[GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)、[QuestionPriorFields](../apps/web/src/features/prior/QuestionPriorFields.tsx) | [goal-form.test.mjs](../apps/web/tests/goal-form.test.mjs)（回答・撤回・回答版の付け方、必須の選択（#259）、422の項目対応、409後の通信中断・503で旧cacheを採用せず取得成功後に最新の版を使う回帰）、合成DBの実ブラウザで409→GET503／中断→入力・競合保持→再取得成功→再保存を確認する |
+| Todayから初期質問の回答を変える入口「Goalの編集で、初期質問の回答を変える」（編集画面の一番上へ）。旧「質問に答えて…（任意）」は#259で削除（出所・planの表示と、予測に使った設定の照合はPR #129（#81）へ移した） | [TodayPage](../apps/web/src/features/today/TodayPage.tsx) | ローカル実ブラウザ |
 
 以下は2026-10-05時点の分担・未決履歴。[P-15](product-spec.md#p-15-質問由来の見通しのmust追加方針)で機能ScopeのMust追加と分担を採択し、当時の実現方式はD-26でOPENだった。追加UIは[#117](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/117)（Kaito、ネイティブ親#88）、Engineは#90配下の#71〜#73、BEは#89配下の#76・#77、FEの既存画面・組み込みは#88配下の#78・#81へ追跡する。#107は提案公開・文書追跡Taskであり、追加UIの親ではない。現在の保存・公開API追加は上の#133で分け、個別期限・Hard依存・Ready/BLOCKED・元の完了チェックは採択から自動変更しない。
 

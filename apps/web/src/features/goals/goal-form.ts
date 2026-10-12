@@ -22,7 +22,7 @@ export type FormValues = {
   timezone: string;
   /** 到達予定日（#157、P-19）。YYYY-MM-DD、空は未設定。 */
   targetDate: string;
-  /** R-11の2問の回答（任意。null は回答しない、UNKNOWN は経験がない・思い出せない）。 */
+  /** R-11の2問の回答（null は回答しない、UNKNOWN は経験がない・思い出せない）。どれかを選んだかは PriorChosen で持つ（#259）。 */
   questionPrior: QuestionAnswers;
 };
 
@@ -165,6 +165,23 @@ const sameAnswers = (x: QuestionAnswers, y: QuestionAnswers) => x.a === y.a && x
 /** 編集で、単位か1回の量を変えるか。変えると保存済みの回答は API が取り消す（R-11、#133）。 */
 export function changesAnswerContext(values: FormValues, goal: Goal): boolean {
   return values.unit !== goal.unit || int(values.sessionAmount) !== goal.sessionAmount;
+}
+
+/**
+ * 初期質問の各問で、利用者がどれかの選択肢（「回答しない」を含む）を選んだか（#259）。
+ * 回答の値は null を「回答しない」として送るため、未選択と区別できない。値の意味は変えず、選んだかどうかだけを画面側で持つ。
+ */
+export type PriorChosen = Readonly<{ a: boolean; b: boolean }>;
+export const ALL_CHOSEN: PriorChosen = { a: true, b: true };
+
+/** 最初の選択状態。作成は未選択、編集は保存済みの回答がある問だけ選択済みにする（保存済みの null は「回答しない」と未回答を区別できないため、選び直してもらう）。 */
+export function initialPriorChosen(mode: 'create' | 'edit', answers: QuestionAnswers): PriorChosen {
+  return mode === 'create' ? { a: false, b: false } : { a: answers.a !== null, b: answers.b !== null };
+}
+
+/** 2問とも選ぶまで保存させない（#259）。単位か1回の量を変えて回答欄を押せない間（answersLock）は求めない。 */
+export function priorChoiceError(chosen: PriorChosen, locked: boolean): string | undefined {
+  return locked || (chosen.a && chosen.b) ? undefined : goalsCopy.form.answersRequired;
 }
 
 /**

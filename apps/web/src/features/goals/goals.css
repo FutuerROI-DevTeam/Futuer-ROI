@@ -514,6 +514,10 @@
     gap: var(--fr-space-5);
     align-items: start;
   }
+  /* 量のまとまりは、総量→1回の量→記録開始日の前日までに終えた量の順に1列で並べる（#259）。スマートフォン幅はもとから1列 */
+  .fr-goalform__group--record .fr-goalform__pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .fr-goalform__prior {
     margin: var(--fr-space-6) var(--fr-space-8);
     padding: 0 var(--fr-space-6);

@@ -46,6 +46,8 @@ const ensure = (condition: unknown, message: string) => { if (!condition) throw 
 const tick = () => new Promise(resolve => setTimeout(resolve, 5));
 const settle = async () => { for (let i = 0; i < 15; i++) await act(tick); };
 const input = () => host.querySelector<HTMLInputElement>('#goal-title');
+// 初期質問は必須（#259）。両問で「回答しない」を選ぶ（押せない間は何もしない）
+const choosePrior = async () => act(async () => { host.querySelectorAll<HTMLInputElement>('.r11-qp fieldset input[value=""]').forEach(radio => radio.click()); await tick(); });
 const submit = () => host.querySelector<HTMLButtonElement>('button[type="submit"]');
 const totalMinutes = () => {
   const h = host.querySelector<HTMLInputElement>('#goal-totalRequired'), m = host.querySelector<HTMLInputElement>('#goal-totalRequired-minutes');
@@ -100,7 +102,7 @@ async function run() {
     saveError = null; getError = null; await navigate('/');
     await navigate(scenario.mode === 'create' ? '/goals/new' : '/goals/goal/edit');
     await visible(); await settle(); ensure(input(), scenario.label + ': initial form absent');
-    await set('#goal-title', 'A-PRIVATE-185-DRAFT'); await set('#goal-totalRequired', '123'); await set('#goal-sessionAmount', '17');
+    await set('#goal-title', 'A-PRIVATE-185-DRAFT'); await set('#goal-totalRequired', '123'); await set('#goal-sessionAmount', '17'); await choosePrior();
     saveError = scenario.error; await clickSave(); const before = view(), count = writes.length;
     ensure(before.title === 'A-PRIVATE-185-DRAFT', scenario.label + ': input was lost before session check');
     ensure(before.invalid === 'true' || before.failed || before.conflict, scenario.label + ': initial failure absent');
@@ -161,7 +163,7 @@ async function run() {
     await navigate('/'); await check();
     await navigate(mode === 'create' ? '/goals/new' : '/goals/goal/edit');
     ensure(input(), 'reset form missing');
-    await set('#goal-title', 'A-PRIVATE-185-DRAFT'); await set('#goal-totalRequired', '123'); await set('#goal-sessionAmount', '17');
+    await set('#goal-title', 'A-PRIVATE-185-DRAFT'); await set('#goal-totalRequired', '123'); await set('#goal-sessionAmount', '17'); await choosePrior();
   };
   const failed = async (error = api(503, 'UNAVAILABLE')) => { saveError = error; await clickSave(); };
   const record = (label: string, extra: Record<string, unknown> = {}) => results.push({ label, preserved: true, owner: current.owner, after: view(), ...extra } as any);
