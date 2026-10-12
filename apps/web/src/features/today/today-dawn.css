@@ -139,6 +139,8 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-today__detail .fr-note { padding-top: 6px; }
 .fr-page--today .fr-today__pad { margin: 0 16px; }
 @media (max-width: 359px) {
+  /* 失敗後の「もう一度保存」「選び直す」は2列だと文字の途中で折れるので、1列に積む（#277）。上の折り返し許可は保つ */
+  .fr-page--today .fr-savefail__actions { grid-template-columns: minmax(0, 1fr); }
   .fr-page--today .fr-choice { font-size: 16px; }
   .fr-page--today .fr-choice__label { gap: 4px; }
   .fr-page--today .fr-today__records { padding-inline: 12px; }

@@ -125,6 +125,10 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
       if (mode === 'list') {
         const text = (await evaluate(state)).text;
         assert.ok(text.includes('決めた総量に届きました') && text.includes('積み上げを見る'));
+        // 進捗率の直後の「記録開始前の … を含む」が、同じ行で区切りなしに続かない（#277）
+        const initial = await evaluate(`(()=>{const row=document.querySelector('.fr-goals__initial')?.closest('.fr-goals__row-sub');const t=row?.querySelector('.fr-goals__amount-total')?.getBoundingClientRect();const i=row?.querySelector('.fr-goals__initial')?.getBoundingClientRect();return t&&i?{gap:i.left-t.right,sameLine:Math.abs(i.top-t.top)<4}:null})()`);
+        assert.ok(initial, 'initial progress note absent at ' + width);
+        if (initial.sameLine) assert.ok(initial.gap >= 6, 'initial note runs into percent at ' + width + ': ' + JSON.stringify(initial));
       }
       await screenshot(mode + '-' + width);
       if (mode === 'today' && artifacts) {
@@ -359,6 +363,23 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
   const retried = await until(state, v => v?.puts?.length === 2 && v?.active === 'fr-recorded-title', 'retry absent');
   assert.equal(retried.feedback, '', 'retry must not celebrate uncertain baseline');
   assert.deepEqual(retried.puts[0], retried.puts[1], 'retry preserves the original body');
+  for (const width of [320, 390]) {
+    await resize(width); await mount('today'); await evaluate('window.__goalQA.failure("offline")');
+    await activate('.fr-today__dock .fr-choice');
+    await until(state, v => v?.puts?.length === 1 && v?.text?.includes('もう一度'), 'failure absent at ' + width);
+    await evaluate('document.fonts.ready');
+    const failureLayout = await evaluate(`(()=>{
+      const lines=b=>{const t=[...b.childNodes].find(n=>n.nodeType===3);const r=document.createRange();r.selectNodeContents(t);return r.getClientRects().length};
+      const a=document.activeElement;
+      return {focusInPanel:!!a?.closest('.fr-error'),focusTag:a?.tagName,buttons:[...document.querySelectorAll('.fr-today__dock .fr-savefail__actions .fr-btn')].map(b=>({text:b.textContent,lines:lines(b)}))}})()`);
+    assert.equal(failureLayout.buttons.length, 2, 'failure buttons at ' + width);
+    assert.ok(failureLayout.buttons.every(b => b.lines === 1), 'failure button label wrapped at ' + width + ': ' + JSON.stringify(failureLayout));
+    assert.equal(failureLayout.focusInPanel, true, 'focus left the page after failure at ' + width + ': ' + JSON.stringify(failureLayout));
+    await evaluate('window.__goalQA.failure(null)');
+    await screenshot('today-failure-' + width);
+    evidence.push({ mode: 'failure layout/focus', width, ...failureLayout });
+  }
+  await resize(390);
   await mount('today'); await evaluate('window.__goalQA.hold()');
   await activate('.fr-today__dock .fr-choice');
   await until(state, v => v?.puts?.length === 1, 'held save did not start');
