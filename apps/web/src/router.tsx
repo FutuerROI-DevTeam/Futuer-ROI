@@ -19,10 +19,11 @@ import { EvaluationPage } from './features/evaluation/EvaluationPage.tsx';
  * ルートの構成（#146）。
  *
  *   /                          公開トップ（ログイン不要）
- *   [auth]                     ログイン・新規登録・パスワード再設定。ログイン済みなら戻り先へ移る
+ *   [auth]                     ログイン・新規登録・再設定メールの要求。ログイン済みなら戻り先へ移る
  *     /login, /register
  *     /forgot-password         再設定メールの要求
- *     /reset-password          メールのリンクから戻り、新しいパスワードを保存（?token= か ?error=INVALID_TOKEN）
+ *   /reset-password            メールのリンクから戻り、新しいパスワードを保存（?token= か ?error=INVALID_TOKEN）。
+ *                              ログイン中のブラウザで開いても（別端末から要求した・別アカウントでログイン中）フォームを出す
  *   [app]                      ログインが必要な画面。ログインの確認はここ1か所で行う
  *     /goals                   Goal一覧
  *     /goals/new               Goalの作成
@@ -80,11 +81,13 @@ const forgotPasswordRoute = createRoute({
   component: ForgotPasswordPage,
 });
 
+// 復旧用の画面なので[auth]（ログイン済みなら戻り先へ移す）の外に置く。中に置くと、ログイン中のブラウザで
+// 有効なメールのリンクを開いてもGoal一覧へ移され、フォームに到達できない。
 const resetPasswordRoute = createRoute({
-  getParentRoute: () => authLayout,
+  getParentRoute: () => rootRoute,
   path: '/reset-password',
-  // 親（authLayout）の戻り先の検査に加えて、メールのリンクが付けたtoken／errorだけを受け取る
-  validateSearch: (search: Record<string, unknown>) => ({ ...authSearch(search), ...resetSearch(search) }),
+  // メールのリンクが付けたtoken／errorだけを受け取る
+  validateSearch: resetSearch,
   component: function ResetPasswordRoute() {
     const { token, error } = resetPasswordRoute.useSearch();
     return <ResetPasswordPage search={token ? { token } : error ? { error } : {}} />;
@@ -149,7 +152,8 @@ const evaluationRoute = createRoute({
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
-  authLayout.addChildren([loginRoute, registerRoute, forgotPasswordRoute, resetPasswordRoute]),
+  authLayout.addChildren([loginRoute, registerRoute, forgotPasswordRoute]),
+  resetPasswordRoute,
   appLayout.addChildren([goalsRoute, goalNewRoute, goalEditRoute, todayRoute, historyRoute, evaluationRoute]),
   healthRoute,
 ]);
