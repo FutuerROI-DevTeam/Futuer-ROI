@@ -1,0 +1,221 @@
+name: Deploy production
+
+# Issue #275: mainへのpushで動いたApplication / Foundationが同じSHAで全job成功した後にだけ、
+# Vercel本番へ配備する。採用理由・代替案・手動での停止と戻し方は docs/operations/release-guide.md の
+# 「12. 自動配備（CD）」を参照。
+on:
+  workflow_run:
+    workflows: [Application, Foundation]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+# 本番配備は常に1つずつ。実行中のものは中断せず、待機は最新の1件だけ残る（古い待機はGitHubが取り消す）。
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24.21.0'
+  TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+  VERCEL_TELEMETRY_DISABLED: '1'
+
+jobs:
+  gate:
+    name: CI result and main head
+    if: >-
+      github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      deploy: ${{ steps.gate.outputs.deploy }}
+      reason: ${{ steps.gate.outputs.reason }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Decide whether this SHA may be deployed
+        id: gate
+        env:
+          CD_ENABLED: ${{ vars.CD_ENABLED }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/deploy-gate.mjs gate
+      - name: Summarize
+        env:
+          DEPLOY: ${{ steps.gate.outputs.deploy }}
+          REASON: ${{ steps.gate.outputs.reason }}
+        run: |
+          echo "- SHA \`$TARGET_SHA\`: deploy=$DEPLOY ($REASON)" >> "$GITHUB_STEP_SUMMARY"
+
+  schema:
+    name: Production schema check (read only)
+    needs: gate
+    if: needs.gate.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    outputs:
+      schema: ${{ steps.classify.outputs.schema }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: db:check against production
+        id: check
+        env:
+          SCHEMA_CHECK_TIMEOUT_MS: '30000'
+          SCHEMA_CHECK_QUERY_TIMEOUT_MS: '5000'
+        run: |
+          set +e
+          bash .github/scripts/with-production-db.sh npm run --silent db:check > "$RUNNER_TEMP/schema.txt"
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/schema.txt"
+      - name: Classify
+        id: classify
+        run: node .github/scripts/deploy-gate.mjs schema "$RUNNER_TEMP/schema.txt" "${{ steps.check.outputs.exit }}"
+      - name: Stop on unexpected schema state
+        if: steps.classify.outputs.schema == 'stop'
+        run: |
+          echo "- schema: stop。本番DBが想定外の状態です。release-guide 12-D に従い人が確認してください。" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+  migrate:
+    name: Production migration (approval required)
+    needs: [gate, schema]
+    if: needs.schema.outputs.schema == 'pending'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # production-migration Environmentの承認者が、旧版との互換性（release-guide 工程10）を確認してから承認する。
+    environment: production-migration
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Record the restore point
+        run: echo "- migration開始 $(date -u +%Y-%m-%dT%H:%M:%SZ)（Neonの履歴復元で戻す場合の基準時刻）" >> "$GITHUB_STEP_SUMMARY"
+      - name: Ensure the SHA is still main head
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/deploy-gate.mjs head
+      - name: db:migrate
+        run: bash .github/scripts/with-production-db.sh npm run --silent db:migrate
+      - name: db:check must be ok after migration
+        env:
+          SCHEMA_CHECK_TIMEOUT_MS: '30000'
+          SCHEMA_CHECK_QUERY_TIMEOUT_MS: '5000'
+        run: bash .github/scripts/with-production-db.sh npm run --silent db:check
+
+  deploy:
+    name: Build, verify and promote
+    needs: [gate, schema, migrate]
+    if: >-
+      always()
+      && needs.gate.outputs.deploy == 'true'
+      && (needs.schema.outputs.schema == 'ok' || needs.migrate.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Skip if production already runs this SHA
+        id: current
+        run: |
+          host="${PRODUCTION_URL#https://}"
+          curl -fsS -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v13/deployments/$host?teamId=$VERCEL_ORG_ID" > "$RUNNER_TEMP/current.json"
+          if node .github/scripts/deploy-gate.mjs deployment "$RUNNER_TEMP/current.json" >/dev/null; then
+            echo "same=true" >> "$GITHUB_OUTPUT"
+            echo "- 本番は既に \`$TARGET_SHA\` です。配備しません。" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "same=false" >> "$GITHUB_OUTPUT"
+            node -e "const d=require(process.argv[1]);console.log('previous=' + d.id)" "$RUNNER_TEMP/current.json" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Ensure the SHA is still main head
+        if: steps.current.outputs.same == 'false'
+        run: node .github/scripts/deploy-gate.mjs head
+      - name: Build a production deployment without assigning the domain
+        id: build
+        if: steps.current.outputs.same == 'false'
+        run: |
+          url="$(npx --yes vercel@63.1.2 deploy --prod --skip-domain --yes --meta "cdSha=$TARGET_SHA" --token "$VERCEL_TOKEN")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "- 候補: $url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify the candidate is this SHA
+        if: steps.current.outputs.same == 'false'
+        run: |
+          host="${{ steps.build.outputs.url }}"; host="${host#https://}"
+          curl -fsS -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v13/deployments/$host?teamId=$VERCEL_ORG_ID" > "$RUNNER_TEMP/candidate.json"
+          node .github/scripts/deploy-gate.mjs deployment "$RUNNER_TEMP/candidate.json"
+      - name: Smoke test the candidate
+        if: steps.current.outputs.same == 'false'
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: bash .github/scripts/smoke-deployment.sh "${{ steps.build.outputs.url }}"
+      - name: Ensure the SHA is still main head before promote
+        if: steps.current.outputs.same == 'false'
+        run: node .github/scripts/deploy-gate.mjs head
+      - name: Promote to production
+        id: promote
+        if: steps.current.outputs.same == 'false'
+        run: npx --yes vercel@63.1.2 promote "${{ steps.build.outputs.url }}" --yes --timeout 5m --token "$VERCEL_TOKEN"
+      - name: Verify production URL serves this SHA
+        if: steps.current.outputs.same == 'false'
+        run: |
+          host="${PRODUCTION_URL#https://}"
+          curl -fsS -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v13/deployments/$host?teamId=$VERCEL_ORG_ID" > "$RUNNER_TEMP/production.json"
+          node .github/scripts/deploy-gate.mjs deployment "$RUNNER_TEMP/production.json"
+          bash .github/scripts/smoke-deployment.sh "$PRODUCTION_URL"
+          echo "- 本番: \`$TARGET_SHA\` を確認（health・/・401）" >> "$GITHUB_STEP_SUMMARY"
+      - name: Roll back the domain to the previous deployment
+        if: failure() && steps.promote.outcome == 'success'
+        run: |
+          npx --yes vercel@63.1.2 rollback "${{ steps.current.outputs.previous }}" --yes --timeout 5m --token "$VERCEL_TOKEN"
+          echo "- 本番確認に失敗したため、直前の版へ戻しました。DBは戻していません。" >> "$GITHUB_STEP_SUMMARY"
