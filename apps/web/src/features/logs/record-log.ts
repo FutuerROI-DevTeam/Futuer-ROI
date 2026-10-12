@@ -11,13 +11,22 @@ import { isUnauthenticated } from '../../api/http.ts';
 export type RecordChoice = { status: 'DONE'; amount: number } | { status: 'SKIPPED'; amount: null };
 
 export function toLogPut(choice: RecordChoice, expectedGoalSettingsRevision: number): LogPut {
-  if (choice.status === 'SKIPPED') return { status: 'SKIPPED', expectedGoalSettingsRevision };
+  if (choice.status === 'SKIPPED') {
+    return { status: 'SKIPPED', expectedGoalSettingsRevision };
+  }
   return { status: 'DONE', amount: choice.amount, expectedGoalSettingsRevision };
 }
 
 /** 画面に出す記録の要約（「やった・20分」「やった・90分」「休んだ」）。amount は記録の単位で量を書く（copy/amount.ts）。 */
-export function describeChoice(choice: RecordChoice, sessionAmount: number, amount: (n: number) => string, restLabel: string): string {
-  if (choice.status === 'SKIPPED') return restLabel;
+export function describeChoice(
+  choice: RecordChoice,
+  sessionAmount: number,
+  amount: (n: number) => string,
+  restLabel: string,
+): string {
+  if (choice.status === 'SKIPPED') {
+    return restLabel;
+  }
   return `やった・${amount(choice.amount ?? sessionAmount)}`;
 }
 
@@ -39,16 +48,26 @@ export function isCurrentToday(date: string, goalToday?: string, todayDate?: str
 
 /** 送信直前に日付が変わった場合も、HTTP を送らず選び直しを案内する。 */
 export class TodayDateChangedError extends Error {
-  constructor() { super('Today date changed'); }
+  constructor() {
+    super('Today date changed');
+  }
 }
 
 export function classifySaveError(error: unknown): SaveFailureKind {
-  if (error instanceof TodayDateChangedError) return 'day-changed';
-  if (isUnauthenticated(error)) return 'signed-out';
-  if (error instanceof ApiError && error.status === 409 && error.body?.error.code === 'GOAL_SETTINGS_CONFLICT') return 'settings';
+  if (error instanceof TodayDateChangedError) {
+    return 'day-changed';
+  }
+  if (isUnauthenticated(error)) {
+    return 'signed-out';
+  }
+  if (error instanceof ApiError && error.status === 409 && error.body?.error.code === 'GOAL_SETTINGS_CONFLICT') {
+    return 'settings';
+  }
   if (error instanceof ApiError && error.status === 422) {
     const code = error.body?.error.code;
-    if (code === 'LOG_DATE_OUT_OF_WINDOW' || code === 'LOG_DATE_BEFORE_START') return 'date';
+    if (code === 'LOG_DATE_OUT_OF_WINDOW' || code === 'LOG_DATE_BEFORE_START') {
+      return 'date';
+    }
   }
   return 'failed';
 }
@@ -63,7 +82,9 @@ export type YesterdayRecord = { kind: 'before-start' } | { kind: 'missing' } | {
 
 export function yesterdayRecord(yesterday: string, recordStartDate: string, logs: readonly Log[]): YesterdayRecord {
   // YYYY-MM-DD どうしなので文字列の比較で日付の前後が分かる
-  if (yesterday < recordStartDate) return { kind: 'before-start' };
+  if (yesterday < recordStartDate) {
+    return { kind: 'before-start' };
+  }
   const log = logs.find((l) => l.localDate === yesterday);
   return log ? { kind: 'recorded', log } : { kind: 'missing' };
 }
@@ -71,15 +92,15 @@ export function yesterdayRecord(yesterday: string, recordStartDate: string, logs
 /** 保存済みの記録を、訂正の初期値（RecordChoice）にする。DONE は保存済みの量のまま（今の1回の量に置き換えない）。 */
 export function choiceFromLog(log: Log): RecordChoice {
   if (log.status === 'DONE') {
-    if (log.amount === null) throw new TypeError('DONE log must have an amount');
+    if (log.amount === null) {
+      throw new TypeError('DONE log must have an amount');
+    }
     return { status: 'DONE', amount: log.amount };
   }
   return { status: 'SKIPPED', amount: null };
 }
 
-/**
- * locked の間は action を実行しない操作にする（#88）。通常の保存だけでなく、失敗後の「もう一度保存」にも同じ排他を効かせるため。
- */
+/** 通常保存と失敗後の再試行に同じ排他を適用する（#88）。 */
 export function unlessLocked(locked: boolean, action: () => void): () => void {
   return () => {
     if (!locked) action();
@@ -115,14 +136,20 @@ export function editLocks(state: {
  * 記録の事実をたどるだけで、予測の計算はしない。
  */
 export function reachedDate(initialProgress: number, totalRequired: number, logs: readonly Log[]): string | null | undefined {
-  if (initialProgress >= totalRequired) return null;
+  if (initialProgress >= totalRequired) {
+    return null;
+  }
   let done = initialProgress;
   // YYYY-MM-DD どうしなので文字列の比較で日付順に並ぶ
   const byDateAscending = (a: Log, b: Log) => (a.localDate < b.localDate ? -1 : a.localDate > b.localDate ? 1 : 0);
   for (const log of [...logs].sort(byDateAscending)) {
-    if (log.status !== 'DONE') continue;
+    if (log.status !== 'DONE') {
+      continue;
+    }
     done += log.amount ?? 0;
-    if (done >= totalRequired) return log.localDate;
+    if (done >= totalRequired) {
+      return log.localDate;
+    }
   }
   return undefined;
 }

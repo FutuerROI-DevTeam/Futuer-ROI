@@ -62,10 +62,17 @@ export function RecordChoiceBar({
   const draftBaseline = useRef<string | undefined>(undefined);
   const draftStarted = useRef(false);
   const publishDraft = useCallback((value: number | null) => {
-    if (!draftStarted.current) { draftBaseline.current = previewBaseline; draftStarted.current = true; }
+    if (!draftStarted.current) {
+      draftBaseline.current = previewBaseline;
+      draftStarted.current = true;
+    }
     if (draftBaseline.current !== undefined) onPreviewChange?.({ baseline: draftBaseline.current, localDate: today, status: 'DONE', amount: value });
   }, [onPreviewChange, previewBaseline, today]);
-  const clearPreview = () => { draftBaseline.current = undefined; draftStarted.current = false; onPreviewChange?.(null); };
+  const clearPreview = () => {
+    draftBaseline.current = undefined;
+    draftStarted.current = false;
+    onPreviewChange?.(null);
+  };
   useEffect(() => () => onPreviewChange?.(null), [onPreviewChange]);
   const amount = useRecordAmount({
     date: today,
@@ -78,12 +85,13 @@ export function RecordChoiceBar({
     onDraftChange: publishDraft,
   });
   useEffect(() => {
-    if (reinputFocus.current) { reinputFocus.current = false; amount.amountLink.current?.focus(); }
+    if (reinputFocus.current) {
+      reinputFocus.current = false;
+      amount.amountLink.current?.focus();
+    }
   }, [inputSettings]);
-  // 入力（下書き）がないときは、Goalの設定が変わっても記録を止めず、最新の設定へ黙って合わせる（#244）。
-  // 名前・到達予定日だけの変更でも設定版は上がるため、止めると未入力なのに「未保存の量」と案内して記録できなくなる。
-  // 下書きがなければ量は新しい1回の量から決まるので、読み替える入力はない。入力中・量の編集中・保存中は今までどおり止める。
-  // 画面に出る前（layout effect）に合わせ、案内が一瞬出ないようにする。フォーカスは動かさない。
+  // 名前・期限日だけでも版は上がる。下書き・編集中・保存中でなければ最新設定へ合わせ、未入力の記録を止めない（#244）。
+  // layout effectで一瞬の誤案内を防ぐ。フォーカスは動かさない。
   useLayoutEffect(() => {
     if (inputSettings === recordSettings || draftStarted.current || editingAmount || saver.isSaving) return;
     setInputSettings(recordSettings);
@@ -117,7 +125,13 @@ export function RecordChoiceBar({
     return (
       <StickyActionBar>
         <SaveFailure
-          settings={{ ready: saver.settingsReady, meaningChanged: saver.meaningChanged, loading: saver.reloadingSettings, failed: saver.settingsReloadFailed, reload: saver.reloadSettings }}
+          settings={{
+            ready: saver.settingsReady,
+            meaningChanged: saver.meaningChanged,
+            loading: saver.reloadingSettings,
+            failed: saver.settingsReloadFailed,
+            reload: saver.reloadSettings,
+          }}
           kind={classifySaveError(saver.failure.error)}
           body={todayCopy.saveFailed(describeChoice(failed, sessionAmount, amountFormat({ unit: saver.failure.vars.unit }).record, todayCopy.recordedRest))}
           localDate={saver.failure.vars.localDate}
@@ -125,7 +139,10 @@ export function RecordChoiceBar({
           onRetry={unlessLocked(locked, saver.retry)}
           retryLocked={locked}
           lockedNote={todayCopy.otherEditing}
-          onReselect={() => { clearPreview(); saver.reset(); }}
+          onReselect={() => {
+            clearPreview();
+            saver.reset();
+          }}
           onRefresh={() => {
             clearPreview();
             saver.reset();
@@ -160,7 +177,11 @@ export function RecordChoiceBar({
           fmt={fmt}
           busy={saver.isSaving || locked}
           onSubmit={(value) => save({ status: 'DONE', amount: value })}
-          onCancel={() => { if (amount.hasDraft) publishDraft(amount.shownAmount); else clearPreview(); amount.closeAmount(); }}
+          onCancel={() => {
+            if (amount.hasDraft) publishDraft(amount.shownAmount);
+            else clearPreview();
+            amount.closeAmount();
+          }}
           onDraftChange={publishDraft}
         />
         {/* 量の入力を開いていても、選び直しそのものをやめられる（以前の上部の入口と同じ、#221） */}
