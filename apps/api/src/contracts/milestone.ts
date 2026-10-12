@@ -33,11 +33,11 @@ export const MilestoneForecast = Type.Object({ id: uuid, issuedAt: instant, expi
   baselineEngineQuantiles: quantiles, candidateMilestoneQuantiles: quantiles }, strict);
 export const MilestoneReport = Type.Object({ participating: Type.Boolean(), participationId: Type.Union([uuid, Type.Null()]),
   participationExpiresAt: Type.Union([instant, Type.Null()]), goalSettingsRevision: GoalSettingsRevision, answerRevision: AnswerRevision,
-  fitGeneration: Type.Integer({ minimum: 0 }), forecasts: Type.Array(MilestoneForecast, { maxItems: 90 }),
+  consentRevision: GoalSettingsRevision, fitGeneration: Type.Integer({ minimum: 0 }), forecasts: Type.Array(MilestoneForecast, { maxItems: 90 }),
   artifact: Type.Union([MilestoneArtifact, Type.Null()]) }, strict);
 export type MilestoneReport = Static<typeof MilestoneReport>;
 export type MilestoneForecast = Static<typeof MilestoneForecast>;
-export const MilestoneJoin = Type.Object({ policyVersion: Type.Literal('session-milestone-opt-in-v1'), expectedGoalSettingsRevision: GoalSettingsRevision }, strict);
+export const MilestoneJoin = Type.Object({ policyVersion: Type.Literal('session-milestone-opt-in-v1'), expectedGoalSettingsRevision: GoalSettingsRevision, expectedConsentRevision: GoalSettingsRevision }, strict);
 export const MilestoneWithdraw = Type.Object({ expectedParticipationId: uuid }, strict);
 const expected = { expectedGoalSettingsRevision: GoalSettingsRevision, expectedAnswerRevision: AnswerRevision, expectedParticipationId: uuid };
 export const MilestoneCapture = Type.Object({ ...expected, artifactId: Type.Optional(uuid), artifactHash: Type.Optional(hash) }, strict);

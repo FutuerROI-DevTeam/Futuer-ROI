@@ -206,7 +206,7 @@ TodayのP80計算範囲の文言（[#154](https://github.com/jogi-hack-2026-team
 | 契約・経路 | 実装 | 検証・残る条件 |
 | --- | --- | --- |
 | 発行時CDFを元の計算法で凍結し、別offsetを有界fit | [CDF入口](../packages/prediction/src/frozen-completion-cdf.ts)、[core](../apps/api/src/milestone/core.ts)、[設計補助](prediction/milestone-calibration.md) | [pure core](../apps/api/tests/milestone-core.test.ts)のNLL/gradient、独立[70桁oracle](../experiments/session-milestone-oracle/oracle.py)、非ゼロ・KKT・identity・重複・分離・roundoff |
-| 実量到達、d+2成熟、欠測、打切り、固定cutoffと訂正 | [assessment](../apps/api/src/milestone/assessment.ts) | [assessment回帰](../apps/api/tests/milestone-assessment.test.ts)：DST、interval、UNKNOWN、部分censor、構造的ゼロ、版/期限/訂正。欠測機構の実証は未実施 |
+| 実量到達、d+2成熟、欠測、打切り、固定cutoffと訂正 | [assessment](../apps/api/src/milestone/assessment.ts) | [assessment回帰](../apps/api/tests/milestone-assessment.test.ts)：DST、interval、UNKNOWN、部分censor、構造的ゼロ、版/期限/訂正、実Engineの極小質量で有限scoreを保持する解析評価。欠測機構の実証は未実施 |
 | 別同意、期待版/世代、凍結候補、競合、撤回と90日 | [contracts](../apps/api/src/contracts/milestone.ts)、[routes](../apps/api/src/milestone/routes.ts)、[store](../apps/api/src/milestone/store.ts)、[0008](../apps/api/migrations/0008_session_milestone.sql)、[policy](../apps/api/src/milestone/policy.ts) | [合成HTTP/DB](../apps/api/tests/milestone.test.ts)：default OFFでtableなし、既存同意から分離、owner/Goal FK、非ゼロ前向き比較、標準Today一致、CAS、ABA、期限/withdraw/Goal delete、物理purge |
 | 明示の期限切れ物理削除 | [purge CLI](../apps/api/src/milestone/purge-cli.ts)、[環境例](../.env.example) | 上の合成DBで関数を検証。実DBへCLIは実行しない。定期purge・backup反映・公開負荷・実ユーザー効果はOPEN |
 

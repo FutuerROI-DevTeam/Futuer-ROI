@@ -41,3 +41,17 @@ compareの未記録・達成済み・near Goal・元材料不足が内部error�
 保存diagnosticsはu=0.22314355131420976、odds倍率1.25、KKT残差0。3学習発行のoriginは2026-10-04/07/10、未学習の比較発行は2026-10-13。途中到達NLLはbaseline 0.6061358035703156、candidate 0.5108256237659907。final scoreは両方0のCENSOR、標準Todayは一致した。これは匿名合成の小例で、本試験群や新しい最終確認群ではない。
 
 UIは追加せず、実ブラウザ/初見理解は未検証。実DB migration・本番flag・purge CLIの実DB実行・公開混合負荷・自動purge/backup反映は未実施。90日のread filterと合成physical purge成功を運用保証に置き換えない。merge/deploy/Issue Done・チーム受入は実施しない。
+
+
+## 復旧後の独立境界レビュー
+
+固定70b0f403の追加レビューで、丸めた候補CDFからscoreを再計算すると、有限のNLLがInfinity→nullになるBlockingを確認した。実N=1 Engineのa=Beta(12,29)、b=Beta(29,2)、DONEではEVENT30の解析NLLは36.26679694043136だが、表示CDFの隣接点が同値に丸まる。a=Beta(2,30)、b=Beta(30,2)ではCENSOR30の解析NLLは36.95994412099131である。
+
+候補scoreを凍結元CDF＋凍結uの既存解析式へ統一し、正のsigmoid枝を安定した補数式にした。改善後も表示CDFの隣接質量消失はあり得るため、解析scoreとの区別を契約・設計補助へ記載した。支持失敗へのepsilon救済は行わない。DBを使わない凍結payload境界oracleと真の構造的支持失敗の2テストを追加した。最終同HEADの実行結果と独立再レビューは外部manifest/PRに記録する。
+
+
+## 独立レビューDの追加修正
+
+作者側の固定70b0f403・新規専用合成DBで、Dの3再現harnessを再実行した。JOIN→撤回→同一旧JOINが204で参加を復活、HIGH/HIGH＋SKIPPED4日発行後の初回DONEでINVALID、DB session Europe/Berlinで暦90日CHECKがJSの経過90日を拒否する422を確認した。harnessのPASSは不具合再現成功であり製品受入成功ではない。
+
+単調consentRevisionのGET/PUT CAS、unitLockedを除く明示context、SQL/JSの2160時間統一を実装した。撤回/期限/purge後の旧JOIN拒否と新しい版のrejoin、初回DONE成熟EVENT、UTC/DST両sessionの3table上限と+1ms拒否を回帰へ追加した。新規未公開0008だけを修正し、旧migration・実DBには適用しない。最終修正版の独立再レビューと試験結果は外部manifest/PRで固定する。

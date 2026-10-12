@@ -18,15 +18,15 @@ type Artifact = { schemaVersion: 'session-milestone-artifact-v1'; scope: Scope; 
   protocol: 'session-milestone-survival-v1'; fit: OffsetFit; receipts: Receipt[] };
 type ArtifactRow = { id: string; payload_hash: string; created_at: Date; expires_at: Date; payload: Artifact };
 type StoredEpisode = EpisodeRow & { payload_hash: string };
-type State = { snapshot: TodaySnapshot; participation: Participation | undefined; rows: StoredEpisode[]; artifact: ArtifactRow | undefined; scope: Scope };
+type State = { snapshot: TodaySnapshot; consentRevision: number; participation: Participation | undefined; rows: StoredEpisode[]; artifact: ArtifactRow | undefined; scope: Scope };
 type GoalRow = { total_required: number; initial_progress: number; session_amount: number; timezone: string;
-  record_start_date: string; unit: 'minutes' | 'sessions'; goal_settings_revision: number; unit_history_locked: boolean } & TodaySnapshot['question'];
+  record_start_date: string; unit: 'minutes' | 'sessions'; goal_settings_revision: number; unit_history_locked: boolean; milestone_consent_revision: number } & TodaySnapshot['question'];
 const plus90 = (at: Date) => new Date(at.getTime() + 90 * 86_400_000);
 const cutoff90 = (at: Date) => new Date(at.getTime() - 90 * 86_400_000);
 
 async function state(client: PoolClient, userId: string, goalId: string, clock: () => Date, build: string, write: boolean): Promise<State | null> {
   const goal = (await client.query<GoalRow>(`select total_required,initial_progress,session_amount,timezone,
-    record_start_date::text as record_start_date,unit,goal_settings_revision,unit_history_locked,
+    record_start_date::text as record_start_date,unit,goal_settings_revision,unit_history_locked,milestone_consent_revision,
     question_prior,answer_revision::text as answer_revision,question_prior_snapshot
     from goal where id=$1 and user_id=$2${write ? ' for update' : ''}`, [goalId, userId])).rows[0];
   if (!goal) return null;
@@ -51,7 +51,7 @@ async function state(client: PoolClient, userId: string, goalId: string, clock: 
     goalSettingsRevision: goal.goal_settings_revision, unitLocked: goal.unit_history_locked || goal.initial_progress > 0 },
     question: { question_prior: goal.question_prior, answer_revision: goal.answer_revision, question_prior_snapshot: goal.question_prior_snapshot },
     logs: logs.map(log => ({ localDate: log.local_date, status: log.status, amount: log.amount })) };
-  return { snapshot, participation, rows, artifact,
+  return { snapshot, consentRevision: goal.milestone_consent_revision, participation, rows, artifact,
     scope: { ownerId: userId, goalId, participationId: active ? participation.id : '', contextKey: contextKey(snapshot, build) } };
 }
 async function owned<T>(pool: Pool, userId: string, goalId: string, clock: () => Date, build: string,
@@ -104,6 +104,7 @@ export async function milestoneReport(pool: Pool, userId: string, goalId: string
     return { participating: current.participation?.goal_id === goalId,
       participationId: current.participation?.goal_id === goalId ? current.participation.id : null,
       participationExpiresAt: current.participation?.goal_id === goalId ? current.participation.expires_at.toISOString() : null,
+      consentRevision: current.consentRevision,
       goalSettingsRevision: current.snapshot.goal.goalSettingsRevision, answerRevision: Number(current.snapshot.question.answer_revision),
       fitGeneration: current.participation?.goal_id === goalId ? current.participation.fit_generation : 0,
       forecasts: current.rows.map(row => episodeView(row, current.snapshot, build)),
@@ -111,21 +112,28 @@ export async function milestoneReport(pool: Pool, userId: string, goalId: string
         expiresAt: selected.row.expires_at.toISOString(), fit: selected.fit } : null };
   });
 }
-export async function joinMilestone(pool: Pool, userId: string, goalId: string, expectedRevision: number, clock: () => Date, build: string) {
+export async function joinMilestone(pool: Pool, userId: string, goalId: string, expectedRevision: number, expectedConsentRevision: number, clock: () => Date, build: string) {
   return owned(pool, userId, goalId, clock, build, true, async (client, current) => {
     if (current.snapshot.goal.goalSettingsRevision !== expectedRevision) throw new MilestoneConflict('CONTEXT_CHANGED');
     if (current.participation && current.participation.goal_id !== goalId) throw new MilestoneConflict('OTHER_GOAL');
-    if (!current.participation) {
-      await client.query('delete from milestone_participation where user_id=$1', [userId]);
-      await client.query('insert into milestone_participation(user_id,goal_id,policy_version,joined_at,expires_at) values($1,$2,$3,$4,$5)',
-        [userId, goalId, MILESTONE_POLICY_VERSION, current.snapshot.now, plus90(current.snapshot.now)]);
+    if (current.participation) {
+      // Replay only the request which created this still-active participation; do not renew it.
+      if (expectedConsentRevision !== current.consentRevision - 1) throw new MilestoneConflict('CONSENT_CHANGED');
+      return true;
     }
+    if (expectedConsentRevision !== current.consentRevision) throw new MilestoneConflict('CONSENT_CHANGED');
+    await client.query('update goal set milestone_consent_revision=milestone_consent_revision+1 where id=$1 and user_id=$2', [goalId, userId]);
+    await client.query('delete from milestone_participation where user_id=$1', [userId]);
+    await client.query('insert into milestone_participation(user_id,goal_id,policy_version,joined_at,expires_at) values($1,$2,$3,$4,$5)',
+      [userId, goalId, MILESTONE_POLICY_VERSION, current.snapshot.now, plus90(current.snapshot.now)]);
     return true;
   });
 }
 export async function withdrawMilestone(pool: Pool, userId: string, goalId: string, expectedId: string, clock: () => Date, build: string) {
   return owned(pool, userId, goalId, clock, build, true, async (client, current) => {
     if (current.participation?.goal_id === goalId && current.participation.id !== expectedId) throw new MilestoneConflict('PARTICIPATION_CHANGED');
+    // Preserve only a monotone precondition on the business Goal, even after derived consent rows are removed.
+    await client.query('update goal set milestone_consent_revision=milestone_consent_revision+1 where id=$1 and user_id=$2', [goalId, userId]);
     await client.query('delete from milestone_participation where user_id=$1 and goal_id=$2 and id=$3', [userId, goalId, expectedId]);
     return true;
   });

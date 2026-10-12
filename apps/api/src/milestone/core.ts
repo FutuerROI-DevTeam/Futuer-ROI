@@ -24,7 +24,8 @@ export function shiftProbability(p: number, u: number): number {
   if (!Number.isFinite(p) || p < 0 || p > 1 || !Number.isFinite(u) || Math.abs(u) > MILESTONE_PROTOCOL.bound) throw new RangeError('INVALID_OFFSET');
   if (p === 0 || p === 1 || u === 0) return p;
   const z = Math.log(p) - Math.log1p(-p) + u;
-  return z >= 0 ? 1 / (1 + Math.exp(-z)) : Math.exp(z) / (1 + Math.exp(z));
+  const r = Math.exp(z >= 0 ? -z : z);
+  return z >= 0 ? 1 - r / (1 + r) : r / (1 + r);
 }
 const logDen = (p: number, u: number) => p === 1 ? u : Math.log1p(p * Math.expm1(u));
 export function observationLoss(cdf: readonly number[], observation: Observation, u: number): { loss: number; gradient: number } {

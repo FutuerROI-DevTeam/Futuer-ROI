@@ -876,7 +876,7 @@ Context / Reason: 元の質問priorとMarkov/Beta Engineを保ち、同じ本人
 Decision:
 
 - [protocol/core](../apps/api/src/milestone/core.ts)は`session-milestone-survival-v1`、H=30、訂正待ち2暦日、直近3発行、`|u|≤log(1.25)`、損失はepisodeごとの生存NLLの平均＋`u²/2`。共通係数はこの実装に加えず、質問やposteriorをfitし直さない。1人Goalの総重みは1で、同一発行idの重複は加算しない。3発行は独立した3人・3到達の意味ではない。定数はこの比較実装の事前固定であり、合成成績から最適値を選んだものではない。
-- CDFのoddsを`exp(u)`倍し、0/1と単調性・残存tailを保つ。eventは`-log(Fu(d)-Fu(d-1))`、intervalは`-log(Fu(r)-Fu(l))`、右打切りは`-log(1-Fu(c))`。正則化で目的関数は強凸となり、有界1係数を二分法とKKTで検証する。構造的ゼロの到達・確率1後の未達はεで救済せずFAILED/u=0。詳細な導出と限界は[設計補助](prediction/milestone-calibration.md)。
+- CDFのoddsを`exp(u)`倍し、0/1と単調性・残存tailを保つ。eventは`-log(Fu(d)-Fu(d-1))`、intervalは`-log(Fu(r)-Fu(l))`、右打切りは`-log(1-Fu(c))`。scoreは凍結元CDF＋凍結uから安定解析式で計算し、表示CDF差分の丸めによる微小正質量の消失と区別する。正則化で目的関数は強凸となり、有界1係数を二分法とKKTで検証する。構造的ゼロの到達・確率1後の未達はεで救済せずFAILED/u=0。詳細な導出と限界は[設計補助](prediction/milestone-calibration.md)。
 - [凍結CDF入口](../packages/prediction/src/frozen-completion-cdf.ts)は元の実completion methodを再現する。BETA_BINOMIALは元の事後積分、POSTERIOR_SAMPLINGは同じseed/sampleの全経路混合DPを使う。元Engineの既存`NUMERICAL_MARGIN=1e-10`内の境界/単調性roundoffだけをCDF表現へ射影し、表現版`bounded-monotone-roundoff-v1`を保存する。標準predict・元quantile式は変更しない。
 - [migration 0008](../apps/api/migrations/0008_session_milestone.sql)の参加・発行・係数3tableを既存R-12と分ける。owner付きGoal/参加世代の複合FK、現地日unique、最大90日、hashをDBでも制約する。保存payloadには必要な集計・prior/posterior・CDF・版・hashを入れ、全生ログや自由記述を複製しない。
 - `MILESTONE_CALIBRATION_ENABLED`未設定/`0`はOFF。保護された`GET /api/milestone-calibration`だけ能力を返し、OFFでは新tableを読まずGoal別routeを登録しない。有効時は明示buildまたはVercel SHAが必須。既存評価の同意とは別の`session-milestone-opt-in-v1`を明示PUTで確認する。
@@ -888,3 +888,8 @@ Decision:
 Alternatives: 元priorまたはa/bへ追加観測として入れる案は同じログを二重に独立証拠へ数え、元モデル維持を崩す。全履歴/全利用者の学習基盤は同意と運用を拡大する。既存R-12同意を流用する案は記述的照合から学習利用へ目的を変える。別係数・別同意・凍結比較は既存Fastify/TypeBox/PostgreSQLだけで隔離できるため採用する。依存・queue・新しい恒久workerは追加しない。
 
 Consequences / Reconsideration: 未記録による打切り/区間の機構、離散実量と1回量のずれ、同一Goal内の依存、管理打切り後の同じ絶対閾値、条件付けとodds変換の非可換性は、合成テストだけで解決しない。最終到達への転移や実効用は未検証。同期計算の公開混合負荷は未測定で、D-28の再検討条件を維持する。[対応表](change-map.md#途中到達の個人補正248)と[検証記録](changes/issue-248-milestone-verification.md)から、独立oracle・合成DB・既存回帰・未確認範囲を確認する。
+
+
+### D-248の独立レビュー修正
+
+参加PUTはreportのconsentRevisionをexpectedConsentRevisionとして照合し、受理/撤回時にGoal上の単調CAS版を進める。古い受理要求の再送による撤回後・期限切れ/purge後の参加復活を拒否する。有効参加を作った同一要求だけを再送可能とし、期限は延ばさない。このGoal metadataには同意履歴や予測labelを残さず、Goal削除で消す。予測contextは編集可否markerのunitLockedを除き、意味を変える設定・質問・build・prefixを保持する。JS/SQLの90日上限は経過2160時間に統一し、DB session timezoneのDSTへ依存させない。詳細と回帰は[設計補助](prediction/milestone-calibration.md#同意cas予測文脈保持期間の追加確認)を参照する。

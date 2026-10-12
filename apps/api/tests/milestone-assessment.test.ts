@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { TodaySnapshot } from '../src/prediction/store.ts';
-import { assessEpisode, contextKey, makeEpisode, type EpisodeRow } from '../src/milestone/assessment.ts';
+import { assessEpisode, contextKey, episodeView, makeEpisode, type EpisodeRow } from '../src/milestone/assessment.ts';
+import { DEFAULT_CONFIG, completionDistributionForFrozenState } from '@futureroi/prediction';
+import { MILESTONE_PROTOCOL, applyOffset, identityFit, observationLoss } from '../src/milestone/core.ts';
 import { localDateIn, shiftLocalDate } from '../src/goals/local-date.ts';
 const BUILD = 'synthetic-milestone-assessment';
 const origin = '2026-03-28';
@@ -85,4 +87,71 @@ test('#248 H30 closure and original fixed final target differ from the recurring
   assert.equal(row.payload.finalCdf[0], 0);
   assert.ok(row.payload.milestone.cdf[0]! > 0);
   assert.equal(row.payload.comparison.finalExtrapolation, true);
+});
+
+test('#248 finite analytic scores survive adjacent displayed CDF rounding in the actual N=1 Engine', () => {
+  // Pure frozen-payload numerical oracles; no database, fitting, or evaluation cohort.
+  for (const kind of ['EVENT', 'CENSOR'] as const) {
+    const { snapshot, row } = fixture();
+    const posterior = kind === 'EVENT' ? { a: { alpha: 6, beta: 31 }, b: { alpha: 31, beta: 2 } } :
+      { a: { alpha: 2, beta: 30 }, b: { alpha: 30, beta: 2 } };
+    const frozen = completionDistributionForFrozenState(posterior, 'DONE', 1, DEFAULT_CONFIG);
+    const u = MILESTONE_PROTOCOL.bound;
+    const shifted = applyOffset(frozen.cdf, { ...identityFit('NUMERICAL_ORACLE'), status: 'FIT', u });
+    // Both targets here are N=1: exercise the two score paths using one frozen numerical example.
+    row.payload.milestone = frozen;
+    row.payload.finalCdf = frozen.cdf;
+    row.payload.remainingAmount = row.payload.q;
+    row.payload.comparison = { ...row.payload.comparison, u, status: 'FIT',
+      milestoneCdf: shifted.cdf, finalCdf: shifted.cdf };
+    snapshot.now = new Date('2026-04-29T12:00:00Z');
+    for (let d = 1; d <= 30; d++) snapshot.logs.push({ localDate: shiftLocalDate(origin, d),
+      status: kind === 'EVENT' && d === 29 ? 'DONE' : 'SKIPPED',
+      amount: kind === 'EVENT' && d === 29 ? row.payload.q : null });
+    const observation = { kind, lower: kind === 'EVENT' ? 28 : 30, upper: kind === 'EVENT' ? 29 : 30 };
+    const baseline = observationLoss(frozen.cdf, observation, 0).loss;
+    const candidate = observationLoss(frozen.cdf, observation, u).loss;
+    assert.ok(Number.isFinite(candidate) && candidate > baseline);
+    if (kind === 'EVENT') {
+      assert.equal(shifted.cdf[27], shifted.cdf[28]);
+      assert.equal(observationLoss(shifted.cdf, observation, 0).loss, Infinity);
+      assert.ok(Math.abs(candidate - 36.95994412099131) < 1e-12);
+    } else assert.ok(Math.abs(candidate - 36.95994412099131) < 1e-12);
+    const view = episodeView(row, snapshot, BUILD);
+    assert.equal(view.state, kind);
+    assert.deepEqual(view.milestoneScore, { baseline, candidate });
+    assert.deepEqual(view.finalScore, { baseline, candidate, state: kind, extrapolation: true });
+  }
+});
+
+test('#248 scoring does not rescue structural zero mass or a certain-arrival tail with epsilon', () => {
+  for (const kind of ['EVENT', 'CENSOR'] as const) {
+    const { snapshot, row } = fixture();
+    const cdf = Array(30).fill(kind === 'EVENT' ? 0 : 1);
+    row.payload.milestone.cdf = cdf;
+    row.payload.finalCdf = cdf;
+    row.payload.remainingAmount = row.payload.q;
+    row.payload.comparison = { ...row.payload.comparison, u: MILESTONE_PROTOCOL.bound,
+      milestoneCdf: cdf, finalCdf: cdf };
+    snapshot.now = new Date('2026-03-31T12:00:00Z');
+    snapshot.logs.push({ localDate: '2026-03-29', status: kind === 'EVENT' ? 'DONE' : 'SKIPPED',
+      amount: kind === 'EVENT' ? row.payload.q : null });
+    const view = episodeView(row, snapshot, BUILD);
+    assert.deepEqual(view.milestoneScore, { baseline: null, candidate: null });
+    assert.equal(view.finalScore.baseline, null);
+    assert.equal(view.finalScore.candidate, null);
+  }
+});
+
+
+test('#248 context includes prediction settings but excludes the first-DONE editing marker', () => {
+  const { snapshot, row } = fixture();
+  const key = contextKey(snapshot, BUILD);
+  snapshot.goal.unitLocked = !snapshot.goal.unitLocked;
+  assert.equal(contextKey(snapshot, BUILD), key);
+  for (const field of ['unit', 'sessionAmount', 'timezone'] as const) {
+    const changed = { ...snapshot, goal: { ...snapshot.goal,
+      ...(field === 'unit' ? { unit: 'sessions' as const } : field === 'sessionAmount' ? { sessionAmount: 11 } : { timezone: 'UTC' }) } };
+    assert.notEqual(contextKey(changed, BUILD), row.payload.scope.contextKey);
+  }
 });

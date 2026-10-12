@@ -15,7 +15,9 @@ function canonical(value: unknown): unknown {
 }
 export const fingerprint = (value: unknown) => createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 export function contextKey(snapshot: TodaySnapshot, buildVersion: string) {
-  return fingerprint({ goal: snapshot.goal, answerRevision: snapshot.question.answer_revision,
+  const { totalRequired, initialProgress, sessionAmount, timezone, recordStartDate, unit, goalSettingsRevision } = snapshot.goal;
+  // Editing eligibility markers change after normal observations; they are not prediction conditions.
+  return fingerprint({ goal: { totalRequired, initialProgress, sessionAmount, timezone, recordStartDate, unit, goalSettingsRevision }, answerRevision: snapshot.question.answer_revision,
     question: snapshot.question.question_prior_snapshot, config: DEFAULT_CONFIG, buildVersion, protocol: MILESTONE_PROTOCOL.version });
 }
 export type FrozenEpisode = {
@@ -92,23 +94,24 @@ export function assessEpisode(row: EpisodeRow, snapshot: TodaySnapshot, buildVer
 export function episodeView(row: EpisodeRow, snapshot: TodaySnapshot, buildVersion: string) {
   const assessment = assessEpisode(row, snapshot, buildVersion);
   const saved = row.payload;
-  const score = (cdf: number[]) => {
+  // Score the frozen mathematical odds transform; displayed CDF differences may lose tiny positive mass.
+  const score = (cdf: number[], u: number) => {
     if (!assessment.observation) return null;
-    const value = observationLoss(cdf, assessment.observation, 0).loss;
+    const value = observationLoss(cdf, assessment.observation, u).loss;
     return Number.isFinite(value) ? value : null;
   };
   const finalObservation = assessEpisode({ ...row, payload: { ...saved, q: saved.remainingAmount } }, snapshot, buildVersion);
-  const finalScore = (cdf: number[]) => {
+  const finalScore = (cdf: number[], u: number) => {
     if (!finalObservation.observation) return null;
-    const value = observationLoss(cdf, finalObservation.observation, 0).loss;
+    const value = observationLoss(cdf, finalObservation.observation, u).loss;
     return Number.isFinite(value) ? value : null;
   };
   return { id: row.id, issuedAt: row.issued_at.toISOString(), expiresAt: row.expires_at.toISOString(),
     origin: saved.origin, q: saved.q, threshold: saved.threshold, unit: saved.unit,
     state: assessment.state, reason: assessment.reason, observation: assessment.observation, closed: assessment.closed,
     comparison: saved.comparison, baselineMilestoneCdf: saved.milestone.cdf, baselineFinalCdf: saved.finalCdf,
-    milestoneScore: { baseline: score(saved.milestone.cdf), candidate: score(saved.comparison.milestoneCdf) },
-    finalScore: { baseline: finalScore(saved.finalCdf), candidate: finalScore(saved.comparison.finalCdf),
+    milestoneScore: { baseline: score(saved.milestone.cdf, 0), candidate: score(saved.milestone.cdf, saved.comparison.u) },
+    finalScore: { baseline: finalScore(saved.finalCdf, 0), candidate: finalScore(saved.finalCdf, saved.comparison.u),
       state: finalObservation.state, extrapolation: true as const },
     baselineEngineQuantiles: { p50Days: saved.source.p50Days, p80Days: saved.source.p80Days },
     candidateMilestoneQuantiles: saved.comparison.u === 0 ?

@@ -19,6 +19,8 @@ Supporting Doc / Not Source of Truth。現行契約は[Product](../product-spec.
 | EVENT(d) / INTERVAL(l,r) | Fu(b)−Fu(a), a=F(l), b=F(r), eventはl=d−1,r=d | log D(a,u)+log D(b,u)−u−log(b−a) | Fu(a)+Fu(b)−1 |
 | CENSOR(c) | 1−Fu(F(c)) | log D(F(c),u)−log(1−F(c)) | Fu(F(c)) |
 
+表示CDF/PMFは倍精度近似であり、微小な正の質量が差分で0へ丸まる場合がある。比較scoreは、保存元CDFと保存uに対する数学的odds変換を上表の安定解析式で評価する。丸めた候補CDFからNLLを再計算しないため、表示PMFの差分と数値的に一致しない場合がある。表示PMF=0だけで数学的な支持なしと断言しない。元CDFの真の0/1や等しい区間端点による支持失敗はそのままとし、epsilon救済はしない。
+
 本人Goalの3episodeを等重み1/3とし、平均NLLにu²/2を加える。共通切片やa/bを同時fitしない。Hessianは1＋非負の`Fu(p)*(1−Fu(p))`項なので強凸。`|u|≤ln(1.25)`で勾配の両端を確認し、内点は二分法、境界は射影KKT残差で判定する。構造的支持がないlabelはFAILED/u=0とし、tiny epsilonを入れて尤度を作らない。確率0のcensorは損失0・勾配0なので未達を必ず情報不足と呼ぶのも、必ず情報があると呼ぶのも誤りである。
 
 独立[Python Decimal oracle](../../experiments/session-milestone-oracle/oracle.py)はTS helperを呼ばず、変換した確率を直接引いてlogを計算する。70桁・240二分で、3同一分布のEVENT（a=7/17,b=8/18）のuは0.096364823061408624…、CENSOR（F=.1）のuは−0.092017827832426496…となる。TS側の目的/勾配・内点/境界はoracleと有限差分で照合する。oracleは履歴を生成しない。
@@ -40,3 +42,12 @@ CDFのodds変換は条件付けと非可換。F(1)=1/5,F(2)=1/2,exp(u)=5/4なら
 凍結候補はid/hash・参加世代・文脈・fit世代・入力receiptで照合する。GETの比較は保存せず、POST発行は明示候補がなければidentity。過去に凍結した比較は現在の候補失効でも書き換えない。fit世代変更だけでは既存発行の観測はINVALIDにならず、発行の文脈/prefixが変わる場合にINVALIDとなる。版戻しやtitleだけの編集も設定版を保守的に変える。
 
 物理削除は`purgeExpiredMilestone`またはAPI workspaceの`npm run milestone:purge -- --confirm-milestone-purge`で行う。接続先/バックアップ方針を確認した運用者だけが実行する手順で、今回実DBには実行していない。既定OFFのままでもpurgeできる。期限切れの非表示は実際の削除時刻を保証せず、定期実行とバックアップは実利用前のOPEN条件である。
+
+
+## 同意CAS・予測文脈・保持期間の追加確認
+
+参加PUTはGET reportのconsentRevisionをexpectedConsentRevisionとして要求する。受理時にGoalの単調CAS版を消費し、撤回でも進める。同じ有効参加を作った要求の再送だけは同じ参加を返し、期限を延ばさない。撤回・期限切れ・purge後にその古い要求を再送しても409となり、改めて取得した版による明示参加だけが新世代を作る。Goal上の版は履歴やlabelではなく古い要求を識別するCAS metadataであり、Goal削除で消える。
+
+予測contextにはunit/q/timezone/開始日/初期量/目標量/設定版/質問版とsnapshot/build/configを使い、初回DONEで変化するunitLockedは含めない。正当な観測後の編集可否markerの変化で過去の発行を無効にせず、実際の設定変更・prefix訂正の失効判定は維持する。
+
+JSと3tableのSQL上限はともに経過2160時間であり、DB session timezoneの暦90日とは区別する。UTC/Europe/Berlin双方で参加と派生2tableの上限を合成DBで確認する。新規未公開0008だけの修正で、旧migrationや実DBは変更しない。

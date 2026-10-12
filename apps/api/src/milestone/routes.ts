@@ -27,7 +27,7 @@ export async function registerMilestoneRoutes(app: FastifyInstance, deps: { pool
     api.get(base, { schema: { params: GoalParams, response: { 200: MilestoneReport, 404: ErrorBody, 409: ErrorBody } } }, async (request, reply) =>
       await milestoneReport(deps.pool, request.userId, request.params.goalId, deps.now, build) ?? reply.code(404).send(missing));
     api.put(`${base}/participation`, { schema: { params: GoalParams, body: MilestoneJoin, response: { 204: Type.Null(), 404: ErrorBody, 409: ErrorBody } } }, async (request, reply) => {
-      const result = await joinMilestone(deps.pool, request.userId, request.params.goalId, request.body.expectedGoalSettingsRevision, deps.now, build);
+      const result = await joinMilestone(deps.pool, request.userId, request.params.goalId, request.body.expectedGoalSettingsRevision, request.body.expectedConsentRevision, deps.now, build);
       return result ? reply.code(204).send(null) : reply.code(404).send(missing);
     });
     api.delete(`${base}/participation`, { schema: { params: GoalParams, body: MilestoneWithdraw, response: { 204: Type.Null(), 404: ErrorBody, 409: ErrorBody } } }, async (request, reply) => {

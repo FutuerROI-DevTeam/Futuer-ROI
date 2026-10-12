@@ -37,7 +37,8 @@ async function report(client: Client, goal: Goal): Promise<MilestoneReport> {
 const expected = (r: MilestoneReport) => ({ expectedGoalSettingsRevision: r.goalSettingsRevision,
   expectedAnswerRevision: r.answerRevision, expectedParticipationId: r.participationId! });
 async function join(client: Client, goal: Goal) {
-  check(await client.sendExact('PUT', `${path(goal)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: goal.goalSettingsRevision }), 204);
+  const current = await report(client, goal);
+  check(await client.sendExact('PUT', `${path(goal)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: goal.goalSettingsRevision, expectedConsentRevision: current.consentRevision }), 204);
   return report(client, goal);
 }
 async function capture(client: Client, goal: Goal, candidate?: NonNullable<MilestoneReport['artifact']>, status = 201) {
@@ -94,7 +95,7 @@ test('#248 defaults OFF with no milestone tables; existing evaluation opt-in is 
   assert.equal(check(await a.sendExact('GET', '/api/milestone-calibration'), 200).json!.enabled, false);
   check(await a.sendExact('PUT', `/api/goals/${goal.id}/evaluation/participation`, { policyVersion: 'self-evaluation-v1' }), 204);
   check(await a.sendExact('GET', path(goal)), 404);
-  check(await a.sendExact('PUT', `${path(goal)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: 0 }), 404);
+  check(await a.sendExact('PUT', `${path(goal)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: 0, expectedConsentRevision: 0 }), 404);
 });
 test('#248 authenticated synthetic HTTP produces nonzero correction and a frozen prospective comparison', async t => {
   let now = instant(0); const setDay = (d: number) => { now = instant(d); };
@@ -145,7 +146,7 @@ test('#248 authentication, owner/Goal separation, strict input and single active
   assert.equal((await report(a, goal)).participating, false);
   check(await a.sendExact('PUT', `${path(goal)}/participation`, { policyVersion: 'self-evaluation-v1', expectedGoalSettingsRevision: 0 }), 422);
   const r = await join(a, goal);
-  check(await a.sendExact('PUT', `${path(other)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: 0 }), 409);
+  check(await a.sendExact('PUT', `${path(other)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: 0, expectedConsentRevision: 0 }), 409);
   check(await a.sendExact('POST', `${path(goal)}/forecasts`, { ...expected(r), cdf: Array(30).fill(.5), u: .1 }), 422);
   check(await a.sendExact('POST', `${path(goal)}/forecasts`, expected(r), { origin: 'https://untrusted.example.test' }), 403);
   check(await b.sendExact('POST', `${path(goal)}/forecasts`, expected(r)), 404);
@@ -224,4 +225,81 @@ test('#248 compare reports expected domain states rather than internal errors', 
   const today = check(await a.sendExact('GET', `/api/goals/${goal.id}/today?view=r11`), 200).json!;
   assert.equal((today.prediction as { completion: { status: string } }).completion.status, 'completed');
   assert.equal((await db.pool.query('select count(*)::int as n from milestone_forecast')).rows[0]!.n, 3);
+});
+
+
+test('#248 accepted JOIN replay cannot restore consent after withdrawal or expiry/purge', async t => {
+  let now = instant(0);
+  const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options });
+  const a = await signedInClient(stack.app, 'milestone-consent-replay'), goal = await create(a);
+  const before = await report(a, goal);
+  const original = { policyVersion: POLICY, expectedGoalSettingsRevision: 0, expectedConsentRevision: before.consentRevision };
+  check(await a.sendExact('PUT', `${path(goal)}/participation`, original), 204);
+  const first = await report(a, goal);
+  check(await a.sendExact('PUT', `${path(goal)}/participation`, original), 204);
+  assert.equal((await report(a, goal)).participationId, first.participationId);
+  assert.equal((await report(a, goal)).participationExpiresAt, first.participationExpiresAt);
+  check(await a.sendExact('DELETE', `${path(goal)}/participation`, { expectedParticipationId: first.participationId! }), 204);
+  check(await a.sendExact('PUT', `${path(goal)}/participation`, original), 409);
+  assert.equal((await report(a, goal)).participating, false);
+  assert.equal((await db.pool.query('select count(*)::int as n from milestone_participation')).rows[0]!.n, 0);
+  const fresh = await report(a, goal);
+  const newJoin = { ...original, expectedConsentRevision: fresh.consentRevision };
+  check(await a.sendExact('PUT', `${path(goal)}/participation`, newJoin), 204);
+  const restarted = await report(a, goal);
+  assert.notEqual(restarted.participationId, first.participationId);
+  check(await a.sendExact('DELETE', `${path(goal)}/participation`, { expectedParticipationId: first.participationId! }), 409);
+  now = new Date(restarted.participationExpiresAt!);
+  check(await a.sendExact('PUT', `${path(goal)}/participation`, newJoin), 409);
+  await purgeExpiredMilestone(db.pool, now);
+  check(await a.sendExact('PUT', `${path(goal)}/participation`, newJoin), 409);
+  assert.equal((await report(a, goal)).participating, false);
+  await join(a, goal); // Explicit fresh report/precondition allows a new participation, without extending the old one.
+});
+
+test('#248 question-supported forecast remains EVENT after the first DONE changes only unitLocked', async t => {
+  let now = instant(0); const setDay = (d: number) => { now = instant(d); };
+  const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options });
+  const a = await signedInClient(stack.app, 'milestone-first-done');
+  const goal = await create(a, { ...input, questionPrior: { a: 'HIGH', b: 'HIGH' } });
+  assert.equal(goal.unitLocked, false);
+  for (let d = 0; d <= 3; d++) { setDay(d); await record(a, goal, d, 'SKIPPED'); }
+  const r = await join(a, goal), issued = await capture(a, goal);
+  setDay(4); await record(a, goal, 4, 'DONE'); setDay(6);
+  const current = await report(a, goal), observed = current.forecasts.find(f => f.id === issued.id)!;
+  assert.equal(observed.state, 'EVENT');
+  assert.deepEqual(observed.observation, { kind: 'EVENT', lower: 0, upper: 1 });
+  assert.equal(current.goalSettingsRevision, r.goalSettingsRevision);
+  assert.equal(current.answerRevision, r.answerRevision);
+  const stored = (await db.pool.query('select unit_history_locked from goal where id=$1', [goal.id])).rows[0]!;
+  assert.equal(stored.unit_history_locked, true);
+});
+
+test('#248 all retention bounds use 2160 elapsed hours in UTC and a DST database session', async t => {
+  const now = new Date('2026-01-01T12:00:00Z'), expires = new Date(now.getTime() + 90 * 86400000);
+  const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options });
+  const a = await signedInClient(stack.app, 'milestone-dst-retention'), goal = await create(a);
+  for (const zone of ['UTC', 'Europe/Berlin']) {
+    // Configure every existing connection in this fixture's pool; no global/server setting changes.
+    const clients = await Promise.all(Array.from({ length: 3 }, () => db.pool.connect()));
+    try { for (const client of clients) await client.query("select set_config('TimeZone',$1,false)", [zone]); }
+    finally { for (const client of clients) client.release(); }
+    const r = await join(a, goal);
+    assert.equal(r.participationExpiresAt, expires.toISOString());
+    const p = (await db.pool.query('select user_id,id from milestone_participation where goal_id=$1', [goal.id])).rows[0]!;
+    const values = [randomUUID(), goal.id, p.user_id, p.id, now, expires];
+    await db.pool.query(`insert into milestone_forecast(id,goal_id,user_id,participation_id,origin_date,issued_at,expires_at,payload,payload_hash)
+      values($1,$2,$3,$4,'2026-01-01',$5,$6,'{"schemaVersion":"session-milestone-forecast-v1"}',$7)`, [...values, 'a'.repeat(64)]);
+    await db.pool.query(`insert into milestone_artifact(id,goal_id,user_id,participation_id,generation,created_at,expires_at,payload,payload_hash)
+      values($1,$2,$3,$4,1,$5,$6,'{}',$7)`, [randomUUID(), ...values.slice(1), 'b'.repeat(64)]);
+    const rejected = (error: unknown) => (error as { code: string }).code === '23514';
+    for (const table of ['milestone_participation', 'milestone_forecast', 'milestone_artifact']) {
+      await assert.rejects(db.pool.query(`update ${table} set expires_at=$1`, [new Date(expires.getTime() + 1)]), rejected);
+    }
+    // These owned constraint rows have minimal payloads; remove them before the API reads validated payloads.
+    await db.pool.query('delete from milestone_forecast where goal_id=$1', [goal.id]);
+    await db.pool.query('delete from milestone_artifact where goal_id=$1', [goal.id]);
+    check(await a.sendExact('DELETE', `${path(goal)}/participation`, { expectedParticipationId: r.participationId! }), 204);
+    assert.equal((await db.pool.query('select count(*)::int as n from milestone_forecast')).rows[0]!.n, 0);
+  }
 });
