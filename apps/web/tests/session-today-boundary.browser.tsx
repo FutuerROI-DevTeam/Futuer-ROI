@@ -40,7 +40,11 @@ const today = { today: '2026-10-10', yesterday: '2026-10-09', todayLog: null, ye
   context: { recordStartDate: '2026-09-10', unit: 'minutes', sessionAmount: 30, goalSettingsRevision: 0, answerRevision: 0, unitLocked: false },
   provenance: { a: 'RECORDS', b: 'RECORDS' }, plan: null };
 goalsHttp.getGoal = async () => { if (holdGoal) await new Promise<void>(resolve => goalWaiters.push(resolve)); return goal(transport.owner) as never; };
-todayHttp.getToday = async () => { if (holdToday) await new Promise<void>(resolve => todayWaiters.push(resolve)); if (failToday) throw new ApiError(503, { error: { code: 'SYNTHETIC_UNAVAILABLE', message: 'synthetic Today503' } }); return { ...today, today: apiDate, prediction: { ...today.prediction, today: apiDate } } as never; };
+todayHttp.getToday = async () => {
+  if (holdToday) await new Promise<void>(resolve => todayWaiters.push(resolve));
+  if (failToday) throw new ApiError(503, { error: { code: 'SYNTHETIC_UNAVAILABLE', message: 'synthetic Today503' } });
+  return { ...today, today: apiDate, prediction: { ...today.prediction, today: apiDate } } as never;
+};
 todayHttp.listLogs = async () => logs as never;
 const puts: { owner: string; localDate: string; body: unknown }[] = [];
 let failPut = false;
@@ -63,7 +67,11 @@ const ensure = (ok: unknown, message: string) => { if (!ok) throw new Error(mess
 const text = () => host.textContent ?? '';
 const amountInput = () => host.querySelector<HTMLInputElement>('.fr-amount input');
 const button = (label: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.replace(/\s/g, '').startsWith(label));
-const click = async (label: string) => act(async () => { ensure(button(label), 'missing button: ' + label); button(label)!.click(); await tick(); });
+const click = async (label: string) => act(async () => {
+  ensure(button(label), 'missing button: ' + label);
+  button(label)!.click();
+  await tick();
+});
 const typeAmount = async (value: string) => act(async () => {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(amountInput()!, value);
   amountInput()!.dispatchEvent(new Event('input', { bubbles: true })); await tick();
@@ -80,17 +88,39 @@ const focus = async () => {
   await settle();
   ensure(transport.reads > before, 'visibilitychange did not request a real session refetch');
 };
-const release = async () => { transport.hold = false; transport.held.splice(0).forEach((resolve) => resolve()); await settle(); };
+const release = async () => {
+  transport.hold = false;
+  transport.held.splice(0).forEach((resolve) => resolve());
+  await settle();
+};
 
 
 const navigate = async (to: string) => { await act(async () => { void router.navigate({ to }); await tick(); }); await settle(); };
-const releaseGoal = async () => { holdGoal = false; goalWaiters.splice(0).forEach(resolve => resolve()); await settle(); };
-const releaseToday = async () => { holdToday = false; todayWaiters.splice(0).forEach(resolve => resolve()); await settle(); };
+const releaseGoal = async () => {
+  holdGoal = false;
+  goalWaiters.splice(0).forEach(resolve => resolve());
+  await settle();
+};
+const releaseToday = async () => {
+  holdToday = false;
+  todayWaiters.splice(0).forEach(resolve => resolve());
+  await settle();
+};
 async function prepare() {
-  await releaseGoal(); await releaseToday(); await release();
-  transport.owner = 'A'; transport.failure = null; failPut = false; failToday = false; apiDate = '2026-10-10';
-  await navigate('/'); client.clear(); puts.length = 0;
-  await navigate('/goals/goal'); await focus(); await settle();
+  await releaseGoal();
+  await releaseToday();
+  await release();
+  transport.owner = 'A';
+  transport.failure = null;
+  failPut = false;
+  failToday = false;
+  apiDate = '2026-10-10';
+  await navigate('/');
+  client.clear();
+  puts.length = 0;
+  await navigate('/goals/goal');
+  await focus();
+  await settle();
   ensure(text().includes('A-PRIVATE-GOAL') && button('量を変更'), 'initial Today not ready: ' + text());
   await click('量を変更'); await typeAmount('45');
   ensure(amountInput()?.value === '45', 'amount fixture missing');
@@ -98,12 +128,22 @@ async function prepare() {
 async function run() {
   const results: string[] = [], failures: string[] = [];
   const check = async (label: string, fn: () => Promise<void>) => {
-    try { await prepare(); await fn(); results.push(label); }
+    try {
+      await prepare();
+      await fn();
+      results.push(label);
+    }
     catch (error) { failures.push(label + ': ' + String(error)); }
   };
-  await act(async () => { root.render(<QueryClientProvider client={client}><PrivateCacheGuard /><Screen /></QueryClientProvider>); await tick(); }); await settle();
+  await act(async () => {
+    root.render(<QueryClientProvider client={client}><PrivateCacheGuard /><Screen /></QueryClientProvider>);
+    await tick();
+  });
+  await settle();
   await check('Today arrives first on same date: held 45 waits for Goal and sends once', async () => {
-    transport.hold = true; await focus(); await click('この量で記録');
+    transport.hold = true;
+    await focus();
+    await click('この量で記録');
     ensure(puts.length === 0, 'sent while owner checking');
     holdGoal = true; await release();
     ensure(goalWaiters.length > 0 && client.getQueryData(goalKeys.detail(id)) === undefined &&
@@ -114,18 +154,28 @@ async function run() {
     ensure(puts.length === 1 && (puts[0]!.body as any).amount === 45, 'held 45 did not send once: ' + JSON.stringify(puts));
   });
   await check('Explicit reselect cancels a failed retry held during checking', async () => {
-    failPut = true; await click('この量で記録'); await settle();
+    failPut = true;
+    await click('この量で記録');
+    await settle();
     ensure(puts.length === 1 && text().includes('保存できませんでした'), '503 save fixture missing');
-    transport.hold = true; await focus(); await click('もう一度保存');
+    transport.hold = true;
+    await focus();
+    await click('もう一度保存');
     ensure(puts.length === 1, 'retry sent while checking');
-    await click('選び直す'); failPut = false; await release();
+    await click('選び直す');
+    failPut = false;
+    await release();
     ensure(puts.length === 1, 'cancelled held retry sent: ' + JSON.stringify(puts));
     ensure(amountInput()?.value === '30' && !text().includes('保存できませんでした'), 'reselect did not open a fresh amount editor');
-    await typeAmount('46'); await click('この量で記録'); await settle();
+    await typeAmount('46');
+    await click('この量で記録');
+    await settle();
     ensure(puts.length === 2 && (puts[1]!.body as any).amount === 46, 'explicit replacement did not send 46 once');
   });
   await check('Today503 fallback input survives healthy same-A check and pending retry', async () => {
-    await navigate('/'); client.clear(); failToday = true;
+    await navigate('/');
+    client.clear();
+    failToday = true;
     await navigate('/goals/goal');
     ensure(button('量を変更') && text().includes('A-PRIVATE-GOAL'), '503 Goal fallback fixture missing');
     await click('量を変更'); await typeAmount('45');
@@ -144,7 +194,12 @@ async function run() {
   await check('Unaccepted different-date cache during same-A check cannot replace amount editor', async () => {
     const editor = host.querySelector('.fr-amount');
     transport.hold = true; await focus();
-    await act(async () => { client.setQueryData(goalKeys.detail(id), { ...goal('A'), today: '2026-10-11' }); client.setQueryData(todayKeys.today(id), { ...today, today: '2026-10-11' }); await tick(); }); await settle();
+    await act(async () => {
+      client.setQueryData(goalKeys.detail(id), { ...goal('A'), today: '2026-10-11' });
+      client.setQueryData(todayKeys.today(id), { ...today, today: '2026-10-11' });
+      await tick();
+    });
+    await settle();
     ensure(editor?.isConnected && amountInput()?.value === '45' && !text().includes('日付が変わりました'), 'unaccepted cache replaced the editor');
     await release();
     ensure(editor?.isConnected && amountInput()?.value === '45' && puts.length === 0, 'same-date accepted recovery lost input');
@@ -168,36 +223,59 @@ async function run() {
     });
   }
   await check('Batched continuity boundary discards failed 45 context', async () => {
-    failPut = true; await click('この量で記録'); await settle();
+    failPut = true;
+    await click('この量で記録');
+    await settle();
     ensure(puts.length === 1 && button('もう一度保存'), 'failed 45 fixture missing');
     const stable = atom.get();
-    await act(async () => { atom.set({ ...stable, error: { status: 503, message: 'synthetic' } as any }); atom.set(stable); await tick(); }); await settle();
+    await act(async () => {
+      atom.set({ ...stable, error: { status: 503, message: 'synthetic' } as any });
+      atom.set(stable);
+      await tick();
+    }); await settle();
     ensure(!button('もう一度保存') && !amountInput() && button('量を変更'), 'failed save context survived continuity boundary');
     ensure(puts.length === 1, 'discarded failure replayed');
   });
   await check('Held 45 across batched A-B-A never sends', async () => {
-    transport.hold = true; await focus(); await click('この量で記録');
+    transport.hold = true;
+    await focus();
+    await click('この量で記録');
     ensure(puts.length === 0, 'held fixture already sent');
     const stable = atom.get();
-    await act(async () => { atom.set({ ...stable, data: { ...stable.data!, user: { ...stable.data!.user, id: 'B' } } }); atom.set(stable); await tick(); }); await settle();
+    await act(async () => {
+      atom.set({ ...stable, data: { ...stable.data!, user: { ...stable.data!.user, id: 'B' } } });
+      atom.set(stable);
+      await tick();
+    });
+    await settle();
     await release();
     ensure(puts.length === 0 && !amountInput(), 'held old input replayed across continuity boundary');
   });
   await check('Batched healthy same-A check preserves 45 and editor', async () => {
     const stable = atom.get(), generation = getDraftGeneration(), editor = host.querySelector('.fr-amount');
-    await act(async () => { atom.set({ ...stable, isRefetching: true }); atom.set(stable); await tick(); }); await settle();
+    await act(async () => {
+      atom.set({ ...stable, isRefetching: true });
+      atom.set(stable);
+      await tick();
+    }); await settle();
     ensure(getDraftGeneration() === generation && editor?.isConnected && amountInput()?.value === '45', 'ordinary check discarded input');
     ensure(puts.length === 0, 'ordinary check sent a write');
   });
   await check('Known newer Today rejects old held date while Goal is missing', async () => {
-    transport.hold = true; await focus(); await click('この量で記録');
-    apiDate = '2026-10-11'; holdGoal = true; await release();
+    transport.hold = true;
+    await focus();
+    await click('この量で記録');
+    apiDate = '2026-10-11';
+    holdGoal = true;
+    await release();
     ensure(goalWaiters.length > 0 && client.getQueryData(goalKeys.detail(id)) === undefined, 'missing Goal fixture not reached');
     ensure(text().includes('日付が変わりました') && puts.length === 0, 'known stale date sent or did not warn');
     await releaseGoal(); ensure(puts.length === 0, 'old held date sent after Goal caught up');
   });
   await releaseGoal(); await release();
-  await act(async () => root.unmount()); client.clear(); Date.now = realNow;
+  await act(async () => root.unmount());
+  client.clear();
+  Date.now = realNow;
   if (failures.length) throw new Error(JSON.stringify({ results, failures }));
   return { results, reads: transport.reads, writes: transport.writes };
 }
