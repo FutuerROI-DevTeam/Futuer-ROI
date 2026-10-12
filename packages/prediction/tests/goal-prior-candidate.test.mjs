@@ -50,8 +50,12 @@ test('candidate: prior-only and one-origin histories keep existing insufficient 
     assert.deepEqual(result.observations, legacy.observations);
     assert.equal(result.coreMetric.status, legacy.coreMetric.status);
     assert.equal(result.completion.status, legacy.completion.status);
-    if (legacy.coreMetric.status !== 'available') assert.deepEqual(result.coreMetric, legacy.coreMetric);
-    if (legacy.completion.status !== 'available') assert.deepEqual(result.completion, legacy.completion);
+    if (legacy.coreMetric.status !== 'available') {
+      assert.deepEqual(result.coreMetric, legacy.coreMetric);
+    }
+    if (legacy.completion.status !== 'available') {
+      assert.deepEqual(result.completion, legacy.completion);
+    }
   }
   // 未回答の数値対応を新設せず、候補を渡さない既存入口の共通priorと実績起点を固定する。
   const empty = { ...unknownGapInput, logs: [] };
@@ -104,27 +108,35 @@ test('candidate: asymmetric recovery boundaries match an independent integer-alp
   const quantiles = (alpha, beta) => {
     const first = factor => {
       for (let t = 1; ; t++) {
-        let numerator = 1n, denominator = 1n;
+        let numerator = 1n;
+        let denominator = 1n;
         for (let j = 0; j < alpha; j++) {
-          numerator *= BigInt(beta + j); denominator *= BigInt(beta + t + j);
+          numerator *= BigInt(beta + j);
+          denominator *= BigInt(beta + t + j);
         }
-        if (factor * numerator <= denominator) return t;
+        if (factor * numerator <= denominator) {
+          return t;
+        }
       }
     };
     return { status: 'available', g50: first(2n), g80: first(5n) };
   };
   const input = { goal: { totalRequired: 100, initialProgress: 0, sessionAmount: 1 },
     today: '2026-10-03', logs: [log(1, 'SKIPPED'), log(2, 'DONE')] };
-  for (const alpha of [1, 2, 3, 4, 7]) for (const beta of [1, 2, 4, 5, 8, 12]) {
-    const result = evaluateGoalPriorCandidate(input, { a: parameter(2, 2), b: parameter(alpha, beta) }, smallConfig);
-    assert.deepEqual(result.coreMetric, quantiles(alpha + 1, beta));
+  for (const alpha of [1, 2, 3, 4, 7]) {
+    for (const beta of [1, 2, 4, 5, 8, 12]) {
+      const result = evaluateGoalPriorCandidate(input, { a: parameter(2, 2), b: parameter(alpha, beta) }, smallConfig);
+      assert.deepEqual(result.coreMetric, quantiles(alpha + 1, beta));
+    }
   }
   const result = evaluateGoalPriorCandidate(input, { a: parameter(2, 2), b: parameter(4, 5) }, smallConfig);
   assert.equal(result.coreMetric.g50, 1);
 });
 
 test('candidate: source/version are detached provenance and do not alter counts or seeded draws', () => {
-  const snapshot = prior(), before = structuredClone(snapshot), input = structuredClone(unknownGapInput);
+  const snapshot = prior();
+  const before = structuredClone(snapshot);
+  const input = structuredClone(unknownGapInput);
   const result = evaluateGoalPriorCandidate(input, snapshot, smallConfig);
   assert.deepEqual(snapshot, before);
   assert.deepEqual(input, unknownGapInput);
@@ -136,7 +148,8 @@ test('candidate: source/version are detached provenance and do not alter counts 
   assert.deepEqual(changed.completion, result.completion);
   const freeze = value => {
     if (value && typeof value === 'object') {
-      Object.values(value).forEach(freeze); Object.freeze(value);
+      Object.values(value).forEach(freeze);
+      Object.freeze(value);
     }
     return value;
   };
@@ -163,31 +176,40 @@ test('candidate: source/version are detached provenance and do not alter counts 
 });
 
 test('candidate: unsupported shape domain, missing parameters and incomplete provenance fail explicitly', () => {
-  for (const name of ['a', 'b']) for (const shape of ['alpha', 'beta']) {
-    for (const invalid of [0, -1, .5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '2']) {
-      const snapshot = prior(); snapshot[name][shape] = invalid;
-      assert.throws(() => evaluateGoalPriorCandidate(unknownGapInput, snapshot, smallConfig), RangeError);
+  for (const name of ['a', 'b']) {
+    for (const shape of ['alpha', 'beta']) {
+      for (const invalid of [0, -1, .5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '2']) {
+        const snapshot = prior();
+        snapshot[name][shape] = invalid;
+        assert.throws(() => evaluateGoalPriorCandidate(unknownGapInput, snapshot, smallConfig), RangeError);
+      }
     }
   }
   for (const invalid of [undefined, null, {}, { a: prior().a }, { b: prior().b }, { ...prior(), b: null }]) {
     assert.throws(() => evaluateGoalPriorCandidate(unknownGapInput, invalid, smallConfig), TypeError);
   }
-  for (const name of ['a', 'b']) for (const field of ['source', 'version']) {
-    for (const invalid of ['', '  ', undefined, 2]) {
-      const snapshot = prior(); snapshot[name][field] = invalid;
-      assert.throws(() => evaluateGoalPriorCandidate(unknownGapInput, snapshot, smallConfig), TypeError);
+  for (const name of ['a', 'b']) {
+    for (const field of ['source', 'version']) {
+      for (const invalid of ['', '  ', undefined, 2]) {
+        const snapshot = prior();
+        snapshot[name][field] = invalid;
+        assert.throws(() => evaluateGoalPriorCandidate(unknownGapInput, snapshot, smallConfig), TypeError);
+      }
     }
   }
   assert.throws(() => evaluateGoalPriorCandidate(unknownGapInput,
     { ...prior(), a: parameter(Number.MAX_SAFE_INTEGER, 2) }, smallConfig),
   error => error instanceof PredictionConfigError && error.reason === 'UNSAFE_POSTERIOR');
-  for (const name of ['a', 'b']) for (const shape of ['alpha', 'beta']) {
-    const snapshot = prior(); snapshot[name][shape] = Number.MAX_SAFE_INTEGER;
-    const zeroCounts = evaluateGoalPriorCandidate({ ...unknownGapInput, logs: [] }, snapshot, smallConfig);
-    assert.equal(zeroCounts.posterior[name][shape], Number.MAX_SAFE_INTEGER);
-    assert.throws(() => evaluateGoalPriorCandidate(unknownGapInput, snapshot, smallConfig),
-      error => error instanceof PredictionConfigError && error.reason === 'UNSAFE_POSTERIOR' &&
-        JSON.stringify(error.path) === JSON.stringify(['posterior', name, shape]));
+  for (const name of ['a', 'b']) {
+    for (const shape of ['alpha', 'beta']) {
+      const snapshot = prior();
+      snapshot[name][shape] = Number.MAX_SAFE_INTEGER;
+      const zeroCounts = evaluateGoalPriorCandidate({ ...unknownGapInput, logs: [] }, snapshot, smallConfig);
+      assert.equal(zeroCounts.posterior[name][shape], Number.MAX_SAFE_INTEGER);
+      assert.throws(() => evaluateGoalPriorCandidate(unknownGapInput, snapshot, smallConfig),
+        error => error instanceof PredictionConfigError && error.reason === 'UNSAFE_POSTERIOR' &&
+          JSON.stringify(error.path) === JSON.stringify(['posterior', name, shape]));
+    }
   }
 });
 
@@ -201,4 +223,6 @@ test('candidate: independent a changes completion but not b-driven core; source 
 });
 
 // 新しい方式metadataは専用契約テストで検査し、既存の日数・状態の期待値を保持する。
-function completionValues({ computation, ...values }) { return values; }
+function completionValues({ computation, ...values }) {
+  return values;
+}

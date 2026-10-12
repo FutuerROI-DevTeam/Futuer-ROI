@@ -31,8 +31,9 @@ test('window facts cover empty, today, yesterday, UNKNOWN, reverse order and ini
     const facts = observe(input);
     assert.equal(facts.recordedLogCount, row.count);
     assert.equal(facts.observationWindow?.calendarSlots ?? null, row.slots);
-    if (row.start === null) assert.equal(facts.observationWindow, null);
-    else {
+    if (row.start === null) {
+      assert.equal(facts.observationWindow, null);
+    } else {
       assert.equal(facts.observationWindow.startOrdinal, ordinalOracle(done(row.start).localDate));
       assert.equal(facts.observationWindow.endOrdinal, ordinalOracle(done(row.end).localDate));
     }
@@ -40,7 +41,9 @@ test('window facts cover empty, today, yesterday, UNKNOWN, reverse order and ini
     const result = predict(input, config);
     assert.equal(result.observations.observedDays, row.slots ?? 0);
     assert.equal(result.observations.recordedDays, row.count);
-    if (row.initial >= goal.totalRequired) assert.equal(result.completion.status, 'completed');
+    if (row.initial >= goal.totalRequired) {
+      assert.equal(result.completion.status, 'completed');
+    }
   }
 });
 

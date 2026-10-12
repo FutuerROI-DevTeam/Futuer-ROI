@@ -1,6 +1,17 @@
 import { predict, PredictionInputError, PredictionConfigError } from '../src/index.js';
-import type { CoreMetric, LocalDate, PredictionInput, Completion, PredictionCalculation, PredictionResult } from '../src/index.js';
-import type { QuestionPriorPredictionInput, QuestionPriorPredictionConfig, QuestionPriorPredictionResult } from '../src/index.js';
+import type {
+  CoreMetric,
+  LocalDate,
+  PredictionInput,
+  Completion,
+  PredictionCalculation,
+  PredictionResult,
+} from '../src/index.js';
+import type {
+  QuestionPriorPredictionInput,
+  QuestionPriorPredictionConfig,
+  QuestionPriorPredictionResult,
+} from '../src/index.js';
 
 // @ts-expect-error rawのa/bは両方必要で、片方省略をUNKNOWNへ読み替えない。
 const partialQuestion: QuestionPriorPredictionInput['answers'] = { a: 'LOW' };
@@ -13,7 +24,10 @@ function questionResultContract(result: QuestionPriorPredictionResult): void {
   const legacyResult: PredictionResult = result;
   void legacyResult;
 }
-void partialQuestion; void betaAsAnswer; void scalarQuestionConfig; void questionResultContract;
+void partialQuestion;
+void betaAsAnswer;
+void scalarQuestionConfig;
+void questionResultContract;
 
 const callerDate: LocalDate = '2026-10-03';
 const input: PredictionInput = {
@@ -25,9 +39,11 @@ void input;
 
 function waitingDays(metric: CoreMetric): number | undefined {
   switch (metric.status) {
-    case 'available': return metric.g50;
+    case 'available':
+      return metric.g50;
     case 'insufficient':
-    case 'not_applicable': return undefined;
+    case 'not_applicable':
+      return undefined;
   }
 }
 void waitingDays;
@@ -113,7 +129,9 @@ const wrongRaw: QuestionPriorAdapterInputCandidate['answers'] = { a: 'CERTAIN', 
 const partialRaw: QuestionPriorAdapterInputCandidate['answers'] = { a: null };
 // @ts-expect-error 数値結果が同じでもsource付き候補Resultは既存公開Resultではない。
 const adapterAsPublic: PredictionResult = adapterResult;
-void wrongRaw; void partialRaw; void adapterAsPublic;
+void wrongRaw;
+void partialRaw;
+void adapterAsPublic;
 const conditionalSessions: number = adapterResult.conditionalPlan.remainingSessions;
 // @ts-expect-error 条件付き計画も候補結果のreadonly値として渡す。
 adapterResult.conditionalPlan.lastSessionAmount = 0;
@@ -139,9 +157,14 @@ type StableInput = Assert<Same<QuestionPriorPredictionInput, QuestionPriorAdapte
 type StableAnswers = Assert<Same<QuestionPriorAnswers, QuestionPriorAdapterInputCandidate['answers']>>;
 type StableCause = Assert<Same<QuestionPriorValidationCause, QuestionPriorAdapterCandidateError>>;
 type StableConstructor = Assert<Same<ConstructorParameters<typeof QuestionPriorError>[0], QuestionPriorAdapterCandidateError>>;
-void (null as unknown as StableAnswer); void (null as unknown as StableNumeric); void (null as unknown as StableSource);
-void (null as unknown as StableMapping); void (null as unknown as StableInput); void (null as unknown as StableAnswers);
-void (null as unknown as StableCause); void (null as unknown as StableConstructor);
+void (null as unknown as StableAnswer);
+void (null as unknown as StableNumeric);
+void (null as unknown as StableSource);
+void (null as unknown as StableMapping);
+void (null as unknown as StableInput);
+void (null as unknown as StableAnswers);
+void (null as unknown as StableCause);
+void (null as unknown as StableConstructor);
 function readonlyPublicContract(value: QuestionPriorPredictionInput, result: QuestionPriorEvaluation): void {
   // @ts-expect-error inputのa/bは従来どおりreadonly。
   value.answers.a = null;
@@ -150,6 +173,7 @@ function readonlyPublicContract(value: QuestionPriorPredictionInput, result: Que
   const legacyInput: QuestionPriorAdapterInputCandidate = value;
   const stableInput: QuestionPriorPredictionInput = legacyInput;
   const evaluation: import('../src/index.js').QuestionPriorEvaluation = result;
-  void stableInput; void evaluation;
+  void stableInput;
+  void evaluation;
 }
 void readonlyPublicContract;
