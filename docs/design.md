@@ -45,7 +45,7 @@ flowchart TD
   Home --> Login["/login"]
   Home -->|ログイン済み| Goals["/goals"]
   Login -->|成功・replace| Return["安全な戻り先（既定 /goals）"]
-  Register -->|成功・replace| Return
+  Register -->|成功・replace（戻り先を使わない）| Goals
   Return --> Goals
   Return --> Today["/goals/:goalId"]
   Goals --> New["/goals/new"]
