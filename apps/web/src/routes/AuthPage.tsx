@@ -1,4 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
+import { PASSWORD_RESET_ENABLED, PASSWORD_RESET_UNAVAILABLE_MESSAGE } from '../../../api/src/auth/password-reset-policy.ts';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { authClient, describeAuthError, retryAfterSeconds } from '../auth/client.ts';
 import { runAuthAction } from '../auth/action.ts';
@@ -168,7 +169,9 @@ export function AuthPage({ mode, redirectTo, reason }: { mode: AuthMode; redirec
           </Field>
           {mode === 'login' ? (
             <p className="fr-auth__aside">
-              <Link to="/forgot-password" search={{ redirect: '/goals' }} className="fr-auth__link">{c.forgotLink}</Link>
+              {PASSWORD_RESET_ENABLED
+                ? <Link to="/forgot-password" search={{ redirect: '/goals' }} className="fr-auth__link">{c.forgotLink}</Link>
+                : PASSWORD_RESET_UNAVAILABLE_MESSAGE}
             </p>
           ) : null}
           <Button type="submit" variant="primary" block busy={busy} disabled={wait !== null} {...(wait ? { icon: 'clock' as const } : {})}>

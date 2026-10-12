@@ -169,7 +169,16 @@ Evidenceは[Compose検証](../scripts/smoke-compose.sh)と[Application CI](../.g
 
 #### パスワード再設定（#256）
 
-目的は、パスワードを忘れた本人が自分で再設定できること。固定版Better Auth 1.7.7はトークン生成・`verification`表への保存（1時間）・再設定URLの組み立てと、`/reset-password`での新パスワード保存を持つが、メール送信は`emailAndPassword.sendResetPassword`へ渡した関数が担い、未設定なら`/request-password-reset`を400 `RESET_PASSWORD_DISABLED`で拒否する。SDKには文面もテンプレートも無い。
+**現在は一時停止（#284、2026-10-12の依頼者の明示承認）。** メール配送の受入が間に合わず、`MAIL_TRANSPORT=log`のまま再設定を一般公開することは拒否された。サイト全体の公開継続に合わせ、[共通方針](../apps/api/src/auth/password-reset-policy.ts)を`false`に固定し、UI/API/メール設定の停止条件を一致させる。環境変数では再開できない。登録・通常ログイン・セッション・認証済みのパスワード変更・Goal/記録は維持する。
+
+- ログイン画面に「現在パスワード再設定は利用できません」と表示し、`/forgot-password`と`/reset-password`も[停止案内](../apps/web/src/routes/PasswordResetUnavailable.tsx)のみを出す。旧リンク・無効リンク、ログイン中でも入力・送信フォームは出さない。
+- [createAuth](../apps/api/src/auth/options.ts)のSDK共通before hookで`POST /request-password-reset`、`GET /reset-password/:token`、`POST /reset-password`（body/query token）を503 `RESET_PASSWORD_DISABLED`で拒否する。直`auth.api.*`呼出しも同じ境界を通る。利用者検索・token発行/参照/消費・保存・メール送信より前に止め、登録済み/未登録は同じ応答。既存Origin/CSRF/入力検査や回数制限が先に拒否する場合は従来の4xxとなる。
+- 停止中は`sendResetPassword`を登録せず、[loadMailConfig](../apps/api/src/config.ts)はメール設定を読まず`disabled`を返す。[createMailer](../apps/api/src/auth/mail-transport.ts)もlog/Resendを作らず、誤呼出しは送信・ログ出力なしで拒否する。常駐server/Vercel/container-start共通で、メール資格情報の不足だけではサイト全体の起動を止めない。
+- 既発行リンクは停止中に参照/消費できず、新パスワードも保存できない。DB行の削除・期限変更・本番データ操作は行わないため、停止自体はtokenの永久失効ではない。元の有効期限は1時間のまま進む。配送受入後も、停止版が全instanceへ反映され最後の発行から1時間以上経過するまで再開しない。期限内に再開する必要がある場合の既存token失効は別の承認・作業とする。公開先の過去ログはこの変更では消去しないし、秘密値を読み出して確認しない。
+
+停止回帰は[password-reset-disabled.test.ts](../apps/api/tests/password-reset-disabled.test.ts)（実SDKの既発行token、全HTTP/直SDK経路、URL/method違い、検索/発行/消費なし、account/session/token不変、logなし、通常パスワード変更）と[実ルーター回帰](../apps/web/tests/routes.browser.tsx)で追跡する。本番への反映・実配送の受入はこのコード変更/ローカル検証の完了とは区別する。
+
+以下は#256の導入設計と、**合成テストで明示有効化した場合だけ**維持する再開用の契約であり、現在の公開機能ではない。固定版Better Auth 1.7.7はトークン生成・`verification`表への保存（1時間）・再設定URLの組み立てと、`/reset-password`での新パスワード保存を持つが、メール送信は`emailAndPassword.sendResetPassword`へ渡した関数が担う。callbackを外すだけでは既発行tokenの保存は止まらないため、上記のhookも必要。SDKには文面もテンプレートも無い。
 
 | 決める部分 | 採用 | 理由 |
 | --- | --- | --- |
@@ -186,7 +195,7 @@ Evidence: [API回帰](../apps/api/tests/password-reset.test.ts)（要求→メ�
 
 #### ログアウトの失敗と明示再試行（#215）
 
-目的はログアウト失敗を成功として表示せず、DB復帰後に本人が再試行できること。固定SDK 1.7.7のsign-outはDELETE例外を捕捉してCookieを消去し200を返す。内部の`deleteSession`は削除前lookup例外でもDELETEを飛ばすため、内部関数の正常終了だけでは削除確認にならない。[confirmSignOut](../apps/api/src/auth/sign-out.ts)を`createAuth`のbefore hookへ限定登録し、HTTP routerの既存Origin/Referer/Fetch Metadata・callbackURL検査後、SDKの`getSignedCookie`で確かめたtokenだけをDB adapterで削除する。既存SDK endpointがCookie消去と200応答を担当し、正常経路では追加のDELETEを行わない。未ログイン・不正署名はSDKの従来処理に委ね、他sessionは削除しない。
+目的はログアウト失敗を成功として表示せず、DB復帰後に本人が再試行できること。固定SDK 1.7.7のsign-outはDELETE例外を捕捉してCookieを消去し200を返す。内部の`deleteSession`は削除前lookup例外でもDELETEを飛ばすため、内部関数の正常終了だけでは削除確認にならない。[createAuthBeforeHook](../apps/api/src/auth/sign-out.ts)のsign-out分岐を`createAuth`のbefore hookへ登録し、HTTP routerの既存Origin/Referer/Fetch Metadata・callbackURL検査後、SDKの`getSignedCookie`で確かめたtokenだけをDB adapterで削除する。既存SDK endpointがCookie消去と200応答を担当し、正常経路では追加のDELETEを行わない。未ログイン・不正署名はSDKの従来処理に委ね、他sessionは削除しない。
 
 削除完了が確認できないときは503 `SIGN_OUT_UNCONFIRMED`を返し、Cookieを消去しない。画面は「ログアウトを確認できませんでした」と再試行の案内を表示し、busyを解除してその場に留まる。自動再試行は行わない。DB復帰後に再びログアウトを押し、削除完了→Cookie消去→ログイン画面へ進む。DELETE応答が失われた場合は削除済みでも503とし、次の0行DELETEを成功として収束できる。HTTP応答は共通のno-storeを維持する。
 

@@ -57,7 +57,7 @@ test('DB保存の認証制限は2instanceへの並列sign-in/sign-up・再起動
         pool: db.pool, logger: false,
         auth: { instance: auth, baseURL: origin, allowedOrigins: [origin], trustProxyHops: 1 },
       });
-      const stack = { app, mails: [], settle: background.drain,
+      const stack = { app, auth, mails: [], settle: background.drain,
         close: async () => { try { await app.close(); await background.drain(); } finally { await authPool.end(); } } };
       stacks.push(stack);
       return stack;

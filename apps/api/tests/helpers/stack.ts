@@ -98,8 +98,8 @@ export class Client {
  * mailsは既定の捕捉mailerが受け取った再設定メール（外部へは送らない）。
  * 送信は本番と同じく応答と切り離して走るため、mailsを見る前に`settle()`で預かった処理の完了を待つ。
  */
-export type Stack = { app: FastifyInstance; close: () => Promise<void>; mails: MailMessage[]; settle: () => Promise<void> };
-export type StackOptions = { baseURL?: string; signInMax?: number; resetMax?: number; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation']; milestoneCalibration?: AppOptions['milestoneCalibration']; mailer?: Mailer;
+export type Stack = { app: FastifyInstance; auth: ReturnType<typeof createAuth>; close: () => Promise<void>; mails: MailMessage[]; settle: () => Promise<void> };
+export type StackOptions = { baseURL?: string; signInMax?: number; resetMax?: number; passwordResetEnabled?: boolean; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation']; milestoneCalibration?: AppOptions['milestoneCalibration']; mailer?: Mailer;
   /** 指定すると要求ログを有効にしてここへ書く（既定はログなし）。 */
   logStream?: AppOptions['logStream'] };
 
@@ -125,6 +125,7 @@ export async function startStack(db: TestDatabase, o: StackOptions = {}, factori
       signInMax: o.signInMax ?? 50,
       signUpMax: 50,
       resetMax: o.resetMax ?? 50,
+      ...(o.passwordResetEnabled === undefined ? {} : { passwordResetEnabled: o.passwordResetEnabled }),
       mailer: o.mailer ?? (async (message) => { mails.push(message); }),
       background: background.run,
     });
@@ -136,7 +137,7 @@ export async function startStack(db: TestDatabase, o: StackOptions = {}, factori
       ...(o.evaluation ? { evaluation: o.evaluation } : {}),
       ...(o.milestoneCalibration ? { milestoneCalibration: o.milestoneCalibration } : {}),
     });
-    return { app, close, mails, settle: background.drain };
+    return { app, auth, close, mails, settle: background.drain };
   } catch (error) { return cleanupAfterFailure(error, close); }
 }
 
