@@ -893,3 +893,5 @@ Consequences / Reconsideration: 未記録による打切り/区間の機構、�
 ### D-248の独立レビュー修正
 
 参加PUTはreportのconsentRevisionをexpectedConsentRevisionとして照合し、受理/撤回時にGoal上の単調CAS版を進める。古い受理要求の再送による撤回後・期限切れ/purge後の参加復活を拒否する。有効参加を作った同一要求だけを再送可能とし、期限は延ばさない。このGoal metadataには同意履歴や予測labelを残さず、Goal削除で消す。予測contextは編集可否markerのunitLockedを除き、意味を変える設定・質問・build・prefixを保持する。JS/SQLの90日上限は経過2160時間に統一し、DB session timezoneのDSTへ依存させない。詳細と回帰は[設計補助](prediction/milestone-calibration.md#同意cas予測文脈保持期間の追加確認)を参照する。
+
+D-248のGoal UUIDは既存Goal APIの大文字/小文字許可を保持し、補正route境界で正規表記へそろえてscopeを比較する。本人IDを大小変換せず、所有者・参加世代・hashの照合を維持する。

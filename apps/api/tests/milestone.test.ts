@@ -16,7 +16,8 @@ const input: GoalCreate = { title: 'synthetic milestone goal', unit: 'minutes', 
   initialProgress: 0, sessionAmount: 10, timezone: 'UTC' };
 const instant = (day: number) => new Date(Date.UTC(2026, 9, 1 + day, 12));
 const date = (day: number) => instant(day).toISOString().slice(0, 10);
-const path = (goal: Goal) => `/api/goals/${goal.id}/milestone-calibration`;
+// Exercise every milestone endpoint with the legacy uppercase Goal UUID allowance.
+const path = (goal: Goal) => `/api/goals/${goal.id.toUpperCase()}/milestone-calibration`;
 type Wire = Awaited<ReturnType<Client['sendExact']>>;
 function check(res: Wire, status: number) {
   assert.equal(res.status, status, res.body);
@@ -146,6 +147,7 @@ test('#248 authentication, owner/Goal separation, strict input and single active
   assert.equal((await report(a, goal)).participating, false);
   check(await a.sendExact('PUT', `${path(goal)}/participation`, { policyVersion: 'self-evaluation-v1', expectedGoalSettingsRevision: 0 }), 422);
   const r = await join(a, goal);
+  assert.deepEqual(check(await a.sendExact('GET', `/api/goals/${goal.id}/milestone-calibration`), 200).json, r);
   check(await a.sendExact('PUT', `${path(other)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: 0, expectedConsentRevision: 0 }), 409);
   check(await a.sendExact('POST', `${path(goal)}/forecasts`, { ...expected(r), cdf: Array(30).fill(.5), u: .1 }), 422);
   check(await a.sendExact('POST', `${path(goal)}/forecasts`, expected(r), { origin: 'https://untrusted.example.test' }), 403);

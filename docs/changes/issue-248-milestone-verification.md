@@ -55,3 +55,9 @@ UIは追加せず、実ブラウザ/初見理解は未検証。実DB migration�
 作者側の固定70b0f403・新規専用合成DBで、Dの3再現harnessを再実行した。JOIN→撤回→同一旧JOINが204で参加を復活、HIGH/HIGH＋SKIPPED4日発行後の初回DONEでINVALID、DB session Europe/Berlinで暦90日CHECKがJSの経過90日を拒否する422を確認した。harnessのPASSは不具合再現成功であり製品受入成功ではない。
 
 単調consentRevisionのGET/PUT CAS、unitLockedを除く明示context、SQL/JSの2160時間統一を実装した。撤回/期限/purge後の旧JOIN拒否と新しい版のrejoin、初回DONE成熟EVENT、UTC/DST両sessionの3table上限と+1ms拒否を回帰へ追加した。新規未公開0008だけを修正し、旧migration・実DBには適用しない。最終修正版の独立再レビューと試験結果は外部manifest/PRで固定する。
+
+## 追加のGoal ID境界修正
+
+固定0fcで、既存Goal GETが受理する大文字UUIDを新規補正APIだけが別Goalとして扱うことを、履歴を作らない新規専用合成DBで確認した。大文字URLのJOINは204・参加1行を作ったが、同じ大文字URLのGETはparticipating=false、正規小文字URLはtrueだった。SQL UUIDと文字列scope比較の表記差による不具合であり、別Goalや別本人のデータ取得ではない。
+
+補正6endpointのGoal UUIDをroute境界で小文字へ正規化し、本人IDや係数・数式・成熟条件・版/期限の照合は変えない。既存HTTP9ケースは全endpointを大文字UUID経路で実行し、正規経路との同一参加も照合する。外部の小さい境界再現を修正後に再実行し、27件・全回帰・bundle・独立差分レビューを新しい固定版で確認してから公開する。
