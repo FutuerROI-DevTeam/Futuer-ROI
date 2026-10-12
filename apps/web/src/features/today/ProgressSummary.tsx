@@ -8,7 +8,7 @@ import { cumulativeChart, DEFAULT_CHART_WIDTH } from './chart-geometry.ts';
 
 const CUMULATIVE_HEIGHT = 250;
 import type { ActualProgress } from '../prior/presentation-types.ts';
-import { progressPercent, progressPercentLabel } from '../../copy/progress.ts';
+import { progressPercent, progressPercentLabel, progressPercentQualifier } from '../../copy/progress.ts';
 import type { DraftProgress } from '../logs/draft-preview.ts';
 import { DraftProgressPreview } from './DraftProgressPreview.tsx';
 
@@ -40,6 +40,7 @@ export function ProgressSummary({ progress, initialProgress, logs, recordStartDa
         <p className="fr-progress__percent">
           {progressPercentLabel(progress.done, progress.total)}
           <small>%</small>
+          {progressPercentQualifier(progress.done, progress.total)}
         </p>
         <p className="fr-progress__amount">
           {todayCopy.progressActual(fmt.total(progress.done))}

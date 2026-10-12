@@ -8,7 +8,7 @@ import { appCopy } from '../../copy/app.ts';
 import { goalsCopy } from '../../copy/goals.ts';
 import { longDate } from '../../copy/date.ts';
 import { amountFormat } from '../../copy/amount.ts';
-import { progressPercent, progressPercentLabel } from '../../copy/progress.ts';
+import { progressPercent, progressPercentLabel, progressPercentQualifier } from '../../copy/progress.ts';
 import { todayHttp, todayKeys } from '../../api/today-http.ts';
 import { GoalFootprint } from './GoalFootprint.tsx';
 import { AppBar } from '../../ui/components/AppBar.tsx';
@@ -135,7 +135,7 @@ function GoalRow({ goal, evaluationEnabled }: { goal: Goal; evaluationEnabled: b
           <span className="fr-goals__amount">
             {fmt.total(goal.progressDone)}{' '}
           </span>
-          <span className="fr-goals__amount-total">目標 {fmt.total(goal.totalRequired)} · {progressPercentLabel(goal.progressDone, goal.totalRequired)}%</span>
+          <span className="fr-goals__amount-total">目標 {fmt.total(goal.totalRequired)} · {progressPercentLabel(goal.progressDone, goal.totalRequired)}%{progressPercentQualifier(goal.progressDone, goal.totalRequired)}</span>
           {goal.initialProgress > 0 ? <span className="fr-goals__initial">記録開始前の {fmt.total(goal.initialProgress)} を含む</span> : null}
         </span>
         <span
