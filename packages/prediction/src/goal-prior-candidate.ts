@@ -25,10 +25,15 @@ export interface GoalPriorCandidateResult extends PriorCalculation {
 export type GoalPriorCandidateConfig = Omit<PredictionConfig, 'prior'>;
 
 function snapshot(prior: GoalPriorCandidate): GoalPriorCandidate {
-  if (prior === null || typeof prior !== 'object') throw new TypeError('Expected a candidate prior snapshot');
+  if (prior === null || typeof prior !== 'object') {
+    throw new TypeError('Expected a candidate prior snapshot');
+  }
+
   const copy = (name: 'a' | 'b'): BetaPriorCandidate => {
     const value = prior[name];
-    if (value === null || typeof value !== 'object') throw new TypeError(`Expected candidate prior ${name}`);
+    if (value === null || typeof value !== 'object') {
+      throw new TypeError(`Expected candidate prior ${name}`);
+    }
     for (const shape of ['alpha', 'beta'] as const) {
       // 現行BigInt分位点とGamma抽選が扱える範囲。D-26の採択する強度や有効範囲とは区別する。
       if (!Number.isSafeInteger(value[shape]) || value[shape] < 1) {
@@ -47,8 +52,14 @@ function snapshot(prior: GoalPriorCandidate): GoalPriorCandidate {
 
 // 実績ログ全量＋初期snapshotから毎回再計算する。前回posteriorを次回のpriorへ渡す運用はしない。
 // 達成済み／今日記録済み／実績起点の不足判定を保持し、回答だけで表示を許可するgateは追加しない。
-export function evaluateGoalPriorCandidate(input: PredictionInput, prior: GoalPriorCandidate,
-  config: GoalPriorCandidateConfig = DEFAULT_CONFIG): GoalPriorCandidateResult {
+export function evaluateGoalPriorCandidate(
+  input: PredictionInput,
+  prior: GoalPriorCandidate,
+  config: GoalPriorCandidateConfig = DEFAULT_CONFIG,
+): GoalPriorCandidateResult {
   const priorSnapshot = snapshot(prior);
-  return { ...calculateWithPrior(input, { ...config, prior: DEFAULT_CONFIG.prior }, priorSnapshot), priorSnapshot };
+  return {
+    ...calculateWithPrior(input, { ...config, prior: DEFAULT_CONFIG.prior }, priorSnapshot),
+    priorSnapshot,
+  };
 }

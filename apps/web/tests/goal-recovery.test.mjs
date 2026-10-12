@@ -66,7 +66,8 @@ for (const owners of [[], ['B'], ['B', 'A'], ['unmount']]) {
         }
       }
       // Deliberately ignore AbortSignal: a late response still needs the generation guard.
-      resolveGet(goal); await reload;
+      resolveGet(goal);
+      await reload;
       assert.deepEqual(client.getQueryData(goalKeys.detail(id)),owners.length ? undefined : goal);
     } finally {client.clear();delete globalThis.recovery;}
   });

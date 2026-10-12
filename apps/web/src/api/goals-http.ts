@@ -11,7 +11,18 @@ export const goalsHttp = {
   listGoals: (signal?: AbortSignal): Promise<Goal[]> => requestJson(GoalList, '/api/goals', { signal }),
   /** R-11 の読み取り（?view=r11）。R-11 の回答（questionPrior）と回答の版（answerRevision）を含む。専用の schema で応答を確かめる。 */
   getGoal: (goalId: string, signal?: AbortSignal): Promise<GoalR11> => requestJson(GoalR11Schema, `${path(goalId)}?view=r11`, { signal }),
-  createGoal: (body: GoalCreate, idempotencyKey: string, owner?: string): Promise<Goal> => requestJson(GoalSchema, '/api/goals', { method: 'POST', body, headers: { 'Idempotency-Key': idempotencyKey, ...(owner ? { 'X-Create-Owner': owner } : {}) } }),
+  createGoal: (body: GoalCreate, idempotencyKey: string, owner?: string): Promise<Goal> => requestJson(
+    GoalSchema,
+    '/api/goals',
+    {
+      method: 'POST',
+      body,
+      headers: {
+        'Idempotency-Key': idempotencyKey,
+        ...(owner ? { 'X-Create-Owner': owner } : {}),
+      },
+    },
+  ),
   updateGoal: (goalId: string, body: GoalPatch): Promise<Goal> => requestJson(GoalSchema, path(goalId), { method: 'PATCH', body }),
   deleteGoal: (goalId: string): Promise<void> => requestNoContent(path(goalId), { method: 'DELETE' }),
 };

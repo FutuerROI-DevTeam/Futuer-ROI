@@ -68,7 +68,11 @@ const focus = async () => {
   await settle();
   ensure(transport.reads > before, 'visibilitychange did not request a real session refetch');
 };
-const release = async () => { transport.hold = false; transport.held.splice(0).forEach((resolve) => resolve()); await settle(); };
+const release = async () => {
+  transport.hold = false;
+  transport.held.splice(0).forEach((resolve) => resolve());
+  await settle();
+};
 
 async function run() {
   const results: string[] = [];
@@ -115,7 +119,9 @@ async function run() {
   results.push('save pressed during check is dropped when the session turns out to be B; A Today discarded');
 
   // 4. 確認の失敗：入力中の状態を隠して捨て、回復後は新しい画面から始める
-  transport.owner = 'A'; await focus(); await settle();
+  transport.owner = 'A';
+  await focus();
+  await settle();
   ensure(text().includes('A-PRIVATE-GOAL'), 'A recovery missing');
   await click('量を変更'); await typeAmount('45');
   transport.failure = '503'; await focus();
@@ -125,7 +131,9 @@ async function run() {
   ensure(puts.length === 1, 'failure path sent a private write');
   results.push('503 check masks and discards input; recovery opens a fresh Today');
 
-  await act(async () => root.unmount()); client.clear(); Date.now = realNow;
+  await act(async () => root.unmount());
+  client.clear();
+  Date.now = realNow;
   return { results, puts: puts.length, reads: transport.reads, writes: transport.writes };
 }
 run().then((result) => { document.getElementById('result')!.textContent = JSON.stringify({ ok: true, ...result }); }).catch((error) => {

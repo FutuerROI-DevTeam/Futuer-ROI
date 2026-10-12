@@ -5,7 +5,10 @@ import { beta, seedFor, splitmix32, uniform } from '../dist/src/random.js';
 
 function factorial(n) {
   let result = 1n;
-  for (let i = 2n; i <= BigInt(n); i++) result *= i;
+  for (let i = 2n; i <= BigInt(n); i++) {
+    result *= i;
+  }
+
   return result;
 }
 
@@ -15,8 +18,12 @@ function oracle(alpha, beta) {
   for (let t = 1; !result.g80; t++) {
     const n = factorial(beta + t - 1) * factorial(alpha + beta - 1);
     const d = factorial(beta - 1) * factorial(alpha + beta + t - 1);
-    if (!result.g50 && 2n * n <= d) result.g50 = t;
-    if (5n * n <= d) result.g80 = t;
+    if (!result.g50 && 2n * n <= d) {
+      result.g50 = t;
+    }
+    if (5n * n <= d) {
+      result.g80 = t;
+    }
   }
   return result;
 }
@@ -39,7 +46,9 @@ test('T-02 factorial oracle covers normalization and minimal quantiles', () => {
       let mass = 0;
       const survival = t => Number(factorial(beta + t - 1) * factorial(alpha + beta - 1)) /
         Number(factorial(beta - 1) * factorial(alpha + beta + t - 1));
-      for (let t = 1; t <= 50; t++) mass += survival(t - 1) - survival(t);
+      for (let t = 1; t <= 50; t++) {
+        mass += survival(t - 1) - survival(t);
+      }
       assert.ok(Math.abs(mass + survival(50) - 1) < 1e-12);
     }
   }

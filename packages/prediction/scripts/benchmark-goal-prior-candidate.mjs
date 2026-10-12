@@ -39,7 +39,8 @@ for (const requiredFutureDone of [120, 400, 1095]) {
   let result;
   const measuredMs = [];
   for (let iteration = 0; iteration < 6; iteration++) {
-    const start = performance.now(); result = evaluateQuestionPriorAdapterCandidate(input, config);
+    const start = performance.now();
+    result = evaluateQuestionPriorAdapterCandidate(input, config);
     measuredMs.push(performance.now() - start);
   }
   adapterCases.push({ requiredFutureDone, input, config, evidenceSource: result.evidenceSource,

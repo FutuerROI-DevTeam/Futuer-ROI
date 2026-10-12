@@ -24,7 +24,11 @@ async function browserPath() {
 async function until(read, accept, message, timeout = 10000) {
   const deadline = Date.now() + timeout;
   let value;
-  while (Date.now() < deadline) { value = await read(); if (accept(value)) return value; await delay(20); }
+  while (Date.now() < deadline) {
+    value = await read();
+    if (accept(value)) return value;
+    await delay(20);
+  }
   throw new Error(message + ': ' + JSON.stringify(value));
 }
 test('Today responsive details: real viewport, native keyboard and preserved user choice', { timeout: 180000 }, async (t) => {
@@ -112,18 +116,24 @@ test('Today responsive details: real viewport, native keyboard and preserved use
     await fresh(960); await fresh(390);
   });
   await t.test('native click closes desktop and subsequent mobile/desktop resize keeps it closed', async () => {
-    await fresh(960); await click(); await state(false, 'desktop click must close');
+    await fresh(960);
+    await click();
+    await state(false, 'desktop click must close');
     for (const width of [959, 1440, 320, 960]) { await resize(width); await state(false, 'explicit closed at ' + width); }
     const value = await view(); assert.ok(value.inputs.some(event => event.type === 'click' && event.trusted));
     evidence.push({ scenario: 'explicit desktop closed', ...value });
   });
   await t.test('native click opens mobile and desktop/mobile resize keeps it open', async () => {
-    await fresh(390); await click(); await state(true, 'mobile click must open');
+    await fresh(390);
+    await click();
+    await state(true, 'mobile click must open');
     for (const width of [960, 1440, 320, 959]) { await resize(width); await state(true, 'explicit open at ' + width); }
     evidence.push({ scenario: 'explicit mobile open', ...(await view()) });
   });
   await t.test('Tab reaches native summary, Enter toggles and explicit closed survives resize', async () => {
-    await fresh(390); await evaluate('document.activeElement?.blur()'); await press('Tab', 'Tab', 9);
+    await fresh(390);
+    await evaluate('document.activeElement?.blur()');
+    await press('Tab', 'Tab', 9);
     assert.equal((await view()).focusedSummary, true, 'native summary must receive keyboard focus');
     await press('Enter', 'Enter', 13); await state(true, 'Enter opens');
     await press('Enter', 'Enter', 13); await state(false, 'Enter closes');
@@ -183,7 +193,9 @@ test('Today responsive details: real viewport, native keyboard and preserved use
   });
   await t.test('yesterday stays closed initially and preserves open state on same-day render; saving/failure reveal', async () => {
     await evaluate('window.__responsiveFixture.mountYesterday(false, true)'); await state(false, 'initial yesterday must close');
-    await evaluate('document.querySelector("summary").focus()'); await press('Enter', 'Enter', 13); await state(true, 'yesterday Enter opens');
+    await evaluate('document.querySelector("summary").focus()');
+    await press('Enter', 'Enter', 13);
+    await state(true, 'yesterday Enter opens');
     await evaluate('window.__responsiveFixture.mountYesterday(false)'); await state(true, 'same-day render must preserve open');
     await evaluate('window.__responsiveFixture.mountYesterday("saving")'); await state(true, 'saving reveals');
     await press('Enter', 'Enter', 13); await state(false, 'user can collapse while saving');

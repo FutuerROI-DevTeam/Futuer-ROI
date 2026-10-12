@@ -91,7 +91,9 @@ test('T-08: unrecorded today uses one hypothetical session; remaining one gives0
   const quantile = q => {
     for (let day = 1; day <= smallConfig.horizonDays; day++) {
       const cdf = 1 - samples.reduce((sum, s) => sum + (1 - s.a) * (1 - s.b) ** (day - 1), 0) / samples.length;
-      if (cdf >= q - 1e-12) return day;
+      if (cdf >= q - 1e-12) {
+        return day;
+      }
     }
     return null;
   };
@@ -136,7 +138,9 @@ test('T-12: CURRENT_STATE first-future-DONE quantiles match an independent close
       for (let day = 1; day <= smallConfig.horizonDays; day++) {
         const tail = samples.reduce((sum, s) =>
           sum + (1 - (status === 'DONE' ? s.a : s.b)) * (1 - s.b) ** (day - 1), 0) / samples.length;
-        if (1 - tail >= q - 1e-12) return day;
+        if (1 - tail >= q - 1e-12) {
+          return day;
+        }
       }
       return null;
     };
@@ -182,7 +186,9 @@ test('T-13: future and duplicate errors precede completed; invalid quantities/ca
     [log('2026-13-01', 'DONE')], [log('2026-10-00', 'DONE')], [log('2026-1-01', 'DONE')],
     [log('2026-10-01', 'DONE', null)], [log('2026-10-01', 'DONE', 0)],
     [log('2026-10-01', 'SKIPPED', 1)], [log('2026-10-01', 'UNKNOWN', null)],
-  ]) assert.throws(() => predict({ ...completed, logs }, smallConfig), RangeError);
+  ]) {
+    assert.throws(() => predict({ ...completed, logs }, smallConfig), RangeError);
+  }
   for (const field of ['totalRequired', 'initialProgress', 'sessionAmount']) {
     for (const value of [-1, .5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
       assert.throws(() => predict({ ...completed, goal: { ...completed.goal, [field]: value } }, smallConfig), RangeError);
@@ -200,9 +206,13 @@ test('integer ceil and technical config errors remain separate from HTTP error m
   for (const changed of [
     { prior: 1.5 }, { samples: 0 }, { horizonDays: 0 }, { seed: -1 }, { seed: 2 ** 32 },
     { modelVersion: 'unimplemented-model' },
-  ]) assert.throws(() => predict(todayDoneInput, { ...smallConfig, ...changed }), RangeError);
+  ]) {
+    assert.throws(() => predict(todayDoneInput, { ...smallConfig, ...changed }), RangeError);
+  }
   assert.equal(predict(todayDoneInput, { ...smallConfig, prior: 1 }).posterior.a.alpha, 1);
 });
 
 // 新しい方式metadataは専用契約テストで検査し、既存の日数・状態の期待値を保持する。
-function completionValues({ computation, ...values }) { return values; }
+function completionValues({ computation, ...values }) {
+  return values;
+}

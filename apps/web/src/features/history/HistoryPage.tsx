@@ -34,30 +34,65 @@ const WEEKDAY_HEADERS_FROM_MONDAY = ['月', '火', '水', '木', '金', '土', '
 export function HistoryPage({ goalId }: { goalId: string }) {
   const current = usePrivateEpoch();
   const draft = useMemoryDraft<string>(current, `history:${goalId}`);
-  if (!privateDataReady(current)) return <HistoryWaiting goalId={goalId} signedOut={current.owner === null} />;
+  if (!privateDataReady(current)) {
+    return <HistoryWaiting goalId={goalId} signedOut={current.owner === null} />;
+  }
   // 利用者が替わったら表示月も捨てる。旧cacheの消去が完了するまで取得部品をmountしない。
-  return <PrivateHistory key={`${current.owner}:${goalId}:${draft.generation}`} goalId={goalId} clearedAt={current.clearedAt} initialMonth={draft.restored} onMonthChange={draft.remember} />;
+  return (
+    <PrivateHistory
+      key={`${current.owner}:${goalId}:${draft.generation}`}
+      goalId={goalId}
+      clearedAt={current.clearedAt}
+      initialMonth={draft.restored}
+      onMonthChange={draft.remember}
+    />
+  );
 }
 
 function HistoryWaiting({ goalId, signedOut }: { goalId: string; signedOut: boolean }) {
-  const back = <Link to="/goals/$goalId" params={{ goalId }} className="fr-icon-btn" aria-label={c.backToGoal}><Icon name="back" /></Link>;
-  return <div className="fr fr-page fr-page--desk fr-page--history">
-    <PageTitle title={c.historyTitle} />
-    <AppBar title={c.historyTitle} leading={back} />
-    <DeskHeader back={back} title={c.historyTitle} />
-    <div className="fr-history__pad">{signedOut ? <SignedOutPanel /> : <p className="fr-history__legend" role="status"><Spinner />{appCopy.loading}</p>}</div>
-  </div>;
+  const back = (
+    <Link to="/goals/$goalId" params={{ goalId }} className="fr-icon-btn" aria-label={c.backToGoal}>
+      <Icon name="back" />
+    </Link>
+  );
+  return (
+    <div className="fr fr-page fr-page--desk fr-page--history">
+      <PageTitle title={c.historyTitle} />
+      <AppBar title={c.historyTitle} leading={back} />
+      <DeskHeader back={back} title={c.historyTitle} />
+      <div className="fr-history__pad">
+        {signedOut ? <SignedOutPanel /> : (
+          <p className="fr-history__legend" role="status"><Spinner />{appCopy.loading}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function PrivateHistory({ goalId, clearedAt, initialMonth, onMonthChange }: { goalId: string; clearedAt: number; initialMonth: string | undefined; onMonthChange: (month: string) => void }) {
-  const goalQuery = useQuery({ queryKey: goalKeys.detail(goalId), queryFn: ({ signal }) => goalsHttp.getGoal(goalId, signal), ...fetchPolicy });
-  const logsQuery = useQuery({ queryKey: todayKeys.logs(goalId), queryFn: ({ signal }) => todayHttp.listLogs(goalId, signal), ...fetchPolicy });
+function PrivateHistory({ goalId, clearedAt, initialMonth, onMonthChange }: {
+  goalId: string;
+  clearedAt: number;
+  initialMonth: string | undefined;
+  onMonthChange: (month: string) => void;
+}) {
+  const goalQuery = useQuery({
+    queryKey: goalKeys.detail(goalId),
+    queryFn: ({ signal }) => goalsHttp.getGoal(goalId, signal),
+    ...fetchPolicy,
+  });
+  const logsQuery = useQuery({
+    queryKey: todayKeys.logs(goalId),
+    queryFn: ({ signal }) => todayHttp.listLogs(goalId, signal),
+    ...fetchPolicy,
+  });
   const [month, setMonth] = useState<string | null>(initialMonth ?? null);
 
   const goal = goalQuery.dataUpdatedAt > clearedAt ? goalQuery.data : undefined;
   const logs = logsQuery.dataUpdatedAt > clearedAt ? logsQuery.data : undefined;
   const error = goalQuery.error ?? logsQuery.error;
-  if ([goalQuery.error, logsQuery.error].some(isUnauthenticated)) return <HistoryWaiting goalId={goalId} signedOut />;
+  if ([goalQuery.error, logsQuery.error].some(isUnauthenticated)) {
+    return <HistoryWaiting goalId={goalId} signedOut />;
+  }
   const back = (
     <Link to="/goals/$goalId" params={{ goalId }} className="fr-icon-btn" aria-label={c.backToGoal}>
       <Icon name="back" />
@@ -96,7 +131,10 @@ function PrivateHistory({ goalId, clearedAt, initialMonth, onMonthChange }: { go
   const first = goal.recordStartDate.slice(0, 7);
   const last = goal.today.slice(0, 7);
   const shown = month === null ? last : month < first ? first : month > last ? last : month;
-  const chooseMonth = (next: string) => { setMonth(next); onMonthChange(next); };
+  const chooseMonth = (next: string) => {
+    setMonth(next);
+    onMonthChange(next);
+  };
   return (
     <div className="fr fr-page fr-page--desk fr-page--history">
       <PageTitle title={`${c.historyTitle}（${goal.title}）`} />
@@ -107,11 +145,23 @@ function PrivateHistory({ goalId, clearedAt, initialMonth, onMonthChange }: { go
         <p className="fr-history__goal">{goal.title}</p>
         <section className="fr-history__top">
           <div className="fr-history__month">
-            <button type="button" className="fr-icon-btn" aria-label={c.prevMonth} disabled={shown <= first} onClick={() => chooseMonth(shiftMonth(shown, -1))}>
+            <button
+              type="button"
+              className="fr-icon-btn"
+              aria-label={c.prevMonth}
+              disabled={shown <= first}
+              onClick={() => chooseMonth(shiftMonth(shown, -1))}
+            >
               <Icon name="back" />
             </button>
             <h1 aria-live="polite">{c.monthLabel(shown)}</h1>
-            <button type="button" className="fr-icon-btn" aria-label={c.nextMonth} disabled={shown >= last} onClick={() => chooseMonth(shiftMonth(shown, 1))}>
+            <button
+              type="button"
+              className="fr-icon-btn"
+              aria-label={c.nextMonth}
+              disabled={shown >= last}
+              onClick={() => chooseMonth(shiftMonth(shown, 1))}
+            >
               <Icon name="chevronRight" />
             </button>
           </div>
@@ -137,7 +187,9 @@ function PrivateHistory({ goalId, clearedAt, initialMonth, onMonthChange }: { go
             </li>
           ))}
           {monthCells(shown).map((date, i) => {
-            if (date === null) return <li key={`pad-${i}`} aria-hidden="true" />;
+            if (date === null) {
+              return <li key={`pad-${i}`} aria-hidden="true" />;
+            }
             const state = dayState(date, logs, goal.recordStartDate, goal.today);
             const day = Number(date.slice(8, 10));
             const label = `${Number(date.slice(5, 7))}月${day}日${state === 'outside' ? '' : ` ${c.dayStateLabel[state]}`}`;

@@ -99,13 +99,26 @@ export class Client {
  * 送信は本番と同じく応答と切り離して走るため、mailsを見る前に`settle()`で預かった処理の完了を待つ。
  */
 export type Stack = { app: FastifyInstance; auth: ReturnType<typeof createAuth>; close: () => Promise<void>; mails: MailMessage[]; settle: () => Promise<void> };
-export type StackOptions = { baseURL?: string; signInMax?: number; resetMax?: number; passwordResetEnabled?: boolean; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation']; milestoneCalibration?: AppOptions['milestoneCalibration']; mailer?: Mailer;
+export type StackOptions = {
+  baseURL?: string;
+  signInMax?: number;
+  resetMax?: number;
+  passwordResetEnabled?: boolean;
+  trustProxyHops?: number;
+  now?: () => Date;
+  evaluation?: AppOptions['evaluation'];
+  milestoneCalibration?: AppOptions['milestoneCalibration'];
+  mailer?: Mailer;
   /** 指定すると要求ログを有効にしてここへ書く（既定はログなし）。 */
   logStream?: AppOptions['logStream'] };
 
 type StackFactories = { createAuthPool: typeof createAuthPool; createAuth: typeof createAuth; buildApp: typeof buildApp };
 
-export async function startStack(db: TestDatabase, o: StackOptions = {}, factories: Partial<StackFactories> = {}): Promise<Stack> {
+export async function startStack(
+  db: TestDatabase,
+  o: StackOptions = {},
+  factories: Partial<StackFactories> = {},
+): Promise<Stack> {
   const deps = { createAuthPool, createAuth, buildApp, ...factories };
   const baseURL = o.baseURL ?? 'http://127.0.0.1:3000';
   const authPool = deps.createAuthPool({ connectionString: db.connectionString, max: 2 });
@@ -138,7 +151,9 @@ export async function startStack(db: TestDatabase, o: StackOptions = {}, factori
       ...(o.milestoneCalibration ? { milestoneCalibration: o.milestoneCalibration } : {}),
     });
     return { app, auth, close, mails, settle: background.drain };
-  } catch (error) { return cleanupAfterFailure(error, close); }
+  } catch (error) {
+    return cleanupAfterFailure(error, close);
+  }
 }
 
 export const credentials = (tag: string) => ({
@@ -150,7 +165,11 @@ export const credentials = (tag: string) => ({
 // テストごとに専用DB・migration済み・認証つきアプリを用意し、終了時に片付ける。
 type SetupFactories = { createTestDatabase: typeof createTestDatabase; migrate: typeof migrate; startStack: typeof startStack };
 
-export async function setup(t: Pick<test.TestContext, 'after'>, o: StackOptions = {}, factories: Partial<SetupFactories> = {}) {
+export async function setup(
+  t: Pick<test.TestContext, 'after'>,
+  o: StackOptions = {},
+  factories: Partial<SetupFactories> = {},
+) {
   const deps = { createTestDatabase, migrate, startStack, ...factories };
   const db = await deps.createTestDatabase();
   let stack: Stack | undefined;

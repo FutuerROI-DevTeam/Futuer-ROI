@@ -19,7 +19,9 @@ const refetch = async () => {
   if (!simulateMissing) return;
   missingReads++;
   if (missingReads > 3) return; // 未修正のループでもrunnerを止め、回数のassertを失敗させる。
-  publish(null, false, true); await tick(); publish(null);
+  publish(null, false, true);
+  await tick();
+  publish(null);
 };
 let session = { data: { user: { id: 'A', email: 'A@example.invalid' } }, isPending: false, isRefetching: false, error: null, refetch };
 const listeners = new Set<() => void>();
@@ -87,7 +89,13 @@ const render = async () => act(async () => {
   await tick();
 });
 const settle = async () => { for (let i = 0; i < 4; i++) await act(tick); };
-const change = async (owner: string | null, error = false, pending = false) => { await act(async () => { publish(owner, error, pending); await tick(); }); await settle(); };
+const change = async (owner: string | null, error = false, pending = false) => {
+  await act(async () => {
+    publish(owner, error, pending);
+    await tick();
+  });
+  await settle();
+};
 const input = () => host.querySelector<HTMLInputElement>('#goal-title');
 const setTitle = async (value: string) => act(async () => {
   const target = input()!;
@@ -110,12 +118,17 @@ async function run() {
   void client.refetchQueries({ queryKey: goalKeys.list() }); await act(tick);
   let from = commits.length;
   await change('B'); noA('direct switch/list', from);
-  listHold = null; heldList.resolve([goal('A')]); await settle();
+  listHold = null;
+  heldList.resolve([goal('A')]);
+  await settle();
   noA('late A/list', from); ensure(heldList.aborted, 'list A request was not cancelled');
   ensure(host.textContent?.includes('B-PRIVATE-GOAL'), 'B list did not recover');
   results.push('direct session A→B: every commit + late A list response');
 
-  await change('A'); page = 'edit'; await render(); await settle();
+  await change('A');
+  page = 'edit';
+  await render();
+  await settle();
   ensure(input()?.value === 'A-PRIVATE-GOAL', 'edit fixture was not initialized');
   ensure([...host.querySelectorAll<HTMLInputElement>('.r11-qp input:checked')].map((el) => el.value).join(',') === 'HIGH,LOW', 'A answers fixture missing');
   await setTitle('A-PRIVATE-DRAFT'); ensure(input()?.value === 'A-PRIVATE-DRAFT', 'edit draft missing');
@@ -123,21 +136,27 @@ async function run() {
   void client.refetchQueries({ queryKey: goalKeys.detail('shared-test-id') }); await act(tick);
   from = commits.length;
   await change('B'); noA('direct switch/edit', from);
-  detailHold = null; heldDetail.resolve(goal('A')); await settle();
+  detailHold = null;
+  heldDetail.resolve(goal('A'));
+  await settle();
   noA('late A/edit', from); ensure(heldDetail.aborted, 'detail A request was not cancelled');
   ensure(input()?.value === 'B-PRIVATE-GOAL', 'B edit initialized from stale data');
   ensure([...host.querySelectorAll<HTMLInputElement>('.r11-qp input:checked')].every((el) => el.value === ''), 'B edit retained A answers');
   ensure(writes.length === 0, 'switch auto-submitted a draft');
   results.push('edit baseline/answers/draft reset + late A detail response; no auto-submit');
 
-  page = 'create'; await render(); await setTitle('A-PRIVATE-CREATE-DRAFT');
+  page = 'create';
+  await render();
+  await setTitle('A-PRIVATE-CREATE-DRAFT');
   await change(null); ensure(!input(), 'logout retained create form');
   ensure(host.querySelector('a[href="/login"]') && !host.querySelector('[role="status"]'), 'logout/create never reached sign-in UI');
   await change('B'); ensure(input()?.value === '', 'logout→B carried create draft');
   results.push('explicit logout→B: create draft discarded and sign-in UI displayed');
 
   for (const mountedPage of ['list', 'edit', 'today', 'history']) {
-    page = mountedPage; await render(); await settle();
+    page = mountedPage;
+    await render();
+    await settle();
     await change('A'); await change(null);
     ensure(!input() && !host.textContent?.includes('A-PRIVATE'), `logout/${page} exposed A`);
     ensure(host.querySelector('a[href="/login"]') && !host.querySelector('[role="status"]'), `logout/${page} never reached sign-in UI`);
@@ -147,18 +166,29 @@ async function run() {
   results.push('mounted list/edit/Today/history logout: sign-in UI without disabled-query loading; B recovery');
   page = 'create'; await render();
 
-  await change('A'); await setTitle('A-PRIVATE-CREATE-DRAFT'); from = commits.length;
-  await change('B'); noA('same-tab/create', from); ensure(input()?.value === '', 'direct switch carried create draft');
+  await change('A');
+  await setTitle('A-PRIVATE-CREATE-DRAFT');
+  from = commits.length;
+  await change('B');
+  noA('same-tab/create', from);
+  ensure(input()?.value === '', 'direct switch carried create draft');
   results.push('same-tab owner change: create draft discarded');
 
-  page = 'today'; await render(); await settle();
+  page = 'today';
+  await render();
+  await settle();
   await change('A'); await settle();
   ensure(host.textContent?.includes('A-PRIVATE-GOAL'), 'Today error fallback fixture missing');
-  from = commits.length; await change('B'); noA('Today fallback', from);
+  from = commits.length;
+  await change('B');
+  noA('Today fallback', from);
   ensure(host.textContent?.includes('B-PRIVATE-GOAL'), 'Today B fallback missing');
   results.push('Today error fallback never displays previous owner');
 
-  page = 'history'; await change('A'); await render(); await settle();
+  page = 'history';
+  await change('A');
+  await render();
+  await settle();
   const aMark = host.querySelector('.fr-history__cal li[aria-label^="10月9日"]')?.getAttribute('aria-label');
   ensure(aMark?.includes('やった'), 'history A log fixture missing');
   await act(async () => { (host.querySelector('button[aria-label="前の月"]') as HTMLButtonElement).click(); await tick(); }); await settle();
@@ -166,8 +196,14 @@ async function run() {
   const historyDetail = detailHold = deferred(); const historyLog = logsHold = deferred();
   void client.refetchQueries({ queryKey: goalKeys.detail('shared-test-id') });
   void client.refetchQueries({ queryKey: todayKeys.logs('shared-test-id') }); await act(tick);
-  from = commits.length; await change('B'); noA('history switch', from);
-  detailHold = null; logsHold = null; historyDetail.resolve(goal('A')); historyLog.resolve(historyLogs('A')); await settle();
+  from = commits.length;
+  await change('B');
+  noA('history switch', from);
+  detailHold = null;
+  logsHold = null;
+  historyDetail.resolve(goal('A'));
+  historyLog.resolve(historyLogs('A'));
+  await settle();
   noA('history late A goal/logs', from);
   ensure(historyDetail.aborted && historyLog.aborted, 'history A reads were not cancelled');
   ensure(host.querySelector('h1')?.textContent?.includes('10月'), 'history retained A selected month');
@@ -176,18 +212,30 @@ async function run() {
   ensure(!document.title.includes('A-PRIVATE'), 'history document title retained A');
   results.push('history: late A detail/logs discarded, B marks/title and owner-specific month');
 
-  await change('A'); await change('A', true); ensure(!host.querySelector('.fr-history__cal'), 'history session error exposed calendar');
+  await change('A');
+  await change('A', true);
+  ensure(!host.querySelector('.fr-history__cal'), 'history session error exposed calendar');
   await change('B'); ensure(host.querySelector('.fr-history__cal'), 'history session recovery failed');
-  foreignGoal = true; await change('A'); await change('B'); await settle();
+  foreignGoal = true;
+  await change('A');
+  await change('B');
+  await settle();
   ensure(!host.querySelector('.fr-history__cal') && !host.textContent?.includes('A-PRIVATE'), 'foreign goal kept A history');
   ensure(host.textContent?.includes('このGoalは開けません'), 'foreign history did not show 404');
-  foreignGoal = false; await change('A'); await change('B'); await settle();
+  foreignGoal = false;
+  await change('A');
+  await change('B');
+  await settle();
   results.push('history: session failure masking, B recovery, foreign Goal 404');
 
-  page = 'edit'; await render(); await settle();
+  page = 'edit';
+  await render();
+  await settle();
   await change('A'); ensure(input()?.value === 'A-PRIVATE-GOAL', 'session recovery fixture missing');
   await change('A', true); ensure(!input() && !host.textContent?.includes('A-PRIVATE'), 'session failure exposed private state');
-  from = commits.length; await change('B'); noA('session failure recovery', from);
+  from = commits.length;
+  await change('B');
+  noA('session failure recovery', from);
   ensure(input()?.value === 'B-PRIVATE-GOAL', 'session failure→B did not recover');
   results.push('session transport failure→B recovery: private form masked');
 
@@ -200,9 +248,13 @@ async function run() {
   const cancelHolds: ReturnType<typeof deferred>[] = [];
   client.cancelQueries = (...args) => {
     void originalCancel(...args);
-    const hold = deferred(); cancelHolds.push(hold); return hold.promise;
+    const hold = deferred();
+    cancelHolds.push(hold);
+    return hold.promise;
   };
-  await change('A'); await change('B'); await change('A');
+  await change('A');
+  await change('B');
+  await change('A');
   ensure(!input(), 'rapid switches opened gate before latest cancellation');
   await act(async () => { cancelHolds[0].resolve(undefined); await tick(); });
   ensure(!input(), 'stale cancellation completion opened gate');
@@ -213,15 +265,24 @@ async function run() {
   ensure(writes.length === 0, 'owner transitions sent private writes');
   results.push('A→B→A: outdated cancellation cannot reopen gate');
 
-  page = 'list'; await render(); await change('B'); await settle();
-  simulateMissing = true; await change(null); await settle();
+  page = 'list';
+  await render();
+  await change('B');
+  await settle();
+  simulateMissing = true;
+  await change(null);
+  await settle();
   ensure(missingReads === 1, 'AccountMenu retried null→pending→null more than once');
-  await change('B'); await change(null); await settle();
+  await change('B');
+  await change(null);
+  await settle();
   ensure(missingReads === 2, 'new signed-in→missing episode did not retry exactly once');
   simulateMissing = false;
   results.push('AccountMenu: missing session recovery once per episode; no null/pending loop');
 
-  await act(async () => root.unmount()); client.clear(); mutations.disconnect();
+  await act(async () => root.unmount());
+  client.clear();
+  mutations.disconnect();
   return { results, commits: commits.length, writes: writes.length };
 }
 run().then((result) => {

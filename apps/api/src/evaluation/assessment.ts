@@ -8,30 +8,58 @@ import { validateSavedQuestion } from '../questions/snapshot.ts';
 import type { TodaySnapshot } from '../prediction/store.ts';
 
 export type SavedEvaluation = Omit<EvaluationForecast, 'id' | 'issuedAt' | 'expiresAt' | 'p50State' | 'p80State'> & {
-  schemaVersion: 'evaluation-v1'; prefixHash: string;
-  sessionAmount: number; issuedTodayStatus: 'DONE' | 'SKIPPED';
+  schemaVersion: 'evaluation-v1';
+  prefixHash: string;
+  sessionAmount: number;
+  issuedTodayStatus: 'DONE' | 'SKIPPED';
   // 数値の十分統計量。古い全日次記録や回答全文を複製する履歴機能ではない。
-  observations: TodayR11['prediction']['observations']; posterior: TodayR11['prediction']['posterior'];
-  config: TodayR11['prediction']['config']; provenance: TodayR11['provenance'];
-  mappingVersion: string; usedPrior: TodayR11['prediction']['posterior'];
+  observations: TodayR11['prediction']['observations'];
+  posterior: TodayR11['prediction']['posterior'];
+  config: TodayR11['prediction']['config'];
+  provenance: TodayR11['provenance'];
+  mappingVersion: string;
+  usedPrior: TodayR11['prediction']['posterior'];
   computation: import('@futureroi/prediction').CompletionComputation | null;
-  stateVersion: 'explicit-daily-state-v1'; featureVersion: 'adjacent-record-counts-v1';
-  evaluationVersion: 'frozen-remaining-quantile-v1'; presentationPolicyVersion: 'manual-current-state-v1';
+  stateVersion: 'explicit-daily-state-v1';
+  featureVersion: 'adjacent-record-counts-v1';
+  evaluationVersion: 'frozen-remaining-quantile-v1';
+  presentationPolicyVersion: 'manual-current-state-v1';
 };
 export type ForecastRow = { id: string; issued_at: Date; expires_at: Date; payload: SavedEvaluation };
 
 export function prefixFingerprint(logs: readonly Log[], anchor: string): string {
-  return createHash('sha256').update(JSON.stringify(logs.filter(log => log.localDate <= anchor)
-    .map(log => [log.localDate, log.status, log.amount]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))))).digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify(logs
+      .filter(log => log.localDate <= anchor)
+      .map(log => [log.localDate, log.status, log.amount])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0])))))
+    .digest('hex');
 }
+
 export function makeEvaluation(snapshot: TodaySnapshot, buildVersion: string): SavedEvaluation {
   const today = localDateIn(snapshot.now, snapshot.goal.timezone);
-  const savedQuestion = validateSavedQuestion(snapshot.question, { unit: snapshot.goal.unit,
-    sessionAmount: snapshot.goal.sessionAmount, recordStartDate: snapshot.goal.recordStartDate });
+  const savedQuestion = validateSavedQuestion(snapshot.question, {
+    unit: snapshot.goal.unit,
+    sessionAmount: snapshot.goal.sessionAmount,
+    recordStartDate: snapshot.goal.recordStartDate,
+  });
   const { prediction, provenance } = runQuestionPredictionWithDiagnostics({
-    prediction: { goal: { totalRequired: snapshot.goal.totalRequired, initialProgress: snapshot.goal.initialProgress,
-      sessionAmount: snapshot.goal.sessionAmount }, logs: snapshot.logs, today }, answers: savedQuestion.answers, mapping: savedQuestion.mapping });
-  if (prediction.todayStatus === 'UNRECORDED' || prediction.progress.completed) throw new Error('Evaluation requires recorded, incomplete state');
+    prediction: {
+      goal: {
+        totalRequired: snapshot.goal.totalRequired,
+        initialProgress: snapshot.goal.initialProgress,
+        sessionAmount: snapshot.goal.sessionAmount,
+      },
+      logs: snapshot.logs,
+      today,
+    },
+    answers: savedQuestion.answers,
+    mapping: savedQuestion.mapping,
+  });
+  if (prediction.todayStatus === 'UNRECORDED' || prediction.progress.completed) {
+    throw new Error('Evaluation requires recorded, incomplete state');
+  }
+
   const completion = prediction.completion;
   return { schemaVersion: 'evaluation-v1', anchorDate: today, timezone: snapshot.goal.timezone, unit: snapshot.goal.unit,
     remainingAmount: prediction.progress.total - prediction.progress.done,
@@ -45,15 +73,34 @@ export function makeEvaluation(snapshot: TodaySnapshot, buildVersion: string): S
     prefixHash: prefixFingerprint(snapshot.logs, today),
     observations: prediction.observations, posterior: prediction.posterior, config: prediction.config, provenance,
     mappingVersion: savedQuestion.mapping.version,
-    usedPrior: { a: { alpha: prediction.posterior.a.alpha - prediction.observations.nDD, beta: prediction.posterior.a.beta - prediction.observations.nDS },
-      b: { alpha: prediction.posterior.b.alpha - prediction.observations.nSD, beta: prediction.posterior.b.beta - prediction.observations.nSS } },
+    usedPrior: {
+      a: {
+        alpha: prediction.posterior.a.alpha - prediction.observations.nDD,
+        beta: prediction.posterior.a.beta - prediction.observations.nDS,
+      },
+      b: {
+        alpha: prediction.posterior.b.alpha - prediction.observations.nSD,
+        beta: prediction.posterior.b.beta - prediction.observations.nSS,
+      },
+    },
     computation: completion.status === 'available' ? completion.computation ?? null : null,
     stateVersion: 'explicit-daily-state-v1', featureVersion: 'adjacent-record-counts-v1',
     evaluationVersion: 'frozen-remaining-quantile-v1', presentationPolicyVersion: 'manual-current-state-v1' };
 }
 
-function quantileState(saved: SavedEvaluation, q: number | null, snapshot: TodaySnapshot, now: Date, horizon: number): EvaluationState {
-  if (snapshot.goal.goalSettingsRevision !== saved.goalSettingsRevision || snapshot.question.answer_revision !== String(saved.answerRevision)) return 'CONTEXT_CHANGED';
+function quantileState(
+  saved: SavedEvaluation,
+  q: number | null,
+  snapshot: TodaySnapshot,
+  now: Date,
+  horizon: number,
+): EvaluationState {
+  if (
+    snapshot.goal.goalSettingsRevision !== saved.goalSettingsRevision ||
+    snapshot.question.answer_revision !== String(saved.answerRevision)
+  ) {
+    return 'CONTEXT_CHANGED';
+  }
   if (prefixFingerprint(snapshot.logs, saved.anchorDate) !== saved.prefixHash) return 'INPUT_CORRECTED';
   if (q === null) return 'NULL';
   if (q > horizon) return 'OUTSIDE_HORIZON';
@@ -65,13 +112,22 @@ function quantileState(saved: SavedEvaluation, q: number | null, snapshot: Today
   let amount = 0, missing = false;
   for (let d = 1; d <= q; d++) {
     const log = records.get(shiftLocalDate(saved.anchorDate, d));
-    if (!log) missing = true;
-    else if (log.status === 'DONE') amount += log.amount ?? 0;
+    if (!log) {
+      missing = true;
+    } else if (log.status === 'DONE') {
+      amount += log.amount ?? 0;
+    }
   }
   // 既知量だけで到達していれば、途中にUNKNOWNがあってもq日以内の到達は確定する。
   return amount >= saved.remainingAmount ? 'REACHED' : missing ? 'UNKNOWN' : 'NOT_REACHED';
 }
-export function assessEvaluation(row: ForecastRow, snapshot: TodaySnapshot, now: Date, horizon: number): EvaluationForecast {
+
+export function assessEvaluation(
+  row: ForecastRow,
+  snapshot: TodaySnapshot,
+  now: Date,
+  horizon: number,
+): EvaluationForecast {
   const saved = row.payload;
   if (saved.schemaVersion !== 'evaluation-v1') throw new Error('Unsupported evaluation snapshot');
   return { id: row.id, issuedAt: row.issued_at.toISOString(), expiresAt: row.expires_at.toISOString(),
@@ -82,7 +138,11 @@ export function assessEvaluation(row: ForecastRow, snapshot: TodaySnapshot, now:
     p50State: quantileState(saved, saved.p50Days, snapshot, now, horizon),
     p80State: quantileState(saved, saved.p80Days, snapshot, now, horizon) };
 }
-export function countQuantiles(forecasts: readonly EvaluationForecast[], field: 'p50State' | 'p80State'): EvaluationQuantileCounts {
+
+export function countQuantiles(
+  forecasts: readonly EvaluationForecast[],
+  field: 'p50State' | 'p80State',
+): EvaluationQuantileCounts {
   const counts: EvaluationQuantileCounts = { REACHED: 0, NOT_REACHED: 0, UNKNOWN: 0, PENDING: 0, NULL: 0,
     OUTSIDE_HORIZON: 0, INPUT_CORRECTED: 0, CONTEXT_CHANGED: 0, lowerCoverage: null, upperCoverage: null };
   for (const forecast of forecasts) counts[forecast[field]]++;

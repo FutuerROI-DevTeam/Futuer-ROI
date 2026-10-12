@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { promisify } from 'node:util';
 import { countProblems, parseCounts, renderSummary, safeRecord } from './ci-report.mjs';
+
 const counters = (tests = 2, skipped = 0) => ({ tests, pass: tests - skipped, fail: 0, cancelled: 0, skipped, todo: 0 });
 const totals = counts => Object.entries(counts).map(([key, value]) => '# ' + key + ' ' + value).join('\n');
 const workspaceOutput = ['prediction', 'api', 'web'].map(name => '> @futureroi/' + name + '@0.0.0 test\n' + totals(counters())).join('\n');
@@ -46,11 +47,16 @@ test('失敗codeを保持しrawログや秘密をartifactへ保存しない', as
       '-e', 'console.error("private-cookie");process.exit(7)'],
     { env: { ...process.env, CI_REPORT_DIR: directory }, windowsHide: true }), (error) => error.code === 7);
     assert.deepEqual(readdirSync(directory).sort(), ['typecheck.json', 'typecheck.log']);
-    for (const path of readdirSync(directory)) assert.equal(readFileSync(join(directory, path), 'utf8').includes('private-cookie'), false);
+    for (const path of readdirSync(directory)) {
+      assert.equal(readFileSync(join(directory, path), 'utf8').includes('private-cookie'), false);
+    }
     const record = JSON.parse(readFileSync(join(directory, 'typecheck.json'), 'utf8'));
     assert.equal(record.exitCode, 7);
     assert.equal(record.status, 'failed');
-  } finally { for (const path of readdirSync(directory)) rmSync(join(directory, path)); rmdirSync(directory); }
+  } finally {
+    for (const path of readdirSync(directory)) rmSync(join(directory, path));
+    rmdirSync(directory);
+  }
 });
 
 test('spawn失敗と不完全なtest出力も失敗記録を残す', async () => {
@@ -64,7 +70,10 @@ test('spawn失敗と不完全なtest出力も失敗記録を残す', async () =>
       await assert.rejects(promisify(execFile)(process.execPath, [script, 'run', layer, '--', command, ...args],
         { env: { ...process.env, CI_REPORT_DIR: directory }, windowsHide: true }));
       assert.equal(JSON.parse(readFileSync(join(directory, layer + '.json'), 'utf8')).diagnostic, diagnostic);
-    } finally { for (const path of readdirSync(directory)) rmSync(join(directory, path)); rmdirSync(directory); }
+    } finally {
+      for (const path of readdirSync(directory)) rmSync(join(directory, path));
+      rmdirSync(directory);
+    }
   }
 });
 
@@ -113,6 +122,9 @@ test('workspace集計前・途中のexit 7を保持し、保存record経由のCL
       }
       if (output) assert.ok(stdout.includes('prediction: 2 / 2 / 0 / 0 / 0'));
       assert.equal(stdout.includes('N/A (command check)'), false);
-    } finally { for (const path of readdirSync(directory)) rmSync(join(directory, path)); rmdirSync(directory); }
+    } finally {
+      for (const path of readdirSync(directory)) rmSync(join(directory, path));
+      rmdirSync(directory);
+    }
   }
 });

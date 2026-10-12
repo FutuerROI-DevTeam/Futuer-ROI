@@ -55,13 +55,17 @@ interfaceは差替えやテストに必要な境界だけに置く。大がか�
 
 | 境界 | 現行の配置と保つ条件 |
 | --- | --- |
-| FEの入力と訪問 | [GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)がdraft・作成attempt・保存を所有する。[GoalFormFields](../apps/web/src/features/goals/form/GoalFormFields.tsx)は制御された値・callbackで描画し、保存や認証を持たない。[成功receipt](../apps/web/src/features/goals/navigation/useConfirmedGoalSave.ts)はowner・世代・訪問を照合してから、同じattemptの掃除と遷移を一度だけ行う |
+| FEの入力と訪問 | [GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)がdraft・作成attempt・保存を所有する。[goal-form](../apps/web/src/features/goals/goal-form.ts)は純粋な入力検証とAPI body変換、[form-recovery](../apps/web/src/features/goals/form/form-recovery.ts)は復元候補と既知拒否の判定を担当する。storage読込は同moduleの`loadRecovery`へ明示し、Pageの初回読込位置を保つ。[GoalFormFields](../apps/web/src/features/goals/form/GoalFormFields.tsx)と[GoalFormPresentation](../apps/web/src/features/goals/form/GoalFormPresentation.tsx)は制御された値・callbackを描画し、保存や認証を持たない。[成功receipt](../apps/web/src/features/goals/navigation/useConfirmedGoalSave.ts)はowner・世代・訪問を照合してから、同じattemptの掃除と遷移を一度だけ行う |
+| FEのToday | [TodayPage](../apps/web/src/features/today/TodayPage.tsx)がowner・draft・編集・保存・focusを所有し、[useTodayData](../apps/web/src/features/today/useTodayData.ts)が取得・snapshot採用・再同期・日付監視を所有する。[snapshot](../apps/web/src/features/today/snapshot.ts)の重複field照合と[forecast-view](../apps/web/src/features/today/forecast-view.ts)の表示変換は純粋処理。[TodayContent](../apps/web/src/features/today/TodayContent.tsx)は採用済みsnapshotを描画し、取得・保存・編集stateを持たない。表示部品からPageへ逆依存させず、Boundary内の変換・検査と記録UIの生存を保つ |
 | FEの純粋な境界 | [forecast-validation](../apps/web/src/features/prior/forecast-validation.ts)が表示へ渡す契約を検査し、[PriorForecast](../apps/web/src/features/prior/PriorForecast.tsx)は描画する。共有する[IANA timezone・暦日関数](../apps/web/src/calendar.ts)へ時計や画面stateを持ち込まない |
 | BEの判断と永続化 | [settings-policy](../apps/api/src/goals/settings-policy.ts)・[target-date-policy](../apps/api/src/goals/target-date-policy.ts)・[回答更新policy](../apps/api/src/questions/update-policy.ts)・[作成fingerprint](../apps/api/src/goals/create-request-fingerprint.ts)は純粋判定。[Goal store](../apps/api/src/goals/store.ts)はSQL・lock・時計・CAS・commit/rollbackを所有する。`loadGoalReadModels`等の名前でDB読込を明示し、拒否の優先順を抽出の都合で変えない |
+| BEの予測入力 | [prediction/snapshot](../apps/api/src/prediction/snapshot.ts)はGoal・質問・ログの行と採取済み時刻を`TodaySnapshot`へ写す。DB・時計を呼ばず、値・ログ順・null・回答版を保つ。[prediction store](../apps/api/src/prediction/store.ts)は既存型を再exportし、[evaluation store](../apps/api/src/evaluation/store.ts)・[milestone store](../apps/api/src/milestone/store.ts)も同じ純粋変換へ依存する。各storeが引き続きSQL・owner・lock・時計採取・transactionを所有し、最初のGoal SELECT後の採取位置と拒否順序は変えない |
 | Engineの公開型と計算 | [question-prior-types](../packages/prediction/src/question-prior-types.ts)がR-11の公開型を所有し、内部候補は型を参照する。公開入口は既存exportを保つ。数値核・演算順・乱数・K/H/seed・独立オラクルと凍結fixtureを保ち、結果の値・key・省略条件・拒否条件を比較する |
 | 検証の資源 | APIの[helper](../apps/api/tests/helpers/stack.ts)は獲得した資源を早期に所有し、初期化失敗でも獲得済み資源をすべて終了する。元の失敗と終了失敗を併記する。これはテストの境界で、製品へ新しいDI層を導入しない |
 
 変更時は[検証手順](DEVELOPMENT_GUIDE.md#検証)で純粋・描画・実ブラウザ・実DBの範囲を分ける。画面の直接操作や独立オラクルを、ソース文字列の一致や件数だけで置き換えない。
+
+改行・字下げ・コメントと抽出の規則は[コードの読みやすさ](../CONTRIBUTING.md#コードの読みやすさ)を参照する。Engineでは量（整数分／回）、必要DONE回数、将来の日数、確率質量を区別し、内部名と数式の記号を対応させる。`recovery`の1000日は逐日BigInt計算の資源上限であり、完了予測の`horizonDays`や再開待ちの定義へ流用しない。
 
 ### Repository構成
 
@@ -631,6 +635,7 @@ timezoneの日付境界（23:59 / 0:00）はEngineではなくAPI層のテスト
 | 早期のstaging確認 | 本番でしか見えない問題（Cookie・`BETTER_AUTH_URL`・proxy・migration・環境変数・DB接続・cold start・SPA fallback・HTTPS）を早く見つけるため、最終公開を待たずに2段階で確認する。①I-01：healthだけのコンテナ（当時の候補）をstagingへ出し、DBへ接続できる ②I-06：stagingで登録・ログイン・セッション維持ができる。I-14は最終確認・E2E・Demo Seed・仕上げを担う。現在の第一候補ではFunctionで同等のhealth／DB・SPA確認を行う。公開先の承認が遅れた場合の既存移管例外（[#70](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/70)のstaging項目を[#75](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/75)へ、#75のstaging確認を[#83](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/83)へ）に従い、移管先で未確認項目を追跡する。移管を公開確認済みと扱わない |
 | 環境変数 | `DATABASE_URL`（必須）、`BETTER_AUTH_SECRET`、`BETTER_AUTH_URL`。任意の`HOST`・`PORT`・`WEB_DIST`・`LOG_LEVEL`・`SHUTDOWN_TIMEOUT_MS`は[.env.example](../.env.example)を参照。実値はProviderのSecret設定に置き、Gitへ入れない。production／公開候補の名前・必要条件と未決設定は[配備前の照合表](operations/release-demo.md#配備前に照合する環境変数) |
 | デモ | Demo Seed（合成記録）を開発データと分けて投入。手順は[リリースとデモ](operations/release-demo.md) |
+| 自動配備（#275） | GitHub Actionsの`workflow_run`を起床に使い（同repoの手動CI完了も含む）、ロック取得後に最新mainとそのSHAの**push由来**Application／Foundation全job成功を照合してVercel CLIで配備する。別repoイベントは共通待機から隔離する。本番URLへ割り当てない候補のSHA・healthを確認してからpromoteする。候補作成は取消可能なjob、開始済み切替の終端・実alias照合と復旧は専用jobで行い、CLI失敗・取消後も非同期切替を照合する。確認不能なら後続CDを遮断して人が復旧する。migrationは承認付きで配備前に行い、DBは自動で戻さない。VercelのGit連携はCIを待たずにbuildし、Hobbyでコミット作者の制約もあるため採用しない。理由・時間予算・停止と再開・受入の残件は[リリース手順書の12](operations/release-guide.md#12-自動配備cd)。実環境受入は有効化前に担当者が行う |
 
 ### 第一候補の評価理由と代替案
 

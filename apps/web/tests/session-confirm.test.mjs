@@ -30,9 +30,22 @@ test('router confirmation shares the hook store and waits for a replacing refres
   let release;
   let reads = 0;
   let value = { data: { user: { email: 'A@example.invalid' } }, error: null, isPending: false, isRefetching: false, refetch };
-  function publish(next) { value = { ...value, ...next }; for (const fn of listeners) fn(value); }
-  function refetch() { reads++; publish({ isRefetching: true }); return new Promise(resolve => { release = resolve; }); }
-  authClient.$store.atoms.session = { get: () => value, listen: fn => { listeners.add(fn); return () => listeners.delete(fn); } };
+  function publish(next) {
+    value = { ...value, ...next };
+    for (const fn of listeners) fn(value);
+  }
+  function refetch() {
+    reads++;
+    publish({ isRefetching: true });
+    return new Promise(resolve => { release = resolve; });
+  }
+  authClient.$store.atoms.session = {
+    get: () => value,
+    listen: fn => {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+  };
   try {
     const first = checkSession();
     const second = checkSession();
@@ -41,7 +54,8 @@ test('router confirmation shares the hook store and waits for a replacing refres
     let finished = false;
     first.then(() => { finished = true; });
     // 最初のfetchはfocusによる新しい確認に置き換えられた。旧Aを確定扱いしない。
-    release(); await new Promise(resolve => setImmediate(resolve));
+    release();
+    await new Promise(resolve => setImmediate(resolve));
     assert.equal(finished, false);
     publish({ data: { user: { email: 'B@example.invalid' } }, isRefetching: false });
     assert.deepEqual(await first, { kind: 'signed-in', email: 'B@example.invalid' });

@@ -18,7 +18,14 @@ export type PutLogResult =
 // 作成・上書き（R-03・R-04、P-14）。許可窓は「Goalのtimezoneで今日・昨日」かつ「記録開始日以降」。
 // 窓の判定と保存を同じtransactionで行い、Goal行を排他ロックして、同時のPATCH・同Goal PUTを時計の取得前に順序づける。
 // DONEの表示量と設定版を固定して送る。SKIPPEDはNULL。初回DONEのmarkerも同transactionで保存する。
-export async function putLog(pool: Pool, userId: string, goalId: string, localDate: string, body: LogPut, clock: () => Date): Promise<PutLogResult> {
+export async function putLog(
+  pool: Pool,
+  userId: string,
+  goalId: string,
+  localDate: string,
+  body: LogPut,
+  clock: () => Date,
+): Promise<PutLogResult> {
   if (!isGoalId(goalId)) return { kind: 'not_found' };
   const client = await pool.connect();
   try {
@@ -34,7 +41,8 @@ export async function putLog(pool: Pool, userId: string, goalId: string, localDa
       return { kind: 'not_found' };
     }
     if (body.expectedGoalSettingsRevision !== goal.goal_settings_revision) {
-      await client.query('rollback'); return { kind: 'settings_conflict' };
+      await client.query('rollback');
+      return { kind: 'settings_conflict' };
     }
     const today = localDateIn(clock(), goal.timezone);
     const yesterday = shiftLocalDate(today, -1);
@@ -53,7 +61,12 @@ export async function putLog(pool: Pool, userId: string, goalId: string, localDa
        returning local_date::text as local_date, status, amount`,
       [goalId, localDate, body.status, amount],
     );
-    if (body.status === 'DONE') await client.query('update goal set unit_history_locked = true where id = $1 and not unit_history_locked', [goalId]);
+    if (body.status === 'DONE') {
+      await client.query(
+        'update goal set unit_history_locked = true where id = $1 and not unit_history_locked',
+        [goalId],
+      );
+    }
     await client.query('commit');
     return { kind: 'saved', log: toLog(saved.rows[0]!) };
   } catch (error) {
@@ -65,7 +78,12 @@ export async function putLog(pool: Pool, userId: string, goalId: string, localDa
 }
 
 /** 記録の一覧（行動日の昇順）。期間は両端を含み、省略時は全期間。Goalがなければnull。 */
-export async function listLogs(pool: Pool, userId: string, goalId: string, range: { from?: string; to?: string }): Promise<Log[] | null> {
+export async function listLogs(
+  pool: Pool,
+  userId: string,
+  goalId: string,
+  range: { from?: string; to?: string },
+): Promise<Log[] | null> {
   if (!isGoalId(goalId)) return null;
   const owned = await pool.query('select 1 from goal where id = $1 and user_id = $2', [goalId, userId]);
   if (owned.rowCount === 0) return null;

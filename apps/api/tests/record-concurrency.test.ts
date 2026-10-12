@@ -60,8 +60,16 @@ function pauseQuery(pool: pg.Pool, matches: (sql: string) => boolean, before = f
       return client;
     });
   }) as typeof pool.connect;
-  return { reached: () => reached, open: barrier.open, restore: () => { pool.connect = nativeConnect; barrier.open(); } };
+  return {
+    reached: () => reached,
+    open: barrier.open,
+    restore: () => {
+      pool.connect = nativeConnect;
+      barrier.open();
+    },
+  };
 }
+
 async function blocked(pool: pg.Pool) {
   await waitFor(async () => (await pool.query<{ n: number }>(
     `select count(*)::int as n from pg_stat_activity where datname = current_database()
@@ -72,7 +80,10 @@ async function blocked(pool: pg.Pool) {
 test('Today samples its clock after pool wait and includes a new-day normal log without a future-log 500', async t => {
   let now = OLD;
   let calls = 0;
-  const { db, stack } = await setup(t, { now: () => { calls++; return now; } });
+  const { db, stack } = await setup(t, { now: () => {
+    calls++;
+    return now;
+  } });
   const client = await signedInClient(stack.app, 'today-pool');
   const goal = (await client.call('POST', '/api/goals', input)).json as unknown as Goal;
   const owner = (await db.pool.query<{ user_id: string }>('select user_id from goal where id = $1', [goal.id])).rows[0]!.user_id;
@@ -86,7 +97,8 @@ test('Today samples its clock after pool wait and includes a new-day normal log 
     assert.equal(calls, 0);
     now = NEW;
     assert.equal((await putLog(writer, owner, goal.id, '2026-10-06', { expectedGoalSettingsRevision: 0, amount: 30, status: 'DONE' }, () => now)).kind, 'saved');
-    held.forEach(c => c.release()); released = true;
+    held.forEach(c => c.release());
+    released = true;
     const res = await read;
     assert.equal(res.status, 200, res.body);
     const today = res.json as unknown as Today;
@@ -104,7 +116,10 @@ test('Today samples its clock after pool wait and includes a new-day normal log 
 test('Today establishes its first SELECT snapshot before sampling its clock, rather than sampling at BEGIN', async t => {
   let now = OLD;
   let calls = 0;
-  const { db, stack } = await setup(t, { now: () => { calls++; return now; } });
+  const { db, stack } = await setup(t, { now: () => {
+    calls++;
+    return now;
+  } });
   const client = await signedInClient(stack.app, 'today-select');
   const goal = (await client.call('POST', '/api/goals', input)).json as unknown as Goal;
   const owner = (await db.pool.query<{ user_id: string }>('select user_id from goal where id = $1', [goal.id])).rows[0]!.user_id;
@@ -123,7 +138,10 @@ test('Today establishes its first SELECT snapshot before sampling its clock, rat
     assert.equal(calls, 1);
     assert.equal(today.today, '2026-10-06');
     assert.equal(today.todayLog?.localDate, '2026-10-06');
-  } finally { pause.restore(); await read.catch(() => {}); }
+  } finally {
+    pause.restore();
+    await read.catch(() => {});
+  }
 });
 
 test('PUT rejects a date that becomes two days old while waiting for normal Goal PATCH', async t => {
@@ -146,7 +164,11 @@ test('PUT rejects a date that becomes two days old while waiting for normal Goal
     assert.equal(result.status, 422, result.body);
     assert.equal(code(result.json), 'LOG_DATE_OUT_OF_WINDOW');
     assert.equal((await db.pool.query('select count(*)::int as n from action_log')).rows[0].n, 0);
-  } finally { pause.restore(); await patch.catch(() => {}); await put?.catch(() => {}); }
+  } finally {
+    pause.restore();
+    await patch.catch(() => {});
+    await put?.catch(() => {});
+  }
 });
 
 test('First PUT and Goal PATCH obey both normal lock orders without changing logged timezone or initialProgress', async t => {
@@ -175,7 +197,11 @@ test('First PUT and Goal PATCH obey both normal lock orders without changing log
       assert.equal(stored.title, putFirst ? input.title : 'changed');
       assert.equal(stored.hasLogs, putFirst);
       if (putFirst) assert.deepEqual((result.json?.error as { fields: { path: string }[] }).fields.map(f => f.path), ['body/timezone', 'body/initialProgress']);
-    } finally { pause.restore(); await first.catch(() => {}); await second?.catch(() => {}); }
+    } finally {
+      pause.restore();
+      await first.catch(() => {});
+      await second?.catch(() => {});
+    }
     now = new Date(now.valueOf() + 1);
   }
 });
@@ -183,10 +209,14 @@ test('First PUT and Goal PATCH obey both normal lock orders without changing log
 test('Same-day PUT waits before its clock, so midnight does not allow a stale UPSERT overwrite', async t => {
   let now = START;
   let calls = 0;
-  const { db, stack } = await setup(t, { now: () => { calls++; return now; } });
+  const { db, stack } = await setup(t, { now: () => {
+    calls++;
+    return now;
+  } });
   const client = await signedInClient(stack.app, 'upsert-window');
   const goal = (await client.call('POST', '/api/goals', input)).json as unknown as Goal;
-  now = OLD; calls = 0;
+  now = OLD;
+  calls = 0;
   const pause = pauseQuery(db.pool, sql => sql.includes('insert into action_log'));
   const path = `/api/goals/${goal.id}/logs/2026-10-04`;
   const first = client.call('PUT', path, { status: 'DONE', amount: 30 });
@@ -206,5 +236,9 @@ test('Same-day PUT waits before its clock, so midnight does not allow a stale UP
     assert.equal(calls, 2);
     const logs = (await client.call('GET', `/api/goals/${goal.id}/logs`)).json;
     assert.deepEqual(logs, [{ localDate: '2026-10-04', status: 'DONE', amount: 30 }]);
-  } finally { pause.restore(); await first.catch(() => {}); await second?.catch(() => {}); }
+  } finally {
+    pause.restore();
+    await first.catch(() => {});
+    await second?.catch(() => {});
+  }
 });

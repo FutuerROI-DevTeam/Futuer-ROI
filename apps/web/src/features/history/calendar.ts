@@ -29,7 +29,10 @@ export function monthCells(month: string): (string | null)[] {
   const first = parseLocalDate(`${month}-01`);
   const lead = (first.getUTCDay() + 6) % 7; // 月曜＝0
   const days = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
-  return [...Array.from({ length: lead }, () => null), ...Array.from({ length: days }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)];
+  return [
+    ...Array.from({ length: lead }, () => null),
+    ...Array.from({ length: days }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`),
+  ];
 }
 
 /** 前後の月（「YYYY-MM」）。 */

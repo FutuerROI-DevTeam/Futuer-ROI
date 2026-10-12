@@ -72,8 +72,8 @@ jobs:
           package-manager-cache: false
       - name: Install locked workspace dependencies
         run: node .github/scripts/ci-report.mjs run install -- npm ci --ignore-scripts --no-audit --no-fund
-      - name: Test CI diagnostics
-        run: node .github/scripts/ci-report.mjs run diagnostic-tests -- node --test .github/scripts/ci-report.test.mjs
+      - name: Test CI diagnostics and the production deploy gate
+        run: node .github/scripts/ci-report.mjs run diagnostic-tests -- node --test .github/scripts/ci-report.test.mjs .github/scripts/deploy-gate.test.mjs .github/scripts/production-switch.test.mjs .github/scripts/smoke-deployment.test.mjs
       - name: Show versions
         run: |
           node --version

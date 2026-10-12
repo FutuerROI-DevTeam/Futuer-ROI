@@ -107,7 +107,11 @@ type DatabaseFactories = {
 };
 
 export async function createTestDatabase(factories: Partial<DatabaseFactories> = {}): Promise<TestDatabase> {
-  const deps = { connectAdmin: adminConnection, createPool: (options: pg.PoolConfig) => new pg.Pool(options), ...factories };
+  const deps = {
+    connectAdmin: adminConnection,
+    createPool: (options: pg.PoolConfig) => new pg.Pool(options),
+    ...factories,
+  };
   const admin = await deps.connectAdmin();
   const name = `t_${randomBytes(6).toString('hex')}`;
   let adminPool: pg.Pool | undefined;
@@ -133,5 +137,7 @@ export async function createTestDatabase(factories: Partial<DatabaseFactories> =
     const connectionString = url.toString();
     pool = deps.createPool({ connectionString, max: 3 });
     return { connectionString, pool, close };
-  } catch (error) { return cleanupAfterFailure(error, close); }
+  } catch (error) {
+    return cleanupAfterFailure(error, close);
+  }
 }

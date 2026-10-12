@@ -145,8 +145,23 @@
 }
 
 /* 公開入口と認証は同じ空の背景、森の操作、短い説明でつなぐ。 */
-.fr-auth__brand-link { color: var(--fr-ink); text-decoration: none; width: fit-content; min-height: 44px; display: inline-flex; align-items: center; }
-.fr-auth__card { background: var(--fr-surface); border: 1px solid var(--fr-line); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+.fr-auth__brand-link {
+  color: var(--fr-ink);
+  text-decoration: none;
+  width: fit-content;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.fr-auth__card {
+  background: var(--fr-surface);
+  border: 1px solid var(--fr-line);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 .fr-auth__intro { display: flex; flex-direction: column; gap: 8px; }
 .fr-auth__intro h1 { font-size: 26px; line-height: 1.4; }
 .fr-auth__intro p { font-size: 14px; line-height: 1.8; color: var(--fr-ink-2); }
@@ -172,9 +187,24 @@
 .fr-welcome__title { font-family: 'Zen Old Mincho', serif; font-weight: 900; font-size: clamp(38px, 8vw, 56px); line-height: 1.5; letter-spacing: .04em; }
 .fr-welcome__body .fr-auth__lead { font-size: 16px; max-width: 31em; }
 /* ログインの入口。案内の文は置かず、ボタンを右端に置く（#251） */
-.fr-auth__returning { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 12px; color: var(--fr-ink-2); font-size: 13px; }
+.fr-auth__returning {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--fr-ink-2);
+  font-size: 13px;
+}
 .fr-auth__returning .fr-btn { font-size: 14px; min-height: 44px; padding: 8px 20px; }
-.fr-welcome__steps { list-style: none; margin: 0; padding: 24px 0 0; border-top: 1px solid var(--fr-line); display: grid; gap: 16px; }
+.fr-welcome__steps {
+  list-style: none;
+  margin: 0;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--fr-line);
+  display: grid;
+  gap: 16px;
+}
 .fr-welcome__steps li { display: flex; align-items: baseline; gap: 12px; font-size: 14px; }
 .fr-welcome__steps span { color: var(--fr-ink-2); font-size: 12px; font-weight: 700; }
 .fr-welcome__note { font-size: 13px; color: var(--fr-ink-2); line-height: 1.8; }

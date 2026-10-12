@@ -8,7 +8,11 @@ import './history.css';
  */
 export function DayMark({ state, size }: { state: DayState; size: number }) {
   return (
-    <span className={`fr-daymark fr-daymark--${state}`} style={{ width: `var(--fr-daymark-size, ${size}px)`, height: `var(--fr-daymark-size, ${size}px)` }} aria-hidden="true">
+    <span
+      className={`fr-daymark fr-daymark--${state}`}
+      style={{ width: `var(--fr-daymark-size, ${size}px)`, height: `var(--fr-daymark-size, ${size}px)` }}
+      aria-hidden="true"
+    >
       {state === 'done' ? <Icon name="check" size={Math.round(size * 0.55)} strokeWidth={2.4} /> : null}
       {state === 'rest' ? <Icon name="moon" size={Math.round(size * 0.55)} strokeWidth={2.2} /> : null}
       {state === 'unrecorded' ? <span style={{ fontSize: Math.round(size * 0.38) }}>?</span> : null}

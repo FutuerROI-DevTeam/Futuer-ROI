@@ -12,11 +12,16 @@ import type { CompletionPresentation, Plan } from '../prior/presentation-types.t
 
 /** スマホの進捗近くへ置く同じ予測の要約。未保存量で再計算せず、日付の欠如も保持する。 */
 export function CompletionBrief({ completion }: { completion: CompletionPresentation }) {
-  return <p className="fr-completion-brief">{completion.kind === 'estimate'
-    ? completion.p50Label ? todayCopy.completionBrief(completion.p50Label) : todayCopy.completionBriefOutside
-    : todayCopy.completionBriefUnavailable}
-    {completion.kind === 'estimate' ? <span>{' · '}{completion.p80Label ? todayCopy.completionP80(completion.p80Label) : todayCopy.completionP80Over3Years}</span> : null}
-  </p>;
+  return (
+    <p className="fr-completion-brief">
+      {completion.kind === 'estimate'
+        ? completion.p50Label ? todayCopy.completionBrief(completion.p50Label) : todayCopy.completionBriefOutside
+        : todayCopy.completionBriefUnavailable}
+      {completion.kind === 'estimate' ? (
+        <span>{' · '}{completion.p80Label ? todayCopy.completionP80(completion.p80Label) : todayCopy.completionP80Over3Years}</span>
+      ) : null}
+    </p>
+  );
 }
 
 /** これからの見通し（補助指標2）。目安と「10回中8回」の日付を、実際の日付に比例した軸に置く。 */
@@ -46,7 +51,13 @@ export function OutlookPanel({
       {/* 材料が足りないときも、到達予定日だけは出す（ずれは出さない） */}
       {targetDate ? <TargetDateRow today={today} targetDate={targetDate} /> : null}
       {completion.kind === 'estimate' ? (
-        <Estimate completion={completion} today={today} targetDate={targetDate} session={recordDisplay(fmt, sessionAmount)} showDetails={showDetails} />
+        <Estimate
+          completion={completion}
+          today={today}
+          targetDate={targetDate}
+          session={recordDisplay(fmt, sessionAmount)}
+          showDetails={showDetails}
+        />
       ) : completion.kind === 'insufficient' ? (
         <InsufficientNotice>{completion.message}</InsufficientNotice>
       ) : (
@@ -57,7 +68,13 @@ export function OutlookPanel({
   );
 }
 
-function Estimate({ completion, today, targetDate, session, showDetails }: { completion: Extract<CompletionPresentation, { kind: 'estimate' }>; today: string; targetDate: string | null; session: string; showDetails: boolean }) {
+function Estimate({ completion, today, targetDate, session, showDetails }: {
+  completion: Extract<CompletionPresentation, { kind: 'estimate' }>;
+  today: string;
+  targetDate: string | null;
+  session: string;
+  showDetails: boolean;
+}) {
   const label = completion.scenario === 'TODAY_DONE' ? todayCopy.completionLabelTodayDone(session) : todayCopy.completionLabelCurrent(session);
   return (
     <>
@@ -68,7 +85,11 @@ function Estimate({ completion, today, targetDate, session, showDetails }: { com
         <p className="fr-outlook__p80">{completion.p80Label ? todayCopy.completionP80(completion.p80Label) : todayCopy.completionP80Over3Years}</p>
         {targetDate ? <GapLine today={today} days={completion.p80Days} targetDate={targetDate} /> : null}
       </div>
-      <p className="fr-note fr-outlook__assumption">{completion.scenario === 'TODAY_DONE' ? todayCopy.completionTodayAssumption(session) : todayCopy.completionAssumption(session)}</p>
+      <p className="fr-note fr-outlook__assumption">
+        {completion.scenario === 'TODAY_DONE'
+          ? todayCopy.completionTodayAssumption(session)
+          : todayCopy.completionAssumption(session)}
+      </p>
       <EstimateNote completion={completion} />
       <SourceRows sources={completion.sources} />
       {showDetails ? <CompletionDetails completion={completion} today={today} targetDate={targetDate} /> : null}
@@ -77,12 +98,22 @@ function Estimate({ completion, today, targetDate, session, showDetails }: { com
 }
 
 /** 予測の要約の後に配置する、既存データの詳細。 */
-export function CompletionDetails({ completion, today, targetDate = null }: { completion: CompletionPresentation; today: string; targetDate?: string | null }) {
+export function CompletionDetails({ completion, today, targetDate = null }: {
+  completion: CompletionPresentation;
+  today: string;
+  targetDate?: string | null;
+}) {
   if (completion.kind !== 'estimate') return null;
   return (
     <ResponsiveDetails summary={todayCopy.completionWhyTitle} ariaLabel={todayCopy.outlookLabel}>
       {completion.p50Days !== null ? (
-        <AxisChart today={today} p50Days={completion.p50Days} p80Days={completion.p80Days} sameWeek={completion.p50Label === completion.p80Label} targetDate={targetDate} />
+        <AxisChart
+          today={today}
+          p50Days={completion.p50Days}
+          p80Days={completion.p80Days}
+          sameWeek={completion.p50Label === completion.p80Label}
+          targetDate={targetDate}
+        />
       ) : null}
       <p className="fr-note">
         {completionNoteFor(completion.sources)}
@@ -126,10 +157,9 @@ function GapLine({ today, days, targetDate }: { today: string; days: number | nu
 }
 
 /**
- * 日付が出ない・特別な場合の補足（デザインキャンバス D4・D4b・D8）。日数は Engine の値をそのまま見るだけで、計算しない。
- * - 目安が3年より先（p50 なし）：日付を出していない理由
- * - 10回中8回だけが3年より先（p80 なし）：その意味
- * - 今日やった場合に今週で届く（TODAY_DONE で p50 が 0 日）：今日やれば今週に届く
+ * Engine の日数の欠如・0日を補足する（D4・D4b・D8）。
+ * p50/p80 が null なら、計算範囲内で対応する確率に届いていない理由を示す。
+ * TODAY_DONE の p50=0 は、今日やれば今週に届くことを示す。
  */
 function EstimateNote({ completion }: { completion: Extract<CompletionPresentation, { kind: 'estimate' }> }) {
   const note =
@@ -144,8 +174,8 @@ function EstimateNote({ completion }: { completion: Extract<CompletionPresentati
 }
 
 /**
- * 回答を使った見通しであること（R-11「回答由来と仮の値を明示する」）。どちらも記録だけなら出さない（記録だけのモードの表示を変えない）。
- * a／b 別の出所の2行は利用者に意味が伝わらなかったため、1文にまとめた（#221）。材料ごとの説明は「完了予測の根拠」に残る。
+ * 回答由来の見通しを1文で伝える（R-11・#221）。両方が記録由来なら出さない。
+ * 材料ごとの説明は「完了予測の根拠」に残す。
  */
 function SourceRows({ sources }: { sources: Extract<CompletionPresentation, { kind: 'estimate' }>['sources'] }) {
   if (sources.a === 'RECORDS' && sources.b === 'RECORDS') return null;
@@ -157,12 +187,18 @@ function SourceRows({ sources }: { sources: Extract<CompletionPresentation, { ki
 }
 
 function PlanView({ plan, reason, fmt }: { plan: Plan; reason: string; fmt: AmountFormat }) {
-  // 残りは累計と同じ時間＋分、1回の量と最後の量は分で書く（P-18）
+  // 残量は総量の形式、1回と最後の量は記録量の形式で表示する（P-18・P-23）。
   return (
     <div className="fr-plan">
       <p className="fr-plan__title">{todayCopy.planTitle}</p>
       <p className="fr-plan__value">{todayCopy.planSessions(plan.sessions)}</p>
-      <p className="fr-note">{todayCopy.planNote(fmt.total(plan.remainingAmount), recordDisplay(fmt, plan.sessionAmount), recordDisplay(fmt, plan.lastAmount))}</p>
+      <p className="fr-note">
+        {todayCopy.planNote(
+          fmt.total(plan.remainingAmount),
+          recordDisplay(fmt, plan.sessionAmount),
+          recordDisplay(fmt, plan.lastAmount),
+        )}
+      </p>
       <InsufficientNotice>{reason}</InsufficientNotice>
     </div>
   );
@@ -197,10 +233,23 @@ const CUT_MARK_SLANT = 3;
 const YEAR_LABEL_EDGE = 24;
 const MARKER_LABEL_EDGE = 60;
 
-function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: string; p50Days: number; p80Days: number | null; sameWeek: boolean; targetDate: string | null }) {
+function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: {
+  today: string;
+  p50Days: number;
+  p80Days: number | null;
+  sameWeek: boolean;
+  targetDate: string | null;
+}) {
   // 実際の幅で描く（縮めて表示すると文字まで小さくなるため）
   const [ref, width] = useElementWidth<HTMLDivElement>(DEFAULT_CHART_WIDTH);
-  const axis = outlookAxis(today, p50Days, p80Days, sameWeek, width, targetDate ? daysUntil(today, targetDate) : null);
+  const axis = outlookAxis(
+    today,
+    p50Days,
+    p80Days,
+    sameWeek,
+    width,
+    targetDate ? daysUntil(today, targetDate) : null,
+  );
   const description =
     p80Days === null
       ? `日付の軸。目安の日付に印。${todayCopy.completionP80Over3Years}`
@@ -210,14 +259,33 @@ function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: s
   const label = axis.cut ? `${description}${todayCopy.targetDateAxisCut}` : description;
   return (
     <div ref={ref} className="fr-chart-box">
-      <svg className="fr-chart" width={width} height={AXIS_HEIGHT} viewBox={`0 0 ${width} ${AXIS_HEIGHT}`} role="img" aria-label={label}>
+      <svg
+        className="fr-chart"
+        width={width}
+        height={AXIS_HEIGHT}
+        viewBox={`0 0 ${width} ${AXIS_HEIGHT}`}
+        role="img"
+        aria-label={label}
+      >
         {axis.cut ? (
           <>
             {/* 到達予定日が大きく先なので、軸を途中で省く（#187）。ここから右は日付に比例しない */}
             <line x1={axis.axisLeft} y1={AXIS_Y} x2={axis.cut.x - CUT_GAP} y2={AXIS_Y} className="fr-chart__axis" />
             <line x1={axis.cut.x + CUT_GAP} y1={AXIS_Y} x2={axis.axisRight} y2={AXIS_Y} className="fr-chart__axis" />
-            <line x1={axis.cut.x - CUT_GAP - CUT_MARK_SLANT} y1={CUT_MARK_BOTTOM_Y} x2={axis.cut.x - CUT_GAP + CUT_MARK_SLANT} y2={CUT_MARK_TOP_Y} className="fr-chart__axis" />
-            <line x1={axis.cut.x + CUT_GAP - CUT_MARK_SLANT} y1={CUT_MARK_BOTTOM_Y} x2={axis.cut.x + CUT_GAP + CUT_MARK_SLANT} y2={CUT_MARK_TOP_Y} className="fr-chart__axis" />
+            <line
+              x1={axis.cut.x - CUT_GAP - CUT_MARK_SLANT}
+              y1={CUT_MARK_BOTTOM_Y}
+              x2={axis.cut.x - CUT_GAP + CUT_MARK_SLANT}
+              y2={CUT_MARK_TOP_Y}
+              className="fr-chart__axis"
+            />
+            <line
+              x1={axis.cut.x + CUT_GAP - CUT_MARK_SLANT}
+              y1={CUT_MARK_BOTTOM_Y}
+              x2={axis.cut.x + CUT_GAP + CUT_MARK_SLANT}
+              y2={CUT_MARK_TOP_Y}
+              className="fr-chart__axis"
+            />
           </>
         ) : (
           <line x1={axis.axisLeft} y1={AXIS_Y} x2={axis.axisRight} y2={AXIS_Y} className="fr-chart__axis" />
@@ -243,7 +311,12 @@ function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: s
           <g key={marker.kind}>
             <line x1={marker.x} y1={MARKER_LINE_TOP_Y} x2={marker.x} y2={AXIS_Y} className="fr-chart__marker-line" />
             {/* 塗り＝目安、白抜き＝10回中8回（色だけに頼らない） */}
-            <circle cx={marker.x} cy={MARKER_DOT_Y} r={MARKER_DOT_RADIUS} className={marker.kind === 'p50' ? 'fr-chart__dot' : 'fr-chart__dot fr-chart__dot--open'} />
+            <circle
+              cx={marker.x}
+              cy={MARKER_DOT_Y}
+              r={MARKER_DOT_RADIUS}
+              className={marker.kind === 'p50' ? 'fr-chart__dot' : 'fr-chart__dot fr-chart__dot--open'}
+            />
             <text x={marker.x} y={marker.labelY} textAnchor={labelAnchor(marker.x, width, MARKER_LABEL_EDGE)} className="fr-chart__text">
               {marker.kind === 'p50' ? (axis.sameWeek ? '目安・10回中8回' : '目安') : '10回中8回'}
             </text>
@@ -253,7 +326,12 @@ function AxisChart({ today, p50Days, p80Days, sameWeek, targetDate }: { today: s
         {axis.target && targetDate ? (
           <g>
             <line x1={axis.target.x} y1={TARGET_LINE_TOP_Y} x2={axis.target.x} y2={AXIS_Y} className="fr-chart__due" />
-            <text x={axis.target.x} y={TARGET_LABEL_Y} textAnchor={labelAnchor(axis.target.x, width, MARKER_LABEL_EDGE)} className="fr-chart__text fr-chart__text--strong">
+            <text
+              x={axis.target.x}
+              y={TARGET_LABEL_Y}
+              textAnchor={labelAnchor(axis.target.x, width, MARKER_LABEL_EDGE)}
+              className="fr-chart__text fr-chart__text--strong"
+            >
               {/* 軸を省いたときは位置から遠さが読めないので、年まで書く（#187） */}
               {todayCopy.targetDateAxis(axis.cut ? fullDate(targetDate) : shortDate(parseLocalDate(targetDate)))}
             </text>

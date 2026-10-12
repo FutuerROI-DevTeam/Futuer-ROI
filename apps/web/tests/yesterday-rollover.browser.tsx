@@ -102,7 +102,9 @@ async function run() {
 
   await prepare();
   const rolloverBefore = view(), oldInput = input(), beforeWrites = writes.length, beforeReads = reads.length;
-  day = '2026-10-11'; clock = RealDate.parse(day + 'T12:00:00Z'); await refetch();
+  day = '2026-10-11';
+  clock = RealDate.parse(day + 'T12:00:00Z');
+  await refetch();
   const rolloverAfter = view();
   ensure(reads.length === beforeReads + 3, 'next-day control must refetch Goal/Today/logs');
   ensure(rolloverAfter.date?.includes('10日'), 'new yesterday header absent');
@@ -113,7 +115,9 @@ async function run() {
 
   await clickText('量を変更'); await settle();
   ensure(input()?.value === '10', 'new yesterday reused37 instead of initial10');
-  await enterAmount('41'); await clickText('この量で記録'); await settle();
+  await enterAmount('41');
+  await clickText('この量で記録');
+  await settle();
   const request = writes.at(-1)!;
   ensure(writes.length === beforeWrites + 1 && request.path.endsWith('/2026-10-10') && request.body.amount === 41 && request.body.expectedGoalSettingsRevision === 7, 'explicit new-day input sent wrong payload');
   results.push({ name: 'new yesterday saves only explicitly entered amount', request });

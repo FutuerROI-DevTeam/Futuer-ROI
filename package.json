@@ -22,6 +22,8 @@
     "build": "npm run build --workspaces --if-present",
     "build:vercel": "npm run build && node scripts/build-vercel.mjs",
     "verify:vercel": "node --test apps/api/tests/vercel.test.ts scripts/tests/vercel-bundle.test.mjs",
+    "verify:foundation": "pwsh -NoProfile -File ./scripts/check-foundation.ps1",
+    "verify:ci-reports": "node --test .github/scripts/ci-report.test.mjs",
     "db:migrate": "npm run db:migrate --workspace=@futureroi/api",
     "db:migrate:auth": "npm run db:migrate:auth --workspace=@futureroi/api",
     "db:migrate:app": "npm run db:migrate:app --workspace=@futureroi/api",

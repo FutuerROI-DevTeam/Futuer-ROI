@@ -14,7 +14,12 @@ export type GoalRouteDeps = {
   now: () => Date;
 };
 
-const CreateHeaders = Type.Object({ 'x-create-owner': Type.Optional(Type.String()), 'idempotency-key': Type.String({ pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' }) });
+const CreateHeaders = Type.Object({
+  'x-create-owner': Type.Optional(Type.String()),
+  'idempotency-key': Type.String({
+    pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  }),
+});
 const GOAL_NOT_FOUND = errorBody('NOT_FOUND', 'Goal not found.');
 
 /** 到達予定日の検査に通らなかった（#157）。契約違反と同じ形の422で返す。 */
@@ -31,10 +36,26 @@ export async function registerGoalRoutes(app: FastifyInstance, deps: GoalRouteDe
 
     api.post('/api/goals', { schema: { body: GoalCreate, headers: CreateHeaders, response: { 200: Goal, 201: Goal, 409: ErrorBody, 410: ErrorBody, 422: ErrorBody } } }, async (request, reply) => {
       try {
-        if (request.headers['x-create-owner'] !== undefined && request.headers['x-create-owner'] !== request.userId) return reply.code(409).send(errorBody('CREATE_OWNER_CHANGED', 'Sign in with the account that started this create operation.'));
-        const result = await createGoalOnce(deps.pool, request.userId, request.body, deps.now, request.headers['idempotency-key']);
-        if (result.kind === 'conflict') return reply.code(409).send(errorBody('IDEMPOTENCY_CONFLICT', 'This key was used for a different create request.'));
-        if (result.kind === 'deleted') return reply.code(410).send(errorBody('CREATE_RESULT_DELETED', 'The created goal was deleted.'));
+        if (
+          request.headers['x-create-owner'] !== undefined &&
+          request.headers['x-create-owner'] !== request.userId
+        ) {
+          return reply.code(409).send(errorBody(
+            'CREATE_OWNER_CHANGED',
+            'Sign in with the account that started this create operation.',
+          ));
+        }
+        const result = await createGoalOnce(
+          deps.pool, request.userId, request.body, deps.now, request.headers['idempotency-key'],
+        );
+        if (result.kind === 'conflict') {
+          return reply.code(409).send(errorBody(
+            'IDEMPOTENCY_CONFLICT', 'This key was used for a different create request.',
+          ));
+        }
+        if (result.kind === 'deleted') {
+          return reply.code(410).send(errorBody('CREATE_RESULT_DELETED', 'The created goal was deleted.'));
+        }
         if (!('goal' in result)) throw new Error('Unexpected create result');
         if (result.kind === 'replayed') reply.header('Idempotency-Replayed', 'true');
         return reply.code(result.kind === 'created' ? 201 : 200).send(result.goal);
@@ -66,12 +87,39 @@ export async function registerGoalRoutes(app: FastifyInstance, deps: GoalRouteDe
           throw error;
         }
         if (result.kind === 'not_found') return reply.code(404).send(GOAL_NOT_FOUND);
-        if (result.kind === 'settings_conflict') return reply.code(409).send(errorBody('GOAL_SETTINGS_CONFLICT', 'Settings changed. Reload before explicitly saving again.'));
-        if (result.kind === 'unit_locked') return reply.code(422).send(errorBody('GOAL_UNIT_LOCKED', 'Unit cannot change after past DONE amounts or while initial progress is positive.', [{ path: 'body/unit', message: 'create a new goal for a different unit' }]));
-        if (result.kind === 'revision_exhausted') return reply.code(422).send(errorBody('GOAL_SETTINGS_REVISION_EXHAUSTED', 'Settings revision cannot increase further.'));
-        if (result.kind === 'answer_conflict') return reply.code(409).send(errorBody('ANSWER_CONFLICT', 'The answer context changed. Reload the goal before editing the answers.'));
-        if (result.kind === 'invalid_question_patch') return reply.code(422).send(errorBody('VALIDATION_ERROR', 'Request does not match the question contract.',
-          [{ path: `body/${result.field}`, message: result.field === 'questionPrior' ? 'clear the answers when changing unit or sessionAmount; answer again after reloading' : 'include the current answer revision with answer or context updates' }]));
+        if (result.kind === 'settings_conflict') {
+          return reply.code(409).send(errorBody(
+            'GOAL_SETTINGS_CONFLICT', 'Settings changed. Reload before explicitly saving again.',
+          ));
+        }
+        if (result.kind === 'unit_locked') {
+          return reply.code(422).send(errorBody(
+            'GOAL_UNIT_LOCKED',
+            'Unit cannot change after past DONE amounts or while initial progress is positive.',
+            [{ path: 'body/unit', message: 'create a new goal for a different unit' }],
+          ));
+        }
+        if (result.kind === 'revision_exhausted') {
+          return reply.code(422).send(errorBody(
+            'GOAL_SETTINGS_REVISION_EXHAUSTED', 'Settings revision cannot increase further.',
+          ));
+        }
+        if (result.kind === 'answer_conflict') {
+          return reply.code(409).send(errorBody(
+            'ANSWER_CONFLICT', 'The answer context changed. Reload the goal before editing the answers.',
+          ));
+        }
+        if (result.kind === 'invalid_question_patch') {
+          return reply.code(422).send(errorBody(
+            'VALIDATION_ERROR', 'Request does not match the question contract.',
+            [{
+              path: `body/${result.field}`,
+              message: result.field === 'questionPrior'
+                ? 'clear the answers when changing unit or sessionAmount; answer again after reloading'
+                : 'include the current answer revision with answer or context updates',
+            }],
+          ));
+        }
         if (result.kind === 'locked') {
           return reply.code(422).send(
             errorBody(

@@ -33,16 +33,24 @@ function normal(next: Uint32Source): number {
 }
 
 export function gamma(alpha: number, next: Uint32Source): number {
-  if (!Number.isFinite(alpha) || alpha < 1) throw new RangeError('Gamma shape must be finite and >= 1');
+  if (!Number.isFinite(alpha) || alpha < 1) {
+    throw new RangeError('Gamma shape must be finite and >= 1');
+  }
+
   const d = alpha - 1 / 3;
   const c = 1 / Math.sqrt(9 * d);
   for (;;) {
     const x = normal(next);
     const base = 1 + c * x;
-    if (base <= 0) continue;
+    if (base <= 0) {
+      continue;
+    }
     const v = base * base * base;
     const u = uniform(next);
-    if (u < 1 - 0.0331 * x ** 4 || Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) {
+    if (
+      u < 1 - 0.0331 * x ** 4 ||
+      Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))
+    ) {
       return d * v;
     }
   }

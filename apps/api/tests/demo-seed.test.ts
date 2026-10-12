@@ -40,15 +40,25 @@ async function counts(pool: pg.Pool) {
 }
 
 // 障害の境界だけを注入し、SQL・lock・COMMIT/ROLLBACKは実PostgreSQLで実行する。
-function intercept(pool: pg.Pool, hook: (sql: string, run: () => Promise<pg.QueryResult>) => Promise<pg.QueryResult>, released?: (error?: Error | boolean) => void): pg.Pool {
-  return { connect: async () => {
-    const client = await pool.connect();
-    return {
-      query: (sql: string, params?: unknown[]) => hook(sql, () => client.query(sql, params)),
-      release: (error?: Error | boolean) => { released?.(error); client.release(error); },
-    };
-  } } as unknown as pg.Pool;
+function intercept(
+  pool: pg.Pool,
+  hook: (sql: string, run: () => Promise<pg.QueryResult>) => Promise<pg.QueryResult>,
+  released?: (error?: Error | boolean) => void,
+): pg.Pool {
+  return {
+    connect: async () => {
+      const client = await pool.connect();
+      return {
+        query: (sql: string, params?: unknown[]) => hook(sql, () => client.query(sql, params)),
+        release: (error?: Error | boolean) => {
+          released?.(error);
+          client.release(error);
+        },
+      };
+    },
+  } as unknown as pg.Pool;
 }
+
 async function waitFor(pool: pg.Pool, predicate: () => Promise<boolean>) {
   const until = Date.now() + 5_000;
   while (Date.now() < until) {

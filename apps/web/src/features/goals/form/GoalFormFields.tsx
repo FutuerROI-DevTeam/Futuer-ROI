@@ -9,7 +9,17 @@ import { Icon } from '../../../ui/components/Icon.tsx';
 import { TimeAmountField, timeParts } from './TimeAmountField.tsx';
 import { parseGoalAmount } from '../goal-form.ts';
 import { QuestionPriorFields } from '../../prior/QuestionPriorFields.tsx';
-import { NO_ANSWERS, TITLE_MAX, titleLength, type FieldErrors, type FieldName, type FormValues, type GoalWithAnswers, type PriorChosen, type answersLockReason } from '../goal-form.ts';
+import {
+  NO_ANSWERS,
+  TITLE_MAX,
+  titleLength,
+  type FieldErrors,
+  type FieldName,
+  type FormValues,
+  type GoalWithAnswers,
+  type PriorChosen,
+  type answersLockReason,
+} from '../goal-form.ts';
 
 const f = goalsCopy.form;
 
@@ -35,18 +45,41 @@ type Props = {
 } & ({ mode: 'create'; goal?: undefined } | { mode: 'edit'; goal: GoalWithAnswers });
 
 /** controlledな項目表示。入力・baseline・保存操作のstateは親フォームだけが持つ。 */
-export function GoalFormFields({ mode, goal, values, errors, count, unit, timezones,
-  discardedDraft, pendingCreate, refreshNotice, inputDisabled, locked, priorOpen, latestAnswers,
-  answersLock, priorChosen, onPriorChoose, update, onPriorToggle, onDeleteOpen }: Props) {
+export function GoalFormFields({
+  mode,
+  goal,
+  values,
+  errors,
+  count,
+  unit,
+  timezones,
+  discardedDraft,
+  pendingCreate,
+  refreshNotice,
+  inputDisabled,
+  locked,
+  priorOpen,
+  latestAnswers,
+  answersLock,
+  priorChosen,
+  onPriorChoose,
+  update,
+  onPriorToggle,
+  onDeleteOpen,
+}: Props) {
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash === 'fr-goalform-prior') {
       onPriorToggle(true);
       document.getElementById('fr-goalform-prior-summary')?.focus();
-    } else if (hash === 'goal-sessionAmount') document.getElementById(hash)?.focus();
+    } else if (hash === 'goal-sessionAmount') {
+      document.getElementById(hash)?.focus();
+    }
   }, [onPriorToggle]);
-  // 時間＋分の欄に途中の入力（分が60以上など）が残っている間は、単位を切り替えない（切り替えると整数分へ変換できない）
-  const incompleteTime = values.unit === 'minutes' && [values.totalRequired, values.initialProgress].some(raw => raw.startsWith('@hm:') && !Number.isFinite(parseGoalAmount(raw) ?? NaN));
+  // 整数分へ変換できない途中入力を、単位切替で失わない。
+  const incompleteTime = values.unit === 'minutes'
+    && [values.totalRequired, values.initialProgress].some(raw =>
+      raw.startsWith('@hm:') && !Number.isFinite(parseGoalAmount(raw) ?? NaN));
   // 記録が付いた後は単位を変えられない（過去の量の意味を保つため）。編集でだけ起きる
   const unitLocked = mode === 'edit' && goal.unitLocked;
   const bothChosen = priorChosen.a && priorChosen.b;
@@ -57,12 +90,15 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
     </>
   );
   // 未選択のエラーは、まだ選んでいない問の下に出す。APIの検査エラーは従来どおり1問目の下に出す
-  const priorErrors = !errors.questionPrior ? {} : errors.questionPrior === f.answersRequired
+  const priorErrors = !errors.questionPrior ? {}
+    : errors.questionPrior === f.answersRequired
     ? { ...(priorChosen.a ? {} : { a: errors.questionPrior }), ...(priorChosen.b ? {} : { b: errors.questionPrior }) }
     : { a: errors.questionPrior };
   const switchUnit = (next: FormValues['unit']) => {
     for (const field of ['totalRequired', 'initialProgress'] as const) {
-      if (values[field].startsWith('@hm:')) update(field, String(parseGoalAmount(values[field])));
+      if (values[field].startsWith('@hm:')) {
+        update(field, String(parseGoalAmount(values[field])));
+      }
     }
     update('unit', next);
   };
@@ -103,7 +139,14 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
               <Link to="/goals/new" className="fr-goalform__new-goal">{f.createNewGoal}</Link>
             </>
           ) : undefined}>
-            <fieldset id="goal-unit" className="fr-unit-radio" aria-labelledby="goal-unit-label" {...fieldAria('goal-unit', { help: unitLocked, error: errors.unit })} disabled={inputDisabled || incompleteTime || unitLocked} tabIndex={-1}>
+            <fieldset
+              id="goal-unit"
+              className="fr-unit-radio"
+              aria-labelledby="goal-unit-label"
+              {...fieldAria('goal-unit', { help: unitLocked, error: errors.unit })}
+              disabled={inputDisabled || incompleteTime || unitLocked}
+              tabIndex={-1}
+            >
               <label><input type="radio" name="goal-unit" value="minutes" checked={values.unit === 'minutes'} onChange={() => switchUnit('minutes')} />時間</label>
               <label><input type="radio" name="goal-unit" value="sessions" checked={values.unit === 'sessions'} onChange={() => switchUnit('sessions')} />回数</label>
             </fieldset>
@@ -120,36 +163,62 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
         <div className="fr-goalform__group-fields">
           {/* デスクトップ幅では2列に並べる（デザイン Desk-create）。スマートフォン幅では1列のまま */}
           <div className="fr-goalform__pair">
-            {values.unit === 'minutes' ? <TimeAmountField id="goal-totalRequired" label={f.totalRequired} value={values.totalRequired} error={errors.totalRequired} disabled={inputDisabled} onChange={v => update('totalRequired', v)} /> :
-              <AmountField id="goal-totalRequired" label={f.totalRequired} unit={unit} value={values.totalRequired} error={errors.totalRequired} disabled={inputDisabled} onChange={(v) => update('totalRequired', v)} />}
-            <AmountField id="goal-sessionAmount" label={f.sessionAmount} unit={unit} value={values.sessionAmount} error={errors.sessionAmount} disabled={inputDisabled} onChange={(v) => update('sessionAmount', v)} />
+            {values.unit === 'minutes' ? (
+              <TimeAmountField
+                id="goal-totalRequired"
+                label={f.totalRequired}
+                value={values.totalRequired}
+                error={errors.totalRequired}
+                disabled={inputDisabled}
+                onChange={v => update('totalRequired', v)}
+              />
+            ) : (
+              <AmountField
+                id="goal-totalRequired"
+                label={f.totalRequired}
+                unit={unit}
+                value={values.totalRequired}
+                error={errors.totalRequired}
+                disabled={inputDisabled}
+                onChange={(v) => update('totalRequired', v)}
+              />
+            )}
+            <AmountField
+              id="goal-sessionAmount"
+              label={f.sessionAmount}
+              unit={unit}
+              value={values.sessionAmount}
+              error={errors.sessionAmount}
+              disabled={inputDisabled}
+              onChange={(v) => update('sessionAmount', v)}
+            />
           </div>
           {values.unit === 'minutes' ? (
-          <TimeAmountField
-            id="goal-initialProgress"
-            label={f.initialProgress}
-            value={values.initialProgress}
-            error={errors.initialProgress}
-            disabled={inputDisabled || locked}
-            onChange={(v) => update('initialProgress', v)}
-            help={initialProgressHelp}
-          />
+            <TimeAmountField
+              id="goal-initialProgress"
+              label={f.initialProgress}
+              value={values.initialProgress}
+              error={errors.initialProgress}
+              disabled={inputDisabled || locked}
+              onChange={(v) => update('initialProgress', v)}
+              help={initialProgressHelp}
+            />
           ) : (
-          <AmountField
-            id="goal-initialProgress"
-            label={f.initialProgress}
-            unit={unit}
-            value={values.initialProgress}
-            error={errors.initialProgress}
-            disabled={inputDisabled || locked}
-            onChange={(v) => update('initialProgress', v)}
-            help={initialProgressHelp}
-          />
+            <AmountField
+              id="goal-initialProgress"
+              label={f.initialProgress}
+              unit={unit}
+              value={values.initialProgress}
+              error={errors.initialProgress}
+              disabled={inputDisabled || locked}
+              onChange={(v) => update('initialProgress', v)}
+              help={initialProgressHelp}
+            />
           )}
         </div>
       </section>
 
-      {/* 量設定直後の初期質問（#259で必須）。2問ともどれか（「回答しない」を含む）を選ぶまで保存できない。 */}
+      {/* 初期質問は2問とも選ぶまで保存できない。「回答しない」も選択に含む（#259）。 */}
       <details
         id="fr-goalform-prior"
         className="fr-goalform__prior"
@@ -180,7 +249,10 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
         <p className="fr-goals__help">{f.answersNotRecords}</p>
         {mode === 'create' && bothChosen ? <>
           <p className="fr-goals__help">欄を閉じても選んだ回答は残ります。</p>
-          <Button variant="text" disabled={inputDisabled} onClick={() => { onPriorToggle(false); document.getElementById('fr-goalform-prior-summary')?.focus(); }}>回答欄を閉じる</Button>
+          <Button variant="text" disabled={inputDisabled} onClick={() => {
+            onPriorToggle(false);
+            document.getElementById('fr-goalform-prior-summary')?.focus();
+          }}>回答欄を閉じる</Button>
         </> : null}
       </details>
 
@@ -239,8 +311,6 @@ export function GoalFormFields({ mode, goal, values, errors, count, unit, timezo
         </div>
       </section>
 
-
-
       {mode === 'edit' ? (
         <div className="fr-goalform__delete-mobile">
           <Button variant="text" icon="trash" disabled={inputDisabled} onClick={onDeleteOpen}>
@@ -275,7 +345,15 @@ function AmountField({
   const fieldHelp = retained ? <>{help}<p>以前の未保存の時間入力：{retained[0]}時間 {retained[1]}分。新しい単位で量を入力してください。</p></> : help;
   return (
     <Field id={id} label={label} error={error} help={fieldHelp}>
-      <NumberInput id={id} suffix={unit} value={retained ? '' : value} onChange={(event) => onChange(event.target.value)} disabled={disabled} invalid={Boolean(error)} {...fieldAria(id, { help: fieldHelp, error })} />
+      <NumberInput
+        id={id}
+        suffix={unit}
+        value={retained ? '' : value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        invalid={Boolean(error)}
+        {...fieldAria(id, { help: fieldHelp, error })}
+      />
     </Field>
   );
 }

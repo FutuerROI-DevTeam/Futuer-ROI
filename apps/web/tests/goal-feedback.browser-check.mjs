@@ -39,7 +39,8 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
   server = createServer((req, res) => {
     if (req.url === '/peer') {
       res.setHeader('Content-Type', 'text/html');
-      res.end('<script>const channel=new BroadcastChannel("future-roi:save:qa-goal");channel.postMessage({sender:"synthetic-second-tab",type:"start"});</script>'); return;
+      res.end('<script>const channel=new BroadcastChannel("future-roi:save:qa-goal");channel.postMessage({sender:"synthetic-second-tab",type:"start"});</script>');
+      return;
     }
     if (assets.has(req.url)) { res.end(assets.get(req.url)); return; }
     res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html);
@@ -56,7 +57,11 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
   };
   const until = async (expression, accept, message) => {
     let value;
-    for (let i = 0; i < 300; i++) { value = await evaluate(expression); if (accept(value)) return value; await delay(20); }
+    for (let i = 0; i < 300; i++) {
+      value = await evaluate(expression);
+      if (accept(value)) return value;
+      await delay(20);
+    }
     throw new Error(message + ': ' + JSON.stringify(value));
   };
   const state = 'window.__goalQA?.state()';
@@ -81,7 +86,10 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
     for (const type of ['mousePressed', 'mouseReleased']) await cdp.send('Input.dispatchMouseEvent', { type, button: 'left', clickCount: 1, ...box });
     await delay(50);
   };
-  const resize = async width => { await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false }); await delay(70); };
+  const resize = async width => {
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
+    await delay(70);
+  };
   await resize(390);
   await cdp.send('Page.navigate', { url: 'http://127.0.0.1:' + server.address().port });
   await until(state, v => v?.text?.includes('ゴールが遠ざかる'), 'Today did not mount');
@@ -177,7 +185,9 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
   assert.equal(await evaluate('document.querySelectorAll(".fr-goals__row .fr-footprint").length'), 0);
   assert.ok((await evaluate(state)).text.includes('0.67%'));
   const header = await evaluate(`(()=>{const a=document.querySelector('.fr-deskbar__name');return {href:a.getAttribute('href'),decoration:getComputedStyle(a).textDecorationLine,color:getComputedStyle(a).color,parentColor:getComputedStyle(a.parentElement).color}})()`);
-  assert.equal(header.href, '/'); assert.equal(header.decoration, 'none'); assert.equal(header.color, header.parentColor);
+  assert.equal(header.href, '/');
+  assert.equal(header.decoration, 'none');
+  assert.equal(header.color, header.parentColor);
   await activate('.fr-footprint__day[aria-pressed=true]');
   await key('ArrowLeft', 'ArrowLeft', 37);
   await until(state, v => v?.footprint?.includes('英語学習の積み上げ'), 'selected day goals absent');

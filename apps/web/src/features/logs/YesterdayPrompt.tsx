@@ -59,9 +59,19 @@ function YesterdayPromptForDate({
     // ログイン切れ・記録できない日は、選び直しても保存できないため、先にその対処を出す
     body = (
       <SaveFailure
-          settings={{ ready: saver.settingsReady, meaningChanged: saver.meaningChanged, loading: saver.reloadingSettings, failed: saver.settingsReloadFailed, reload: saver.reloadSettings }}
+        settings={{
+          ready: saver.settingsReady,
+          meaningChanged: saver.meaningChanged,
+          loading: saver.reloadingSettings,
+          failed: saver.settingsReloadFailed,
+          reload: saver.reloadSettings,
+        }}
         kind={failureKind}
-        body={saver.failure?.vars?.choice.status === 'DONE' ? todayCopy.unsavedAmount(saver.failure.vars.choice.amount, amountFormat({ unit: saver.failure.vars.unit }).recordUnit) : todayCopy.unsavedRest}
+        body={saver.failure?.vars?.choice.status === 'DONE'
+          ? todayCopy.unsavedAmount(
+            saver.failure.vars.choice.amount,
+            amountFormat({ unit: saver.failure.vars.unit }).recordUnit,
+          ) : todayCopy.unsavedRest}
         localDate={yesterday}
         onRetry={saver.retry}
         onReselect={saver.reset}

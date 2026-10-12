@@ -62,22 +62,35 @@ async function run() {
   await setTitle('A-PRIVATE-DRAFT');
   transport.failure = 'network'; await focus();
   ensure(observed.at(-1)?.owner === 'A' && observed.at(-1)?.error && !input(), 'network failure did not mask draft');
-  transport.owner = 'B'; transport.failure = null; await focus();
+  transport.owner = 'B';
+  transport.failure = null;
+  await focus();
   ensure(observed.at(-1)?.owner === 'B' && !observed.at(-1)?.error && input()?.value === '', 'network failure→B recovery carried A draft');
   results.push('real visibility refetch network failure→B success opens a fresh form; no auto-submit');
 
   page = 'list';
-  await act(async () => { root.render(<QueryClientProvider client={client}><PrivateCacheGuard /><Screen /></QueryClientProvider>); await tick(); }); await settle();
+  await act(async () => {
+    root.render(<QueryClientProvider client={client}><PrivateCacheGuard /><Screen /></QueryClientProvider>);
+    await tick();
+  });
+  await settle();
   ensure(host.textContent?.includes('B-PRIVATE-GOAL'), 'initial B list missing');
   goalHold = new Promise((resolve) => { resolveGoal = resolve; });
   void client.refetchQueries({ queryKey: goalKeys.all }); await act(tick);
-  transport.owner = 'A'; transport.hold = true; transport.failure = '429'; await focus();
+  transport.owner = 'A';
+  transport.hold = true;
+  transport.failure = '429';
+  await focus();
   ensure(observed.at(-1)?.owner === 'B' && observed.at(-1)?.refetching && !observed.at(-1)?.pending && !observed.at(-1)?.error, 'fixed client did not retain B while refetching');
   await act(async () => { resolveGoal!([goal('A')]); await tick(); }); await settle();
   ensure(!host.textContent?.includes('-PRIVATE-GOAL'), 'session refetching allowed a fresh foreign Goal response');
-  transport.hold = false; transport.held.splice(0).forEach(resolve => resolve()); await settle();
+  transport.hold = false;
+  transport.held.splice(0).forEach(resolve => resolve());
+  await settle();
   ensure(observed.at(-1)?.status === 429 && !host.textContent?.includes('-PRIVATE-GOAL'), '429 did not keep the gate closed');
-  goalHold = undefined; transport.failure = null; await focus();
+  goalHold = undefined;
+  transport.failure = null;
+  await focus();
   ensure(host.textContent?.includes('A-PRIVATE-GOAL') && !host.textContent?.includes('B-PRIVATE'), '429→A recovery did not use a fresh A query');
   results.push('real visibility refetch retains B/isRefetching; foreign response and 429 masked; A recovery');
 
@@ -86,11 +99,15 @@ async function run() {
   // 確認中の業務応答は所有者が分からない。同じAで回復してもこのcacheを再利用しない。
   await act(async () => { client.setQueryData(goalKeys.list(), [goal('B')]); await tick(); });
   ensure(!host.textContent?.includes('-PRIVATE-GOAL'), 'same-owner pending check exposed unbound data');
-  transport.hold = false; transport.held.splice(0).forEach(resolve => resolve()); await settle();
+  transport.hold = false;
+  transport.held.splice(0).forEach(resolve => resolve());
+  await settle();
   ensure(host.textContent?.includes('A-PRIVATE-GOAL') && !host.textContent?.includes('B-PRIVATE'), 'same-owner recovery reused data received during checking');
   results.push('same-A refetch masks and discards data received during checking before reopening');
   ensure(transport.writes === 0, 'unexpected private write');
-  await act(async () => root.unmount()); client.clear(); Date.now = realNow;
+  await act(async () => root.unmount());
+  client.clear();
+  Date.now = realNow;
   return { results, reads: transport.reads, writes: transport.writes };
 }
 run().then((result) => { document.getElementById('result')!.textContent = JSON.stringify({ ok: true, ...result }); }).catch((error) => {

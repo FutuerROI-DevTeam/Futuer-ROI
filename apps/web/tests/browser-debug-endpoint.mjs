@@ -6,7 +6,9 @@ export function parseDevToolsEndpoint(stderr) {
       if (endpoint.protocol === 'ws:' && ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname)
         && Number(endpoint.port) > 0 && Number(endpoint.port) <= 65535
         && endpoint.pathname.startsWith('/devtools/browser/') && endpoint.pathname.length > '/devtools/browser/'.length
-        && !endpoint.username && !endpoint.password && !endpoint.search && !endpoint.hash) return endpoint.href;
+        && !endpoint.username && !endpoint.password && !endpoint.search && !endpoint.hash) {
+        return endpoint.href;
+      }
     } catch { /* 不完全なstderr chunkは、次のchunkで再判定する。 */ }
   }
   return null;

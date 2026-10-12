@@ -12,7 +12,12 @@ export function isValidTimezone(timezone: string): boolean {
 export function localDateIn(timezone: string, at: Date): string | null {
   try {
     // en-CA は YYYY-MM-DD の並びで出る
-    return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(at);
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(at);
   } catch {
     return null;
   }

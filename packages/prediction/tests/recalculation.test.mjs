@@ -8,7 +8,9 @@ const log = (day, status, amount = status === 'DONE' ? 10 : null) => ({
 });
 function freeze(value) {
   if (value && typeof value === 'object') {
-    for (const child of Object.values(value)) freeze(child);
+    for (const child of Object.values(value)) {
+      freeze(child);
+    }
     Object.freeze(value);
   }
   return value;
@@ -36,7 +38,9 @@ test('backfill then correction rebuilds both adjacent pairs and actual progress 
     { status: 'insufficient', reason: 'NO_SKIP_ORIGIN_TRANSITION' },
     { status: 'available', g50: 2, g80: 5 },
   ]);
-  for (let i = snapshots.length - 1; i >= 0; i--) assert.deepEqual(predict(snapshots[i], config), results[i]);
+  for (let i = snapshots.length - 1; i >= 0; i--) {
+    assert.deepEqual(predict(snapshots[i], config), results[i]);
+  }
   assert.deepEqual(snapshots, untouched);
 });
 
@@ -93,8 +97,12 @@ test('120 reproducible generated histories agree with a dense calendar oracle an
         observationStarted = true;
         expected.recordedDays++;
       }
-      if (observationStarted && (i < 20 || calendar[20])) expected.observedDays++;
-      if (row?.status === 'DONE') actual += row.amount;
+      if (observationStarted && (i < 20 || calendar[20])) {
+        expected.observedDays++;
+      }
+      if (row?.status === 'DONE') {
+        actual += row.amount;
+      }
       const previous = calendar[i - 1];
       if (previous && row) {
         const key = `n${previous.status === 'DONE' ? 'D' : 'S'}${row.status === 'DONE' ? 'D' : 'S'}`;
