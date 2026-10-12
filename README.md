@@ -69,20 +69,25 @@ npm ci --include=dev
 npm run typecheck
 npm test
 npm run build
+npm run verify:ci-reports
 ```
 
 API テストはテスト用 PostgreSQL を使用します。shell の `DATABASE_URL` がなければ一時クラスタを起動します。指定する場合はテスト専用 DB を作成・削除できる接続先を使ってください。root の `.env` は自動では読みません。実ブラウザのテストはローカルでは別途 `npm run test:browser --workspace=@futureroi/web` を実行します。
+
+`typecheck`は公開型とアプリの型、`test`はEngineの独立オラクル・APIの保存境界・Webの純粋変換と描画、`build`は配信成果物を確認します。`verify:ci-reports`はCIの集計・失敗判定・診断情報の保存範囲を検査します。各層の保証と実ブラウザの範囲は[検証手順](docs/DEVELOPMENT_GUIDE.md#検証)を参照してください。
 
 ### 開発基盤のセットアップと確認
 
 文書・リンクと図の検査は PowerShell 7 で実行できます。
 
 ```powershell
-pwsh -NoProfile -File scripts/check-foundation.ps1
+npm run verify:foundation
 pwsh -NoProfile -File scripts/check-document-diagrams.ps1
 ```
 
 [Application CI](.github/workflows/application.yml) · [Engine CI](.github/workflows/prediction.yml) · [図の編集・検査](docs/diagrams/README.md)
+
+`verify:foundation`は文字コード・相対リンク・環境変数の例・差分の空白を確認します。npmがない場合は`pwsh -NoProfile -File scripts/check-foundation.ps1`でも同じ検査を実行できます。アプリの動作確認は上の検証と分けます。
 
 ## 既知の制約
 

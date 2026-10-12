@@ -80,6 +80,20 @@ numeric回答または実際の起点遷移が材料。UNKNOWN/nullは共通Beta
 
 公開R-11型は[question-prior-types.ts](src/question-prior-types.ts)が所有し、公開入口と内部adapterから参照する。従来の公開exportを保持し、戻り値は同じkey・値・省略条件・key順で構築する。[再帰collector](scripts/test-files.mjs)と[境界監査](scripts/check.mjs)は入れ子のtest／sourceも対象にする。依存監査は補助であり完全な静的解析ではない。
 
+## 計算を読む・変更する入口
+
+公開入口と型は[index](src/index.ts)・[types](src/types.ts)・[R-11型](src/question-prior-types.ts)から確認する。数式の前提と境界の正本は[Architecture](../../docs/architecture.md#prediction-engine)、改行・コメント・抽出の規則は[CONTRIBUTING](../../CONTRIBUTING.md#コードの読みやすさ)を参照する。
+
+| 変更する計算 | 読む場所・対応する値 |
+| --- | --- |
+| 実績・遷移の採取 | [observations](src/observations.ts)。UNKNOWN、実量、今日の状態、`nDD/nDS/nSD/nSS`を予測から分けて読む |
+| 今日の仮実行と残り回数 | [completion-scenario](src/completion-scenario.ts)。量はGoal内の整数分／回、`requiredFutureDone`は明日以降の必要DONE回数。記録済み今日量を二重に差し引かない |
+| 再開待ち日数 | [recovery](src/recovery.ts)。整数比の生存確率、短積探索、逐日積の資源保護。1000日は計算予算であり、完了のhorizonやgの定義ではない |
+| 固定確率での完了・事後混合 | [completion](src/completion.ts)。固定a/bの初到達DPと事後サンプルの等重み混合 |
+| 同一モデルの完了CDF積分 | [completion-integrated](src/completion-integrated.ts)。DONE／SKIPPED起点の試行数、離脱／再開の確率質量、閾値近傍の整数比較、方式のfallback |
+
+これらの整理では演算順序・比較の等号・乱数・丸め・値と公開exportを維持する。方式や拒否条件を変更する場合は、独立オラクル・凍結fixture・資源境界と公開契約まで影響を調べる。
+
 ## 検証CI
 
 [prediction.yml](../../.github/workflows/prediction.yml)は、`packages/prediction/**`またはこのworkflowが変わるPR、mainへのpush、手動実行を対象にする。Foundation CIは別に維持する。PRではGitHubのmerge用commitをcheckoutして基底branchとの組み合わせを検証する。候補adapterの独立CDFオラクル3件と18例の再現JSONもNode matrixで確認し、実験フォルダの変更をCI対象に含める。同じPR／branchの古い実行は取り消し、各jobは10分で打ち切る。read-only permissions・checkout credentials非保持で、Secret・DB・`pull_request_target`は使わない。fork PRも同じ構成で、GitHub側の実行承認が必要な場合はその制限に従う。

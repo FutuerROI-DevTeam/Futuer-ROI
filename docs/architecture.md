@@ -55,13 +55,17 @@ interfaceは差替えやテストに必要な境界だけに置く。大がか�
 
 | 境界 | 現行の配置と保つ条件 |
 | --- | --- |
-| FEの入力と訪問 | [GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)がdraft・作成attempt・保存を所有する。[GoalFormFields](../apps/web/src/features/goals/form/GoalFormFields.tsx)は制御された値・callbackで描画し、保存や認証を持たない。[成功receipt](../apps/web/src/features/goals/navigation/useConfirmedGoalSave.ts)はowner・世代・訪問を照合してから、同じattemptの掃除と遷移を一度だけ行う |
+| FEの入力と訪問 | [GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)がdraft・作成attempt・保存を所有する。[goal-form](../apps/web/src/features/goals/goal-form.ts)は純粋な入力検証とAPI body変換、[form-recovery](../apps/web/src/features/goals/form/form-recovery.ts)は復元候補と既知拒否の判定を担当する。storage読込は同moduleの`loadRecovery`へ明示し、Pageの初回読込位置を保つ。[GoalFormFields](../apps/web/src/features/goals/form/GoalFormFields.tsx)と[GoalFormPresentation](../apps/web/src/features/goals/form/GoalFormPresentation.tsx)は制御された値・callbackを描画し、保存や認証を持たない。[成功receipt](../apps/web/src/features/goals/navigation/useConfirmedGoalSave.ts)はowner・世代・訪問を照合してから、同じattemptの掃除と遷移を一度だけ行う |
+| FEのToday | [TodayPage](../apps/web/src/features/today/TodayPage.tsx)がowner・draft・編集・保存・focusを所有し、[useTodayData](../apps/web/src/features/today/useTodayData.ts)が取得・snapshot採用・再同期・日付監視を所有する。[snapshot](../apps/web/src/features/today/snapshot.ts)の重複field照合と[forecast-view](../apps/web/src/features/today/forecast-view.ts)の表示変換は純粋処理。[TodayContent](../apps/web/src/features/today/TodayContent.tsx)は採用済みsnapshotを描画し、取得・保存・編集stateを持たない。表示部品からPageへ逆依存させず、Boundary内の変換・検査と記録UIの生存を保つ |
 | FEの純粋な境界 | [forecast-validation](../apps/web/src/features/prior/forecast-validation.ts)が表示へ渡す契約を検査し、[PriorForecast](../apps/web/src/features/prior/PriorForecast.tsx)は描画する。共有する[IANA timezone・暦日関数](../apps/web/src/calendar.ts)へ時計や画面stateを持ち込まない |
 | BEの判断と永続化 | [settings-policy](../apps/api/src/goals/settings-policy.ts)・[target-date-policy](../apps/api/src/goals/target-date-policy.ts)・[回答更新policy](../apps/api/src/questions/update-policy.ts)・[作成fingerprint](../apps/api/src/goals/create-request-fingerprint.ts)は純粋判定。[Goal store](../apps/api/src/goals/store.ts)はSQL・lock・時計・CAS・commit/rollbackを所有する。`loadGoalReadModels`等の名前でDB読込を明示し、拒否の優先順を抽出の都合で変えない |
+| BEの予測入力 | [prediction/snapshot](../apps/api/src/prediction/snapshot.ts)はGoal・質問・ログの行と採取済み時刻を`TodaySnapshot`へ写す。DB・時計を呼ばず、値・ログ順・null・回答版を保つ。[prediction store](../apps/api/src/prediction/store.ts)は既存型を再exportし、[evaluation store](../apps/api/src/evaluation/store.ts)・[milestone store](../apps/api/src/milestone/store.ts)も同じ純粋変換へ依存する。各storeが引き続きSQL・owner・lock・時計採取・transactionを所有し、最初のGoal SELECT後の採取位置と拒否順序は変えない |
 | Engineの公開型と計算 | [question-prior-types](../packages/prediction/src/question-prior-types.ts)がR-11の公開型を所有し、内部候補は型を参照する。公開入口は既存exportを保つ。数値核・演算順・乱数・K/H/seed・独立オラクルと凍結fixtureを保ち、結果の値・key・省略条件・拒否条件を比較する |
 | 検証の資源 | APIの[helper](../apps/api/tests/helpers/stack.ts)は獲得した資源を早期に所有し、初期化失敗でも獲得済み資源をすべて終了する。元の失敗と終了失敗を併記する。これはテストの境界で、製品へ新しいDI層を導入しない |
 
 変更時は[検証手順](DEVELOPMENT_GUIDE.md#検証)で純粋・描画・実ブラウザ・実DBの範囲を分ける。画面の直接操作や独立オラクルを、ソース文字列の一致や件数だけで置き換えない。
+
+改行・字下げ・コメントと抽出の規則は[コードの読みやすさ](../CONTRIBUTING.md#コードの読みやすさ)を参照する。Engineでは量（整数分／回）、必要DONE回数、将来の日数、確率質量を区別し、内部名と数式の記号を対応させる。`recovery`の1000日は逐日BigInt計算の資源上限であり、完了予測の`horizonDays`や再開待ちの定義へ流用しない。
 
 ### Repository構成
 

@@ -1,8 +1,9 @@
 import type { GoalR11 as Goal, Log, TodayR11 as Today } from '@contracts';
 
 /**
- * 別々の GET で届く Goal・Today・記録が、同じ時点の材料かを照合する。
- * 取得順や到着時刻に頼らず、応答の重なる値だけで決める。食い違えば useTodayData が取り直す。
+ * 別々の GET で届く Goal・Today・記録の、重なる値が一致する組を照合する。
+ * 同じDB transactionや全fieldの一致を保証する検査ではない。
+ * 取得順や到着時刻に頼らず、食い違えば useTodayData が取り直す。
  *
  * API が同じ snapshot から返す照合値（FE で予測を計算し直さない）：
  * - 日付：Goal の today と Today の today
