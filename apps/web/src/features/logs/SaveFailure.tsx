@@ -37,7 +37,7 @@ export function SaveFailure({
   lockedNote?: string;
 }) {
   const location = useLocation();
-  if (kind === 'settings') return <ErrorPanel title={todayCopy.settingsConflict.title} action={<div className="fr-savefail__actions">
+  if (kind === 'settings') return <ErrorPanel focusTitle title={todayCopy.settingsConflict.title} action={<div className="fr-savefail__actions">
     <Button busy={settings?.loading ?? false} onClick={() => void settings?.reload()}>{todayCopy.settingsConflict.reload}</Button>
     <Button disabled={!settings?.ready || settings.meaningChanged || retryLocked || settings.loading} onClick={onRetry}>{todayCopy.settingsConflict.retry}</Button>
     <Button disabled={!settings?.ready || settings.loading} onClick={onReselect}>{todayCopy.reselect}</Button>
@@ -48,7 +48,7 @@ export function SaveFailure({
   </ErrorPanel>;
   if (kind === 'signed-out') {
     return (
-      <ErrorPanel
+      <ErrorPanel focusTitle
         title={todayCopy.signedOutTitle}
         action={
           <Link to="/login" search={{ redirect: location.href, reason: 'expired' }} className="fr-btn fr-btn--secondary">
@@ -62,7 +62,7 @@ export function SaveFailure({
   }
   if (kind === 'date' || kind === 'day-changed') {
     return (
-      <ErrorPanel
+      <ErrorPanel focusTitle
         title={kind === 'day-changed' ? todayCopy.dateChangedTitle : todayCopy.dateFailedTitle}
         action={
           <Button variant="primary" block onClick={onRefresh}>
@@ -75,7 +75,7 @@ export function SaveFailure({
     );
   }
   return (
-    <ErrorPanel
+    <ErrorPanel focusTitle
       title={todayCopy.saveFailedTitle}
       action={
         <div className="fr-savefail__actions">
