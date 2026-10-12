@@ -1,12 +1,11 @@
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { Goal } from '@contracts';
 import { authClient } from '../../auth/client.ts';
 import { browserTimezone } from '../../calendar.ts';
 import {
   clearCreateAttempt,
-  loadCreateAttempt,
   prepareCreateAttempt,
   CreateRecoveryError,
   createFailureKind,
@@ -19,17 +18,34 @@ import { getPrivateEpoch, privateDataReady, usePrivateEpoch } from '../../api/se
 import { useMemoryDraft } from '../../api/session-draft.ts';
 import { goalsCopy } from '../../copy/goals.ts';
 import { GoalFormFields } from './form/GoalFormFields.tsx';
+import {
+  CloseLink,
+  FormIntro,
+  FormLoading,
+  FormShell,
+  GoalCrumb,
+  ListCrumb,
+  RefreshFailed,
+  SaveFailure,
+} from './form/GoalFormPresentation.tsx';
+import {
+  isCreateBlocked,
+  isCreateResultDeleted,
+  isEditConflict,
+  loadRecovery,
+  rejectedCreateOperation,
+  restoreFormDraft,
+  type FormDraft,
+  type FormFailure,
+} from './form/form-recovery.ts';
 import { useConfirmedGoalSave } from './navigation/useConfirmedGoalSave.ts';
 import { useGoalFormFailure } from './navigation/useGoalFormFailure.ts';
-import { todayCopy } from '../../copy/today.ts';
 import { AppBar } from '../../ui/components/AppBar.tsx';
 import { DeskHeader } from '../../ui/components/DeskHeader.tsx';
 import { PageTitle } from '../../ui/components/PageTitle.tsx';
 import { Button } from '../../ui/components/Button.tsx';
 import { ConfirmDialog } from '../../ui/components/ConfirmDialog.tsx';
-import { Icon } from '../../ui/components/Icon.tsx';
 import { ErrorPanel } from '../../ui/components/Notice.tsx';
-import { Spinner } from '../../ui/components/Spinner.tsx';
 import { StickyActionBar } from '../../ui/components/StickyActionBar.tsx';
 import { fetchPolicy } from '../today/fetch-policy.ts';
 import '../prior/question-prior.css';
@@ -45,7 +61,6 @@ import {
   fieldErrorsFromApi,
   rebaseValues,
   reloadLatestGoal,
-  isEditSaveResultUnknown,
   toCreateBody,
   toPatchBody,
   validateGoalForm,
@@ -198,125 +213,6 @@ export function GoalEditPage({ goalId }: { goalId: string }) {
   );
 }
 
-function FormShell({ title, body }: { title: string; body: ReactNode }) {
-  return (
-    <div className="fr fr-page fr-page--desk fr-page--goalform">
-      <PageTitle title={title} />
-      <AppBar title={title} leading={<CloseLink />} />
-      <DeskHeader back={<ListCrumb />} title={title} titleAs="p" />
-      <FormIntro title={title} />
-      <div className="fr-goals__pad">{body}</div>
-    </div>
-  );
-}
-
-function FormIntro({ title, guide, goalTitle }: { title: string; guide?: string; goalTitle?: string }) {
-  return (
-    <header className="fr-goalform__intro">
-      {goalTitle ? <p className="fr-goalform__goal-name">{goalTitle}</p> : null}
-      <h1>{title}</h1>
-      {guide ? <p className="fr-goalform__guide">{guide}</p> : null}
-    </header>
-  );
-}
-
-function CloseLink() {
-  return (
-    <Link to="/goals" className="fr-icon-btn" aria-label={f.close}>
-      <Icon name="close" />
-    </Link>
-  );
-}
-
-/** デスクトップ幅の戻り先（Goal一覧）。 */
-function ListCrumb() {
-  return (
-    <Link to="/goals" className="fr-btn fr-btn--text">
-      <Icon name="back" size={18} />
-      {c.crumbList}
-    </Link>
-  );
-}
-
-/** デスクトップ幅の編集の戻り先（そのGoalのToday。表示は Today の戻り先と同じ「Goal一覧 / タイトル」）。 */
-function GoalCrumb({ goal }: { goal: Goal }) {
-  return (
-    <Link to="/goals/$goalId" params={{ goalId: goal.id }} className="fr-btn fr-btn--text">
-      <Icon name="back" size={18} />
-      {todayCopy.breadcrumbTrail(goal.title)}
-    </Link>
-  );
-}
-
-function FormLoading() {
-  return (
-    <p className="fr-goals__help fr-goals__loading" role="status">
-      <Spinner />
-      {c.loadingVisible}
-    </p>
-  );
-}
-
-type FormDraft = {
-  values: FormValues;
-  baseline: GoalWithAnswers | undefined;
-  sourceGoal: GoalWithAnswers | undefined;
-  submitted: boolean;
-  priorOpen: boolean;
-  /** 初期質問の各問でどれかを選んだか（#259）。古い保存形式では無いことがある。 */
-  priorChosen?: PriorChosen;
-  latestAnswers: GoalWithAnswers['questionPrior'] | null;
-};
-type FormFailure = FormDraft & {
-  error: unknown;
-  prepareError?: unknown;
-  serverErrors: FieldErrors;
-  operation: CreateAttempt | null;
-};
-
-function rejectedCreateOperation(error: unknown, operation: CreateAttempt | null, owner: string | undefined) {
-  return owner && operation?.owner === owner
-    && error instanceof ApiError && error.status === 422
-    && error.body?.error.code === 'VALIDATION_ERROR'
-    ? operation : null;
-}
-/** 送信結果が確定して再送できない作成の失敗（別入力との競合・作成済みGoalの削除）。保存ボタンを押せなくする。 */
-function isCreateBlocked(error: unknown): boolean {
-  return ['conflict', 'deleted'].includes(createFailureKind(error) ?? '');
-}
-/**
- * 作成の回復情報（sessionStorage）を読む。壊れたJSON・旧schemaでも画面を落とさず、原文は保全する。
- * 読めないときは、同owner・同訪問で実際に送って422で断られた操作と原文が一致した場合だけ表示用に採用し（knownRejected）、保存は止める。
- */
-function loadRecovery(
-  owner: string | undefined,
-  failure: FormFailure | undefined,
-): { attempt: CreateAttempt | null; error: CreateRecoveryError | null; knownRejected: boolean } {
-  try {
-    return { attempt: owner ? loadCreateAttempt(owner, sessionStorage) : null, error: null, knownRejected: false };
-  } catch (error) {
-    const unreadable = error instanceof CreateRecoveryError ? error : new CreateRecoveryError();
-    const rejected = rejectedCreateOperation(failure?.error, failure?.operation ?? null, owner);
-    // 同owner・同訪問の実送信422と原文が一致するときだけ表示に使う。保存禁止は維持する。
-    try {
-      if (rejected && sessionStorage.getItem(`future-roi:create-attempt:${owner}`) === rejected.raw) {
-        return { attempt: rejected, error: unreadable, knownRejected: true };
-      }
-    } catch {
-      // storageを確認できなければ初回loadの拒否を維持する。
-    }
-    return { attempt: null, error: unreadable, knownRejected: false };
-  }
-}
-function sameEditableGoal(left: GoalWithAnswers, right: GoalWithAnswers) {
-  return left.id === right.id
-    && left.answerRevision === right.answerRevision
-    && left.hasLogs === right.hasLogs
-    && ('goalSettingsRevision' in left ? left.goalSettingsRevision : undefined)
-      === ('goalSettingsRevision' in right ? right.goalSettingsRevision : undefined)
-    && JSON.stringify(valuesFromGoal(left)) === JSON.stringify(valuesFromGoal(right));
-}
-
 type Props = {
   draft: FormDraft | undefined;
   onDraftChange: (draft: FormDraft | undefined) => void;
@@ -361,15 +257,7 @@ function GoalForm({
   const [attempt, setAttempt] = useState<CreateAttempt | null>(recovery.attempt);
   const recoveryValues = attempt ? valuesFromCreateBody(attempt.body) : null;
   // 失敗表示は同訪問の入力/旧baselineを保持する。作成attemptがK2へ置換されたらK1の表示は採用しない。
-  const recoveredFailure = (!recovery.error || recovery.knownRejected) && failure && (
-    mode === 'edit' ? failure.sourceGoal?.id === goal.id
-      : attempt ? failure.operation?.raw === attempt.raw
-      : failure.operation === null || (failure.error instanceof ApiError && failure.error.status === 422)
-  ) ? failure : undefined;
-  const restored = recoveredFailure ?? (
-    !attempt && !recovery.error && draft && (!goal || (draft.sourceGoal && sameEditableGoal(draft.sourceGoal, goal)))
-      ? draft : undefined
-  );
+  const { recoveredFailure, restored } = restoreFormDraft(mode, goal, draft, failure, recovery, attempt);
   const [prepareError, setPrepareError] = useState<unknown>(recovery.error ?? recoveredFailure?.prepareError ?? null);
   const [retainedError, setRetainedError] = useState<unknown>(recoveredFailure?.error ?? null);
   const [retainedOperation] = useState(recoveredFailure?.operation ?? null);
@@ -853,100 +741,6 @@ function GoalForm({
   );
 }
 
-/** 表示した後の再取得の失敗。フォームと入力はそのまま残す。 */
-function RefreshFailed({ error, onRetry, editConflict }: { error: unknown; onRetry: () => void; editConflict: boolean }) {
-  if (isUnauthenticated(error)) {
-    return <SignedOutPanel body={c.signedOut.formBody} newTab />;
-  }
-  return (
-    <ErrorPanel
-      title={f.refreshFailed.title}
-      action={
-        <Button icon="retry" onClick={onRetry}>
-          {c.loadError.retry}
-        </Button>
-      }
-    >
-      {isNotFound(error) ? f.refreshFailed.notFound : editConflict ? f.refreshFailed.conflictBody : f.refreshFailed.body}
-    </ErrorPanel>
-  );
-}
-
-/**
- * 入力を残し、明示的な拒否と結果不明（通信失敗・5xx）を区別して表示する（R5、#146）。
- */
-function SaveFailure({ error, mode, onReloadLatest, reloadingLatest, onRestartCreate, onResumeCorrection }: {
-  error: unknown;
-  mode: 'create' | 'edit';
-  onReloadLatest: () => Promise<void>;
-  reloadingLatest: boolean;
-  onRestartCreate?: (() => void) | undefined;
-  onResumeCorrection?: (() => void) | undefined;
-}) {
-  if (isUnauthenticated(error)) {
-    return <SignedOutPanel body={c.signedOut.formBody} newTab />;
-  }
-  if (mode === 'create' && (createFailureKind(error) === 'recovery' || createFailureKind(error) === 'conflict')) return (
-    <ErrorPanel
-      title={createFailureKind(error) === 'recovery' ? f.createRecovery.unreadableTitle : f.createRecovery.conflictTitle}
-      action={<>{onResumeCorrection ? <Button onClick={onResumeCorrection}>{f.createRecovery.resumeCorrection}</Button> : null}<Link to="/goals" className="fr-btn fr-btn--secondary">{f.createRecovery.checkList}</Link></>}
-    >
-      {onResumeCorrection ? f.createRecovery.rejectedCleanupBody : f.createRecovery.checkBody}
-    </ErrorPanel>
-  );
-  if (mode === 'create' && createFailureKind(error) === 'owner') return (
-    <SignedOutPanel body={f.createRecovery.ownerBody} newTab />
-  );
-  if (mode === 'create' && isCreateResultDeleted(error)) return (
-    <ErrorPanel title={f.createRecovery.deletedTitle} action={onRestartCreate ? <Button onClick={onRestartCreate}>{f.createRecovery.restart}</Button> : undefined}>
-      {f.createRecovery.deletedBody}
-    </ErrorPanel>
-  );
-  if (isEditConflict(error)) {
-    // 回答またはGoal設定の版が古い。保存済みに見せず、入力を残して最新を読み直してもらう。
-    return (
-      <ErrorPanel
-        title={f.answerConflict.title}
-        action={
-          <Button icon="retry" busy={reloadingLatest} onClick={() => void onReloadLatest()}>
-            {f.answerConflict.reload}
-          </Button>
-        }
-      >
-        {f.answerConflict.body}
-      </ErrorPanel>
-    );
-  }
-  if (mode === 'edit' && isEditSaveResultUnknown(error)) {
-    // 結果不明を未保存と断定せず、最新を読んで確認してもらう（R5）。
-    return (
-      <ErrorPanel
-        title={f.saveUnknown.title}
-        action={
-          <Button icon="retry" busy={reloadingLatest} onClick={() => void onReloadLatest()}>
-            {f.answerConflict.reload}
-          </Button>
-        }
-      >
-        {f.saveUnknown.body}
-      </ErrorPanel>
-    );
-  }
-  return (
-    <ErrorPanel title={f.saveFailed.title}>
-      {mode === 'create' ? f.saveFailed.createBody : f.saveFailed.editBody}
-    </ErrorPanel>
-  );
-}
-
-/** 回答またはGoal設定の古い版で保存しようとした409。 */
-function isEditConflict(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 409
-    && ['ANSWER_CONFLICT', 'GOAL_SETTINGS_CONFLICT'].includes(error.body?.error.code ?? '');
-}
-function isCreateResultDeleted(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 410 && error.body?.error.code === 'CREATE_RESULT_DELETED';
-}
 /** 選べるタイムゾーン。ブラウザが知っている IANA 名に、今の値（ブラウザ設定・保存済みの値）を必ず含める。 */
 function useTimezones(current: string): string[] {
   return useMemo(() => {
