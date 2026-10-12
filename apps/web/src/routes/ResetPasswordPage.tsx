@@ -1,4 +1,6 @@
 import { Link } from '@tanstack/react-router';
+import { PASSWORD_RESET_ENABLED } from '../../../api/src/auth/password-reset-policy.ts';
+import { PasswordResetUnavailable } from './PasswordResetUnavailable.tsx';
 import { useRef, useState, type FormEvent } from 'react';
 import { runAuthAction } from '../auth/action.ts';
 import { authClient, describeAuthError } from '../auth/client.ts';
@@ -21,6 +23,10 @@ const c = authCopy.reset;
  * - 成功後はログインへ進める（自動ログインはしない。Better Authの既定どおり）
  */
 export function ResetPasswordPage({ search }: { search: ResetSearch }) {
+  return PASSWORD_RESET_ENABLED ? <EnabledResetPasswordPage search={search} /> : <PasswordResetUnavailable />;
+}
+
+function EnabledResetPasswordPage({ search }: { search: ResetSearch }) {
   const [fieldErrors, setFieldErrors] = useState<NewPasswordErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

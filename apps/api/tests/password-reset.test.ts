@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { REDACTED, redactLogUrl } from '../src/http/log-url.ts';
-import { Client, credentials, setup } from './helpers/stack.ts';
+import { Client, credentials, setup as setupStack, type StackOptions } from './helpers/stack.ts';
+
+// 配送再開時にも既存の安全性を失わないよう、合成mailerのこのsuiteだけ明示的に有効化する。
+const setup = (t: Pick<test.TestContext, 'after'>, o: StackOptions = {}) => setupStack(t, { ...o, passwordResetEnabled: true });
 
 const origin = 'http://127.0.0.1:3000';
 const resetPage = `${origin}/reset-password`;

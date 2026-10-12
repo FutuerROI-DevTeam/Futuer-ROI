@@ -638,7 +638,7 @@ Windowsの合成clusterは、poolの終了・残存接続の検査・専用DBの
 - migrationは起動前に`node apps/api/dist/db/migrate-cli.js all`（コンテナ内に`apps/api/migrations/`を同梱）で適用する。同時に実行されてもadvisory lockで直列化され、適用済みSQLの内容が変わっていれば失敗する。
 - ログはpinoのJSON。Cookie・Authorization・Set-Cookieはredactし、リクエストbodyは出力しません。
 - 認証は`BETTER_AUTH_SECRET`（32文字以上）と公開URLの`BETTER_AUTH_URL`（https）が必須。proxyを挟む公開先では`TRUST_PROXY_HOPS`をhop数に合わせる（回数制限の鍵になるclient IPの決定に使う）。詳細は[Architecture「2026-10-06の認証実装」](architecture.md#2026-10-06の認証実装75)。
-- パスワード再設定メールは本番では`MAIL_TRANSPORT`の既定がresendになり、`RESEND_API_KEY`と`MAIL_FROM`が無い（形式が不正な）と起動しない。送信元ドメインがResendで認証済みかは起動時に分からず、未認証なら送信時に拒否される。外部へ送らない確認（Compose・smoke）は`MAIL_TRANSPORT=log`を明示する。logは有効期間中は秘密の再設定URLをログへ出すため、隔離したローカル確認だけに使う。詳細は[Architecture「パスワード再設定（#256）」](architecture.md#パスワード再設定256)。
+- パスワード再設定は#284の承認により一時停止中。`MAIL_TRANSPORT`・`RESEND_API_KEY`・`MAIL_FROM`は参照せず、メール送信・本文ログ出力はしない。メール設定不足だけでは通常認証やサイトの起動を止めない。環境変数だけでは再開できず、配送受入・旧リンク期限の確認とコードレビューが必要。詳細は[Architecture「パスワード再設定（#256）」](architecture.md#パスワード再設定256)。
 
 ### 登録・ログインを確認する
 
@@ -650,7 +650,7 @@ Goalのmigration 0002は、既存GoalがないDBへ記録開始日を追加し�
 
 `npm run dev:web`（または`WEB_DIST`つきのビルド済みサーバー）の `/` を開くと、公開ホームに登録・ログインの入口が表示されます。「登録してはじめる」でメールアドレスとパスワード（8文字以上）を入れると登録とログインが同時に行われ、Goal一覧へ進みます。0件なら「最初のGoalをつくる」から作成し、一覧のGoalを開くとTodayへ進めます。Goal一覧の上のバーと、各画面の一覧へ戻る操作も確認してください。ログイン済みのホームには「Goal一覧を開く」が表示され、再読み込みしてもログイン状態が続きます。保護画面を未ログインで開いた場合はログインへ送り、登録・ログイン画面を切り替えても元の戻り先を保ちます。戻り先指定がない認証はGoal一覧へ進みます。Goal一覧右上のアカウントボタンから「ログアウト」を押すとログイン画面へ戻ります（ログイン済みで`/login`を開くと戻り先へ移ります）。間違ったパスワードは「メールアドレスまたはパスワードが正しくありません」、同じ接続元から60秒に6回以上の失敗は「しばらく待ってからお試しください」と再開できる時刻を表示し、その時刻を過ぎると再試行できます。APIが止まっている間に保護画面を開くと、ログイン画面ではなく「接続できませんでした」と再読み込みを表示します。未ログインで`curl http://127.0.0.1:3000/api/goals`を実行すると401のJSONが返ります。ログイン後のCookieを付けて同じURLを呼ぶとGoalの一覧（最初は`[]`）が返り、作成・編集・削除の規則は[Architecture](architecture.md#2026-10-06のgoal-api76)に記載しています。
 
-パスワードを忘れた場合は、ログイン画面の「パスワードを忘れた方」から`/forgot-password`でメールアドレスを送ります。登録の有無にかかわらず「メールを送りました」と表示します（APIも同じ応答）。開発環境は既定で`MAIL_TRANSPORT=log`のため外部へは送らず、APIのログに`mail: not sent (MAIL_TRANSPORT=log)`としてメール本文と再設定URL（`/api/auth/reset-password/<token>?callbackURL=…`）が出ます。そのURLをブラウザで開くと`/reset-password?token=…`へ戻り、新しいパスワード（8文字以上、確認入力と一致）を保存すると、旧パスワードは使えなくなり新パスワードでログインできます。リンクは1時間で無効になり、無効・期限切れ・使用済みのリンクは「このリンクは使えません」から再送へ進めます。同じ接続元から60秒に6回以上要求すると、ログインと同じ待ち時間の案内になります。実際にResendで送る場合は`MAIL_TRANSPORT=resend`・`RESEND_API_KEY`・`MAIL_FROM`（Resendで認証済みのドメインの送信元）を`.env`へ入れます。
+ログイン画面は「現在パスワード再設定は利用できません」と案内します。`/forgot-password`と`/reset-password`を直接開いた場合や、以前のメールリンク・無効リンクを開いた場合も案内とログインへの導線だけを出します。再設定の要求・リンク処理・保存APIは503 `RESET_PASSWORD_DISABLED`で停止し、新規token・メール本文ログを作りません（既存Origin・入力・回数制限の拒否は4xxのまま）。既発行tokenのDB行は削除せず、停止中は使えませんが元の1時間の期限は進みます。合成テストだけ明示的に有効化して旧機能の回帰も維持し、実配送・本番設定・公開ログからのtoken取り出しは行いません。[停止の仕組みと再開条件](architecture.md#パスワード再設定256)を参照してください。
 
 stagingへの配置は公開先の承認待ちです。現在の第一候補はFE・BEともVercel Hobby＋Neon Free、ローカル開発はDocker（[D-25](architecture.md#d-25)）。#70→#75から移された未確認項目は#83で追跡し、[採用前の最小検証](operations/release-demo.md#公開候補の採用前に行う最小検証)を行います。Cloud Run＋Neonの従来候補はD-25の履歴に残します。
 

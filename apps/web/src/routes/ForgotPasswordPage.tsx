@@ -1,4 +1,6 @@
 import { Link } from '@tanstack/react-router';
+import { PASSWORD_RESET_ENABLED } from '../../../api/src/auth/password-reset-policy.ts';
+import { PasswordResetUnavailable } from './PasswordResetUnavailable.tsx';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { runAuthAction } from '../auth/action.ts';
 import { authClient, describeAuthError, retryAfterSeconds } from '../auth/client.ts';
@@ -23,6 +25,10 @@ const c = authCopy.reset;
  * - 回数制限（429）はログインと同じく再開できる時刻を伝える
  */
 export function ForgotPasswordPage() {
+  return PASSWORD_RESET_ENABLED ? <EnabledForgotPasswordPage /> : <PasswordResetUnavailable />;
+}
+
+function EnabledForgotPasswordPage() {
   const [emailError, setEmailError] = useState<string | undefined>();
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
