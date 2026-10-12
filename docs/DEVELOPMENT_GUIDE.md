@@ -634,7 +634,7 @@ Windowsの合成clusterは、poolの終了・残存接続の検査・専用DBの
 - migrationは起動前に`node apps/api/dist/db/migrate-cli.js all`（コンテナ内に`apps/api/migrations/`を同梱）で適用する。同時に実行されてもadvisory lockで直列化され、適用済みSQLの内容が変わっていれば失敗する。
 - ログはpinoのJSON。Cookie・Authorization・Set-Cookieはredactし、リクエストbodyは出力しません。
 - 認証は`BETTER_AUTH_SECRET`（32文字以上）と公開URLの`BETTER_AUTH_URL`（https）が必須。proxyを挟む公開先では`TRUST_PROXY_HOPS`をhop数に合わせる（回数制限の鍵になるclient IPの決定に使う）。詳細は[Architecture「2026-10-06の認証実装」](architecture.md#2026-10-06の認証実装75)。
-- パスワード再設定メールは本番では`MAIL_TRANSPORT`の既定がresendになり、`RESEND_API_KEY`と`MAIL_FROM`が無いと起動しない。外部へ送らない確認（Compose・smoke）は`MAIL_TRANSPORT=log`を明示する。詳細は[Architecture「パスワード再設定（#256）」](architecture.md#パスワード再設定256)。
+- パスワード再設定メールは本番では`MAIL_TRANSPORT`の既定がresendになり、`RESEND_API_KEY`と`MAIL_FROM`が無い（形式が不正な）と起動しない。送信元ドメインがResendで認証済みかは起動時に分からず、未認証なら送信時に拒否される。外部へ送らない確認（Compose・smoke）は`MAIL_TRANSPORT=log`を明示する。logは有効期間中は秘密の再設定URLをログへ出すため、隔離したローカル確認だけに使う。詳細は[Architecture「パスワード再設定（#256）」](architecture.md#パスワード再設定256)。
 
 ### 登録・ログインを確認する
 

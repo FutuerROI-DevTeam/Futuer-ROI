@@ -50,8 +50,8 @@ export function createResendMailer(o: ResendMailerOptions): Mailer {
   };
 }
 
-// 開発用。外部へ送らず、再設定URLを含む本文をpino互換のJSON 1行で標準出力へ出す。
-// 件名・URLはSecretではない（URLのトークンは1時間で失効し、ログを読める人は開発者本人だけ）。
+// 隔離したローカル確認用。外部へ送らず、再設定URLを含む本文をpino互換のJSON 1行で標準出力へ出す。
+// 再設定URLは有効期間（1時間）中それだけでパスワードを変えられる秘密なので、ログを他人が読める環境では使わない。
 export function createLogMailer(write: (line: string) => void = (line) => process.stdout.write(`${line}\n`)): Mailer {
   return async (message) => {
     write(JSON.stringify({ level: 30, time: Date.now(), msg: 'mail: not sent (MAIL_TRANSPORT=log)', to: message.to, subject: message.subject, text: message.text }));

@@ -63,7 +63,7 @@ PowerShell 7でブロック全体を一度に実行する（保存した`.ps1`�
 | `NODE_ENV` | 公開runtimeはproductionとしてSecret／HTTPSの検査を有効にする | 実際のbuild/runtime適用を確認。開発用Secretの自動生成へ依存しない |
 | `DATABASE_URL` | API必須。通常HTTPはNeon pooled接続を候補にし、TLS・対象DB・role・timeoutの実設定を確認 | migration／将来の`pg_dump`は別processで同じ変数へ**直結URL**を渡す計画。新しい`DIRECT_DATABASE_URL`を現CLIが読むと仮定しない。値の表示・本番CLI実行は行わない |
 | `BETTER_AUTH_SECRET`／`BETTER_AUTH_URL` | production必須。Secretは32文字以上、URLは実際の公開HTTPS originと一致 | PreviewとProductionのorigin・DB・資格情報の分離方法は未決。任意Preview domainを一括許可しない |
-| `MAIL_TRANSPORT`／`RESEND_API_KEY`／`MAIL_FROM` | production既定は`resend`で、APIキーとResend認証済みドメインの送信元が無いと起動しない。パスワード再設定メール（#256）に使う | Resendのアカウント・ドメイン認証・無料枠の確認はチーム作業。送らない確認だけなら`MAIL_TRANSPORT=log`を明示し、再設定URLがログへ出ることを承知する |
+| `MAIL_TRANSPORT`／`RESEND_API_KEY`／`MAIL_FROM` | production既定は`resend`。起動時はAPIキーと送信元の存在・形式だけを検証する（ドメイン未認証でも起動し、送信時にResendが拒否する）。パスワード再設定メール（#256）に使う | Resendのアカウント・送信元ドメインの認証・無料枠と、一般宛先への配信成功は起動とは別に受入れる。`MAIL_TRANSPORT=log`は再設定URL（有効期間中は秘密）をログへ出すため、隔離したローカル確認だけに使い、公開先では使わない |
 | `BETTER_AUTH_ALLOW_HTTP`／`AUTH_TRUSTED_ORIGINS` | HTTP例外はlocal container確認用。追加originは認証と状態変更業務APIの許可先になる | 公開でHTTP例外を有効にしない。CORS設定の代用ではなく、originを増やす必要があるなら同一origin設計を再確認 |
 | `TRUST_PROXY_HOPS` | 既定0。実際の転送経路・header形式・client IPを確認して決める | Vercelという名前だけでhop数を推測しない。設定変更・公開検証は別の作業 |
 | `AUTH_SIGN_IN_MAX`／`AUTH_SIGN_UP_MAX` | 1接続元60秒の試行上限、各既定5 | 共有会場回線のQAと認証防御を照合。業務API・予測のCPU予算とは別。今回上限を変更しない |
