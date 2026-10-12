@@ -6,6 +6,8 @@ Supporting Artifact / Not a Source of Truth
 
 ## 範囲と方法
 
+走査日: 2026-10-12。検証対象コードSHA: `5556cf61445b60336f57e56798bdd44b89d91ed0`（#282の最終検証対象で、後続の文書追記commitとは区別する）。
+
 初回変更後の`7d0ae9d`を基準に、現行FE・BE・Engine・test・検証入口を追加走査した。長い式・密集control・複数statement・コメントを全fileで確認し、読む段階が混ざる箇所へ限定編集した。長いliteral・SQL・JSXの空白を機械整形する基準にはしない。
 
 最新main `17e8acbe5ab658b85258cbd70070ccc2ecd5b042`から#280・#281・#283を取り込み、Goal一覧・320pxボタン・保存失敗focus・年表示・session失敗UIを保った。競合を解決したSaveFailure/dateと新しいSessionFailure/Noticeも確認した。以下の「変更」はこのmainに対する今回PRの差分であり、追加走査で既に十分と判断したfileにも初回の責務抽出が含まれる。
