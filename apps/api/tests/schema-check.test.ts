@@ -227,6 +227,40 @@ test('旧schema・未適用・同番号の異名を全文名で区別し、新�
   await checkCliPairUnchanged(old, oldReport);
 });
 
+test('監査済み全8CRLF履歴をLF checkoutで照合し、再適用せずschema・履歴・timestamp・全行を保つ', async (t) => {
+  const db = await createTestDatabase();
+  t.after(() => db.close());
+  const legacyFiles = ['0001_goal_action_log.sql', '0002_goal_record_start_date.sql', '0003_goal_question_prior.sql',
+    '0004_demo_seed_goal.sql', '0005_goal_data_integrity.sql', '0005_goal_target_date.sql',
+    '0006_prediction_evaluation.sql', '0008_session_milestone.sql'];
+  const checkout = copyMigrations(t, legacyFiles);
+  for (const name of legacyFiles) {
+    const sql = readFileSync(join(checkout, name), 'utf8').replace(/\r\n/g, '\n');
+    writeFileSync(join(checkout, name), sql.replace(/\n/g, '\r\n'));
+  }
+  const dir = pathToFileURL(`${checkout}/`);
+  await migrate(db.pool, 'all', dir); // 隔離fixtureで旧Windowsのraw実行・記録を再現する。
+  for (const name of legacyFiles) {
+    const sql = readFileSync(join(checkout, name), 'utf8');
+    writeFileSync(join(checkout, name), sql.replace(/\r\n/g, '\n'));
+  }
+  const before = await snapshot(db.pool);
+  const report = await checkUnchanged(db, { connectionString: db.connectionString, migrationsDir: dir });
+  assert.equal(report.status, 'ok');
+  assert.deepEqual(report.app?.applied, legacyFiles);
+  assert.deepEqual(report.app?.checksumMismatch, []);
+  assert.deepEqual(await migrate(db.pool, 'app', dir), { target: 'app', app: { applied: [] } });
+  assert.deepEqual(await snapshot(db.pool), before, 'runner preserves all legacy history including applied_at');
+  await checkCliPairUnchanged(db, report, {}, [checkout]);
+  writeFileSync(join(checkout, '0099_future.sql'), 'create table future_example (id integer);\n');
+  await db.pool.query(`insert into schema_migrations (name, checksum) values ('9999_elsewhere.sql', repeat('0', 64))`);
+  const blocked = await checkUnchanged(db, { connectionString: db.connectionString, migrationsDir: dir });
+  assert.equal(blocked.status, 'drift');
+  assert.deepEqual(blocked.app?.pending, ['0099_future.sql']);
+  assert.deepEqual(blocked.app?.unknownHistory, ['9999_elsewhere.sql']);
+  assert.deepEqual(blocked.app?.checksumMismatch, []);
+});
+
 test('checksum不一致とcheckoutにない履歴を失敗にし、履歴行を無視・削除・修正しない', async (t) => {
   const db = await createTestDatabase();
   t.after(() => db.close());

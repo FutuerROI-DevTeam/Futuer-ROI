@@ -154,6 +154,8 @@ Evidenceは[Compose検証](../scripts/smoke-compose.sh)と[Application CI](../.g
 | 認証DDLと失敗復旧 | 固定版の生成SQLを1 transactionで適用し、table作成後のindex失敗もrollbackする | 再実行時に部分schemaを残さない（[回帰](../apps/api/tests/migrate.test.ts)） | 既存schemaの手動変更・古い部分適用は自動削除しない |
 | migrationの時間制限 | 専用poolは接続確立だけ5秒。advisory lock待ち・DDL実行にHTTP用の5秒制限を使わない | 他instanceのmigrationが終わるまで直列化する（[回帰](../apps/api/tests/pool-responsibility.test.ts)） | 長時間待機はoperatorが原因を確認し中止する |
 
+#275の初回CDで、WindowsのCRLF実行時に記録したchecksumとLF checkoutの不一致が報告されたため、[照合helper](../apps/api/src/db/migration-checksum.ts)をrunnerとread-only schema-checkで共用する。互換一致は、監査済み8ファイルの**全文名と固定LF／全CRLF hash pair**に現在hash・記録hashの両方が属する場合だけ。raw完全一致、実行SQL、SHA-256計算、新規記録値、適用済み履歴・timestampは保持し、SQLの一般正規化や再適用はしない。未掲載SQLの改行差、BOM、混在改行、本文改変を互換扱いにしない。今後のcheckoutは[属性](../.gitattributes)でLF固定する。一般正規化は文字列／dollar quote内の改行も変えるため不採用。[回帰](../apps/api/tests/migration-checksum.test.ts)と[schema-check回帰](../apps/api/tests/schema-check.test.ts)、報告・未確認範囲は[release-guide 12-E](operations/release-guide.md#12-e-未確認)を参照する。
+
 ### 2026-10-06の認証実装（#75）
 
 私的APIのHTTP保存禁止（[#153](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/153)）は[app.ts](../apps/api/src/app.ts)で共通適用する。[apiBoundary](../apps/api/src/http/api-boundary.ts)が業務API・authと分類する応答は、成功・失敗（401／403／404／422／429／500等）とも`Cache-Control: no-store`を返し、routerが拒否したAPI要求にも適用する。登録済みhealth、SPAの`no-cache`、hash付きassetsの長期cacheは維持する。これはHTTP保存の方針であり、FEのcache消去・本番proxy/CDNの実漏洩防止を検証済みとするものではない。範囲と所有者・DB・Cookie保全は[cache-control.test.ts](../apps/api/tests/cache-control.test.ts)と既存auth／SPA回帰で確認する。

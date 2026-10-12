@@ -7,6 +7,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import pg from 'pg';
 import { authSchemaOptions } from '../auth/options.ts';
 import { defaultMigrationsDir, MIGRATION_FILE, migrationChecksum } from './migrate.ts';
+import { matchesMigrationChecksum } from './migration-checksum.ts';
 
 export type FindingCode =
   | 'empty_database'
@@ -167,7 +168,7 @@ async function checkAppMigrations(pool: pg.Pool, files: { name: string; sha256: 
   for (const file of files) {
     const previous = recorded.get(file.name);
     if (previous === undefined) pending.push(file.name);
-    else if (previous !== file.sha256) checksumMismatch.push(file.name);
+    else if (!matchesMigrationChecksum(file.name, file.sha256, previous)) checksumMismatch.push(file.name);
     else applied.push(file.name);
     recorded.delete(file.name);
   }

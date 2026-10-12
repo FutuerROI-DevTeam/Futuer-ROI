@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import type { Pool, PoolClient } from 'pg';
 import { authSchemaOptions } from '../auth/options.ts';
+import { matchesMigrationChecksum } from './migration-checksum.ts';
 
 // 実行順は 認証（Better Authのテーブル）→ アプリ（migrations/*.sql）。goal.user_id が "user"(id) を参照するため。
 // Demo Seed（db:seed:demo、#82）はこの後に別コマンドで実行する。
@@ -74,7 +75,7 @@ export async function migrateApp(pool: Pool, dir: URL = defaultMigrationsDir): P
       const checksum = migrationChecksum(sql);
       const previous = recorded.get(name);
       if (previous !== undefined) {
-        if (previous !== checksum) {
+        if (!matchesMigrationChecksum(name, checksum, previous)) {
           throw new MigrationChecksumError(`適用済みのmigration ${name} の内容が変更されています。既存ファイルを直さず、新しい番号のファイルを追加してください。`);
         }
         continue;
