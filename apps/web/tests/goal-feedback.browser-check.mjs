@@ -222,6 +222,20 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
   assert.equal(await evaluate('document.querySelectorAll(".fr-today__dock .fr-amount input,.fr-today__dock .fr-choice").length'), 0);
   await screenshot('draft-settings-changed-390');
   evidence.push({ mode: 'changed goal settings suppress old draft preview' });
+  // 入力がないときは、設定が変わっても記録を止めない（名前だけの変更・1回の量の変更）（#244）
+  await mount('today-empty');
+  await evaluate('window.__goalQA.configure({title:"名前だけ変更",goalSettingsRevision:1})');
+  await until(state, v => v?.text?.includes('名前だけ変更'), 'title update not reflected');
+  assert.ok(!(await evaluate(state)).text.includes('Goalの設定が変わりました'), 'no draft but record was blocked');
+  assert.ok(await evaluate('document.querySelectorAll(".fr-today__dock .fr-choice").length') > 0, 'record choices missing without draft');
+  await evaluate('window.__goalQA.configure({sessionAmount:45,goalSettingsRevision:2})');
+  await until(state, v => v?.text?.includes('今日記録する量：45分'), 'new session amount not used without draft');
+  assert.ok(!(await evaluate(state)).text.includes('Goalの設定が変わりました'));
+  await activate('.fr-today__dock .fr-choice');
+  const silentSave = await until(state, v => v?.puts?.length === 1, 'save after silent settings sync absent');
+  assert.equal(silentSave.puts[0].body.amount, 45);
+  assert.equal(silentSave.puts[0].body.expectedGoalSettingsRevision, 2);
+  evidence.push({ mode: 'settings change without draft keeps recording', puts: silentSave.puts });
   for (const kind of ['editor', 'stepped-editor', 'stepped']) {
     await mount('today-empty');
     if (kind !== 'editor') await click('document.querySelector(".fr-today__dock button[aria-label^=量を増やす]")');

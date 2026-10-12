@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { longDate } from '../../copy/date.ts';
 import { ErrorPanel } from '../../ui/components/Notice.tsx';
 import type { Log } from '@contracts';
@@ -80,6 +80,14 @@ export function RecordChoiceBar({
   useEffect(() => {
     if (reinputFocus.current) { reinputFocus.current = false; amount.amountLink.current?.focus(); }
   }, [inputSettings]);
+  // 入力（下書き）がないときは、Goalの設定が変わっても記録を止めず、最新の設定へ黙って合わせる（#244）。
+  // 名前・到達予定日だけの変更でも設定版は上がるため、止めると未入力なのに「未保存の量」と案内して記録できなくなる。
+  // 下書きがなければ量は新しい1回の量から決まるので、読み替える入力はない。入力中・量の編集中・保存中は今までどおり止める。
+  // 画面に出る前（layout effect）に合わせ、案内が一瞬出ないようにする。フォーカスは動かさない。
+  useLayoutEffect(() => {
+    if (inputSettings === recordSettings || draftStarted.current || editingAmount || saver.isSaving) return;
+    setInputSettings(recordSettings);
+  }, [recordSettings, inputSettings, editingAmount, saver.isSaving]);
   // 昨日を訂正している間は、量の入力からも送らない
   const save = (choice: RecordChoice) => {
     if (locked || settingsChanged) return;
