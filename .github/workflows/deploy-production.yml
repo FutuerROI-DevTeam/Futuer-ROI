@@ -13,8 +13,7 @@ permissions:
   contents: read
   actions: read
 
-# 本番配備は常に1つずつ。実行中のものは中断せず、待機は最新の1件だけ残る。
-# 待機が古いSHAのイベントに置き換わっても、gateがその時点のmain先頭を対象にするため最新mainを取りこぼさない。
+# 本番配備は常に1つずつ。待機イベントは置換されるので、ロック取得後にgateが最新mainを選び直す。
 concurrency:
   group: production-deploy
   cancel-in-progress: false
@@ -144,15 +143,18 @@ jobs:
         run: bash .github/scripts/with-production-db.sh npm run --silent db:check
 
   deploy:
-    name: Build, verify and promote
+    name: Build and verify candidate
     needs: [gate, schema, migrate]
-    # migrateのskipは許すが、Cancelは尊重する（always()だと取消後もpromoteへ進み得る。PR #276 review P2）。
     if: >-
       !cancelled()
       && needs.gate.outputs.deploy == 'true'
       && (needs.schema.outputs.schema == 'ok' || needs.migrate.result == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    outputs:
+      same: ${{ steps.current.outputs.same }}
+      previous: ${{ steps.current.outputs.previous }}
+      candidate: ${{ steps.candidate.outputs.id }}
     environment:
       name: production
       url: ${{ vars.PRODUCTION_URL }}
@@ -174,17 +176,17 @@ jobs:
           package-manager-cache: false
       - name: Skip if production already runs this SHA
         id: current
-        timeout-minutes: 2
         run: |
           host="${PRODUCTION_URL#https://}"
-          curl -fsS --connect-timeout 5 --max-time 20 -H "Authorization: Bearer $VERCEL_TOKEN" \
+          curl --connect-timeout 5 --max-time 15 -fsS -H "Authorization: Bearer $VERCEL_TOKEN" \
             "https://api.vercel.com/v13/deployments/$host?teamId=$VERCEL_ORG_ID" > "$RUNNER_TEMP/current.json"
-          echo "previous=$(node -e "console.log(require(process.argv[1]).id)" "$RUNNER_TEMP/current.json")" >> "$GITHUB_OUTPUT"
           if node .github/scripts/deploy-gate.mjs deployment "$RUNNER_TEMP/current.json" >/dev/null; then
             echo "same=true" >> "$GITHUB_OUTPUT"
             echo "- 本番は既に \`$TARGET_SHA\` です。配備しません。" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "same=false" >> "$GITHUB_OUTPUT"
+            node -e "const d=require(process.argv[1]);if (!/^dpl_[\\w-]+$/.test(d.id) || d.readyState !== 'READY' || d.target !== 'production') process.exit(1)" "$RUNNER_TEMP/current.json"
+            node -e "const d=require(process.argv[1]);console.log('previous=' + d.id)" "$RUNNER_TEMP/current.json" >> "$GITHUB_OUTPUT"
           fi
       - name: Ensure the SHA is still main head
         if: steps.current.outputs.same == 'false'
@@ -192,50 +194,97 @@ jobs:
       - name: Build a production deployment without assigning the domain
         id: build
         if: steps.current.outputs.same == 'false'
-        timeout-minutes: 12
         run: |
-          url="$(npx --yes vercel@63.1.2 deploy --prod --skip-domain --yes --meta "cdSha=$TARGET_SHA" --token "$VERCEL_TOKEN")"
+          url="$(timeout --kill-after=5s 8m npx --yes vercel@63.1.2 deploy --prod --skip-domain --yes --meta "cdSha=$TARGET_SHA" --token "$VERCEL_TOKEN")"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "- 候補: $url" >> "$GITHUB_STEP_SUMMARY"
       - name: Verify the candidate is this SHA
         id: candidate
         if: steps.current.outputs.same == 'false'
-        timeout-minutes: 2
         env:
           CANDIDATE_URL: ${{ steps.build.outputs.url }}
+          PREVIOUS_ID: ${{ steps.current.outputs.previous }}
         run: |
           host="${CANDIDATE_URL#https://}"
-          curl -fsS --connect-timeout 5 --max-time 20 -H "Authorization: Bearer $VERCEL_TOKEN" \
+          curl --connect-timeout 5 --max-time 15 -fsS -H "Authorization: Bearer $VERCEL_TOKEN" \
             "https://api.vercel.com/v13/deployments/$host?teamId=$VERCEL_ORG_ID" > "$RUNNER_TEMP/candidate.json"
           node .github/scripts/deploy-gate.mjs deployment "$RUNNER_TEMP/candidate.json"
-          echo "id=$(node -e "console.log(require(process.argv[1]).id)" "$RUNNER_TEMP/candidate.json")" >> "$GITHUB_OUTPUT"
+          candidate_id="$(node -e "const d=require(process.argv[1]);if (d.projectId !== process.env.VERCEL_PROJECT_ID || !/^dpl_[\\w-]+$/.test(d.id)) process.exit(1);console.log(d.id)" "$RUNNER_TEMP/candidate.json")"
+          echo "id=$candidate_id" >> "$GITHUB_OUTPUT"
+          echo "- 切替候補ID: \`$candidate_id\` / 直前本番ID: \`$PREVIOUS_ID\`（復旧時の照合に使用）" >> "$GITHUB_STEP_SUMMARY"
       - name: Smoke test the candidate
         if: steps.current.outputs.same == 'false'
-        timeout-minutes: 4
         env:
           CANDIDATE_URL: ${{ steps.build.outputs.url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: bash .github/scripts/smoke-deployment.sh "$CANDIDATE_URL"
+
+  switch:
+    name: Reconcile production switch
+    needs: [gate, deploy]
+    # Only the critical section survives ordinary Cancel. Promote and verification
+    # respect cancellation; the always() recovery step handles a journaled attempt.
+    # Force-cancel/runner loss needs operator recovery (release-guide 12-D).
+    if: >-
+      always()
+      && needs.deploy.result == 'success'
+      && needs.deploy.outputs.same == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    env:
+      TARGET_SHA: ${{ needs.gate.outputs.sha }}
+      CANDIDATE_ID: ${{ needs.deploy.outputs.candidate }}
+      PREVIOUS_ID: ${{ needs.deploy.outputs.previous }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: ${{ !cancelled() }}
+        timeout-minutes: 2
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        if: ${{ !cancelled() }}
+        timeout-minutes: 2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Install the pinned CLI before any switch attempt
+        if: ${{ !cancelled() }}
+        timeout-minutes: 2
+        run: timeout --kill-after=5s 2m npm install --prefix "$RUNNER_TEMP/cd-cli" --ignore-scripts --no-audit --no-fund vercel@63.1.2
       - name: Ensure the SHA is still main head before promote
-        if: steps.current.outputs.same == 'false'
+        id: head
+        if: ${{ !cancelled() }}
+        timeout-minutes: 1
         run: node .github/scripts/deploy-gate.mjs head
-      # ここから先は本番URLが変わり得る。試行を記録し、CLIの成否に関係なく実aliasで照合・復旧する（review P1）。
-      - name: Mark the promote attempt
-        id: attempt
-        if: steps.current.outputs.same == 'false'
-        run: echo "promote=true" >> "$GITHUB_OUTPUT"
       - name: Promote to production
-        if: steps.attempt.outputs.promote == 'true'
-        continue-on-error: true
-        timeout-minutes: 4
+        id: promote
+        if: ${{ !cancelled() && success() && steps.head.outcome == 'success' }}
+        timeout-minutes: 2
+        run: node .github/scripts/production-switch.mjs promote
+      - name: Verify the asynchronous promotion and production
+        id: verify
+        if: ${{ !cancelled() && success() && steps.promote.outputs.attempted == 'true' }}
+        timeout-minutes: 6
         env:
-          CANDIDATE_URL: ${{ steps.build.outputs.url }}
-        run: npx --yes vercel@63.1.2 promote "$CANDIDATE_URL" --yes --timeout 3m --token "$VERCEL_TOKEN"
-      - name: Reconcile production and roll back on failure
-        # Cancel後もpromote開始後なら必ず照合・復旧する。
-        if: always() && steps.attempt.outputs.promote == 'true'
-        timeout-minutes: 10
+          PROMOTE_STARTED: ${{ steps.promote.outputs.started }}
+          PROMOTE_BASELINE: ${{ steps.promote.outputs.baseline }}
+        run: timeout --kill-after=5s 6m node .github/scripts/production-switch.mjs verify
+      - name: Recover any failed or cancelled switch attempt
+        timeout-minutes: 14
+        if: >-
+          always() && steps.promote.outputs.attempted == 'true'
+          && (cancelled() || steps.verify.outcome != 'success')
         env:
-          CANDIDATE_ID: ${{ steps.candidate.outputs.id }}
-          PREVIOUS_ID: ${{ steps.current.outputs.previous }}
-        run: bash .github/scripts/reconcile-production.sh "$CANDIDATE_ID" "$PREVIOUS_ID"
+          PROMOTE_STARTED: ${{ steps.promote.outputs.started }}
+          PROMOTE_BASELINE: ${{ steps.promote.outputs.baseline }}
+        run: node .github/scripts/production-switch.mjs recover

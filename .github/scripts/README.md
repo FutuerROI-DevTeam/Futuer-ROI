@@ -20,6 +20,6 @@ summaryは常時出力する。失敗artifactは既存のupload-artifact pinを�
 
 - `deploy-gate.mjs`：Deploy productionの判定器。CI成功・mainの先頭・schemaの分類・配備SHAの照合だけを行い、Secretや接続値は扱わない。
 - `with-production-db.sh`：Vercel Productionの直結URLを実行中だけ取得してmaskし、1コマンドへ`DATABASE_URL`として渡す。
-- `smoke-deployment.sh`：候補・本番URLのhealth・トップ・未認証401を確認する。HTTP要求は接続5秒・1回20秒で打ち切る。
-- `reconcile-production.sh`：promote後に本番URLの実deploymentを照合し、確認失敗・未切替・状態不明なら直前の版へ戻す。回帰は`reconcile-production.test.sh`（stub、Container jobのshell testで実行）。
-- 回帰: node --test .github/scripts/deploy-gate.test.mjs（ApplicationのCIでも実行）。流れと停止・戻し方は[リリース手順書の12](../../docs/operations/release-guide.md#12-自動配備cd)。
+- `smoke-deployment.sh`：候補・本番URLのhealth・トップ・未認証401を確認する。HTTP要求は接続5秒・転送15秒、smoke全体120秒で打ち切る。途中停止したHTTP 200も失敗にする。
+- `production-switch.mjs`：promote前の開始記録、freshな`lastAliasRequest`の終端・実alias・SHA・smokeの検証と復旧。取消対象の検証と、取消後も続く専用復旧stepを分ける。状態不明ではpending promoteにrollbackを競合させず失敗し、次のgateも遮断する。Rolling Releaseは非対応。
+- 回帰: `node --test .github/scripts/deploy-gate.test.mjs .github/scripts/production-switch.test.mjs .github/scripts/smoke-deployment.test.mjs`（Application CIでも実行）。mock CLI／API／時計と実shell／curl＋localhostを使い、外部環境・Secret・DBを使わない。流れと停止・戻し方は[リリース手順書の12](../../docs/operations/release-guide.md#12-自動配備cd)。

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { REQUIRED_JOBS, checkDeployment, classifySchema, decideGate, parseSchemaReport, productionState, recoveryAction } from './deploy-gate.mjs';
+import { REQUIRED_JOBS, checkDeployment, classifySchema, decideGate, evaluateCurrentMain, parseSchemaReport, switchBlocks } from './deploy-gate.mjs';
 
 const A = 'a'.repeat(40);
 const B = 'b'.repeat(40);
@@ -85,18 +85,49 @@ test('deploymentは対象SHA・production・READYのときだけok', () => {
   assert.equal(checkDeployment(null, A), 'missing');
 });
 
-test('promote後は本番URLの実際のdeploymentで状態を判断する（CLIの成否に依存しない）', () => {
-  const ids = { candidateId: 'dpl_new', previousId: 'dpl_old' };
-  assert.equal(productionState({ ...ids, productionId: 'dpl_new' }), 'candidate');
-  // CLIがタイムアウトしてもpromotionが後から完了した場合は候補として確認する。
-  assert.equal(productionState({ ...ids, productionId: 'dpl_old' }), 'previous');
-  assert.equal(productionState({ ...ids, productionId: 'dpl_other' }), 'unknown');
-  assert.equal(productionState({ ...ids, productionId: '' }), 'unknown');
+test('古いAが待機Bを置換しても、ロック後のgateは最新main BのCIを照合する', async () => {
+  const app = run('Application', { head_sha: B });
+  const foundation = run('Foundation', { head_sha: B });
+  const paths = [];
+  const api = async path => {
+    paths.push(path);
+    if (path === '/git/ref/heads/main') return { object: { sha: B } };
+    if (path.startsWith('/actions/workflows/')) return { workflow_runs: [] };
+    if (path.startsWith('/actions/runs?')) return { workflow_runs: [app, foundation] };
+    return { jobs: jobsFor(path.includes(`/${app.id}/`) ? 'Application' : 'Foundation') };
+  };
+  // GitHub single-pending queue: X running; B waits; stale A's rerun replaces B.
+  let pendingEvent = B;
+  pendingEvent = A;
+  assert.equal(pendingEvent, A);
+  assert.equal(decideGate(input({ targetSha: pendingEvent, mainSha: B })).reason, 'not-main-head'); // old bug
+  const result = await evaluateCurrentMain({ enabled: true, api, currentRunId: '10' });
+  assert.deepEqual(result, { sha: B, deploy: true, reason: 'ci-passed' });
+  assert.ok(paths.includes(`/actions/runs?head_sha=${B}&event=push&branch=main&per_page=100`));
+  app.conclusion = 'failure';
+  assert.equal((await evaluateCurrentMain({ enabled: true, api })).reason, 'ci-failed:Application');
 });
 
-test('候補が本番かつ確認成功のときだけ完了し、それ以外は直前の版へ戻す', () => {
-  assert.equal(recoveryAction('candidate', true), 'done');
-  assert.equal(recoveryAction('candidate', false), 'restore-previous');
-  assert.equal(recoveryAction('previous', true), 'restore-previous');
-  assert.equal(recoveryAction('unknown', true), 'restore-previous');
+test('失敗・取消された切替は後続CDを止め、gate-only/skipでは解除しない', async () => {
+  assert.equal(switchBlocks([]), null);
+  assert.equal(switchBlocks([{ name: 'Reconcile production switch', conclusion: 'skipped' }]), null);
+  for (const conclusion of ['failure', 'cancelled', 'timed_out', null]) {
+    assert.equal(switchBlocks([{ name: 'Reconcile production switch', conclusion }]), true);
+  }
+  assert.equal(switchBlocks([{ name: 'Reconcile production switch', conclusion: 'success' }]), false);
+  const { runs, jobsByRunId } = green();
+  const api = async path => {
+    if (path === '/git/ref/heads/main') return { object: { sha: A } };
+    if (path.startsWith('/actions/workflows/')) return { workflow_runs: [{ id: 100 }, { id: 99, run_attempt: 2 }, { id: 98 }] };
+    if (path.startsWith('/actions/runs?')) return { workflow_runs: runs };
+    if (path.includes('/100/')) return { jobs: [] };
+    if (path.includes('/99/')) return { jobs: [{ name: 'Reconcile production switch',
+      conclusion: path.includes('/attempts/1/') ? 'failure' : 'skipped' }] };
+    if (path.includes('/98/')) return { jobs: [{ name: 'Reconcile production switch', conclusion: 'success' }] };
+    return { jobs: jobsByRunId[Number(path.split('/')[3])] };
+  };
+  assert.equal((await evaluateCurrentMain({ enabled: true, api, currentRunId: '100' })).reason, 'previous-switch-needs-review');
+  assert.equal((await evaluateCurrentMain({ enabled: true, api, currentRunId: '99' })).deploy, true); // operator-approved full retry
+  assert.deepEqual(await evaluateCurrentMain({ enabled: false, api: () => { throw new Error('must not call'); } }),
+    { deploy: false, reason: 'cd-disabled' });
 });

@@ -1,10 +1,9 @@
 // 本番CD（Issue #275）の判定器。配備してよいかの判断だけを行い、Secretや接続値は扱わない。
 // 使い方:
-//   node .github/scripts/deploy-gate.mjs gate     ロック取得後のmain先頭について、CI成功・CD有効を確認しsha/deploy/reasonを書く
+//   node .github/scripts/deploy-gate.mjs gate     ロック取得後の最新mainのCI成功・CD有効を確認しsha/deploy/reasonを書く
 //   node .github/scripts/deploy-gate.mjs head     対象SHAが今もmainの先頭かだけを確認する（promote直前）
 //   node .github/scripts/deploy-gate.mjs schema FILE EXIT   db:checkの出力を ok / pending / stop に分類する
 //   node .github/scripts/deploy-gate.mjs deployment FILE    Vercel deploymentのJSONが対象SHAの本番buildか確認する
-//   node .github/scripts/deploy-gate.mjs state PROD CAND PREV / recovery STATE SMOKE_OK   promote後の照合と復旧の判断
 import { appendFileSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
@@ -18,8 +17,9 @@ const SHA = /^[0-9a-f]{40}$/;
 
 // runs: GitHub APIのworkflow run（name, head_sha, head_branch, event, status, conclusion, id, run_attempt）
 // jobsByRunId: run idごとのjob一覧（name, conclusion）
-export function decideGate({ enabled, targetSha, mainSha, runs, jobsByRunId }) {
+export function decideGate({ enabled, targetSha, mainSha, runs, jobsByRunId, blockedBySwitch = false }) {
   if (!enabled) return { deploy: false, reason: 'cd-disabled' };
+  if (blockedBySwitch) return { deploy: false, reason: 'previous-switch-needs-review' };
   if (!SHA.test(targetSha ?? '') || !SHA.test(mainSha ?? '')) return { deploy: false, reason: 'invalid-sha' };
   if (targetSha !== mainSha) return { deploy: false, reason: 'not-main-head' };
   for (const [workflow, jobNames] of Object.entries(REQUIRED_JOBS)) {
@@ -67,30 +67,53 @@ export function checkDeployment(deployment, targetSha) {
   return 'ok';
 }
 
-// promote後（CLIが失敗・タイムアウトした場合を含む）に、本番URLが実際に指しているdeploymentを分類する。
-// Vercelの --timeout はCLIの待機を止めるだけで、受理されたpromotionは後から完了し得る（PR #276 review P1）。
-export function productionState({ productionId, candidateId, previousId }) {
-  if (productionId && productionId === candidateId) return 'candidate';
-  if (productionId && productionId === previousId) return 'previous';
-  return 'unknown';
-}
-
-// 照合後の復旧。候補が本番かつ確認成功ならdone。それ以外は直前の版へ明示的に戻し（固定し）、jobは失敗にする。
-export function recoveryAction(state, smokeOk) {
-  if (state === 'candidate' && smokeOk) return 'done';
-  return 'restore-previous';
-}
-
 async function github(path) {
   const response = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}${path}`, {
     headers: { authorization: `Bearer ${process.env.GITHUB_TOKEN}`, accept: 'application/vnd.github+json',
       'x-github-api-version': '2022-11-28' },
+    signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) throw new Error(`GitHub API ${path.split('?')[0]} -> ${response.status}`);
   return response.json();
 }
 
 const mainHead = async () => (await github('/git/ref/heads/main')).object.sha;
+
+// gate-only/skip runs must not hide a switch that failed or was force-cancelled.
+// The operator inspects it and re-runs that entire run; never automatically unblock it.
+export function switchBlocks(jobs) {
+  const job = jobs.find(j => j.name === 'Reconcile production switch');
+  return job && job.conclusion !== 'skipped' ? job.conclusion !== 'success' : null;
+}
+
+async function previousSwitchBlocks(api, currentRunId) {
+  for (let page = 1; ; page++) {
+    const { workflow_runs: runs } = await api(`/actions/workflows/deploy-production.yml/runs?branch=main&per_page=100&page=${page}`);
+    for (const run of runs) {
+      if (String(run.id) === currentRunId) continue;
+      // A whole-run retry can skip switch (e.g. CI still waiting). That must not
+      // erase an earlier unresolved switch in the same run's attempt history.
+      for (let attempt = run.run_attempt ?? 1; attempt >= 1; attempt--) {
+        const { jobs } = await api(`/actions/runs/${run.id}/attempts/${attempt}/jobs?per_page=100`);
+        const blocked = switchBlocks(jobs);
+        if (blocked !== null) return blocked;
+      }
+    }
+    if (runs.length < 100) return false;
+  }
+}
+
+export async function evaluateCurrentMain({ enabled, api, currentRunId }) {
+  if (!enabled) return { deploy: false, reason: 'cd-disabled' };
+  const mainSha = (await api('/git/ref/heads/main')).object.sha;
+  const { workflow_runs: runs } = await api(`/actions/runs?head_sha=${mainSha}&event=push&branch=main&per_page=100`);
+  const jobsByRunId = {};
+  for (const run of runs.filter(r => Object.hasOwn(REQUIRED_JOBS, r.name) && r.status === 'completed')) {
+    jobsByRunId[run.id] = (await api(`/actions/runs/${run.id}/jobs?filter=latest&per_page=100`)).jobs;
+  }
+  return { sha: mainSha, ...decideGate({ enabled, targetSha: mainSha, mainSha, runs, jobsByRunId,
+    blockedBySwitch: await previousSwitchBlocks(api, currentRunId) }) };
+}
 
 function output(values) {
   const lines = Object.entries(values).map(([k, v]) => `${k}=${v}`);
@@ -101,16 +124,10 @@ function output(values) {
 async function main([mode, ...args]) {
   const targetSha = process.env.TARGET_SHA;
   if (mode === 'gate') {
-    // 対象は起動イベントのSHAではなく、ロック取得後のmainの先頭。古いSHAのイベントが最新mainの待機を
-    // 置き換えても、最新mainを配備できる（PR #276 review P2）。
     const enabled = process.env.CD_ENABLED === 'true';
-    const mainSha = await mainHead();
-    const { workflow_runs: runs } = await github(`/actions/runs?head_sha=${mainSha}&event=push&branch=main&per_page=100`);
-    const jobsByRunId = {};
-    for (const run of runs.filter(r => Object.hasOwn(REQUIRED_JOBS, r.name) && r.status === 'completed')) {
-      jobsByRunId[run.id] = (await github(`/actions/runs/${run.id}/jobs?filter=latest&per_page=100`)).jobs;
-    }
-    output({ sha: mainSha, ...decideGate({ enabled, targetSha: mainSha, mainSha, runs, jobsByRunId }) });
+    // workflow_run is a wake-up, not the target. This runs AFTER the workflow lock:
+    // if stale A replaces pending B, A still reconciles the current deployable main B.
+    output(await evaluateCurrentMain({ enabled, api: github, currentRunId: process.env.GITHUB_RUN_ID }));
   } else if (mode === 'head') {
     const mainSha = await mainHead();
     if (mainSha !== targetSha) { output({ head: 'false' }); process.exitCode = 1; return; }
@@ -122,13 +139,8 @@ async function main([mode, ...args]) {
     const result = checkDeployment(JSON.parse(readFileSync(args[0], 'utf8')), targetSha);
     output({ deployment: result });
     if (result !== 'ok') process.exitCode = 1;
-  } else if (mode === 'state') {
-    const [productionId, candidateId, previousId] = args;
-    output({ state: productionState({ productionId, candidateId, previousId }) });
-  } else if (mode === 'recovery') {
-    output({ action: recoveryAction(args[0], args[1] === 'true') });
   } else {
-    console.error('usage: deploy-gate.mjs gate|head|schema FILE EXIT|deployment FILE|state PROD CAND PREV|recovery STATE SMOKE_OK');
+    console.error('usage: deploy-gate.mjs gate|head|schema FILE EXIT|deployment FILE');
     process.exitCode = 2;
   }
 }
