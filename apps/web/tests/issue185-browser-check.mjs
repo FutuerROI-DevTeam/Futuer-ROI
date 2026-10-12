@@ -22,7 +22,12 @@ async function browserPath() {
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
       '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
     ] : ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'])].filter(Boolean);
-  for (const path of candidates) { try { await access(path); return path; } catch {} }
+  for (const path of candidates) {
+    try {
+      await access(path);
+      return path;
+    } catch {}
+  }
   throw new Error('Chromium not found: set TEST_BROWSER to an installed Chrome/Edge/Chromium executable (not a skipped PASS)');
 }
 
@@ -36,7 +41,8 @@ function setupSessionTransport() {
       return Response.json({ enabled: false, policyVersion: 'self-evaluation-v1', retentionDays: 90, maxSnapshots: 90, observationDays: 30 });
     }
     if (new URL(url, location.href).pathname !== '/api/auth/get-session' || (init?.method && init.method !== 'GET')) {
-      state.writes++; throw new Error('unexpected request: ' + url);
+      state.writes++;
+      throw new Error('unexpected request: ' + url);
     }
     state.reads++;
     if (state.hold) await new Promise((resolve) => state.held.push(resolve));
@@ -80,9 +86,18 @@ async function runBrowser(t, entry, mockAuth, realRouter = false) {
     onunhandledrejection=(event)=>{document.getElementById('result').textContent=JSON.stringify({ok:false,error:String(event.reason)});};
     </script><script>${code.replaceAll('</script', '<\\/script')}</script>`;
   await writeFile(page, html);
-  const server = createServer((_, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); });
-  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-  t.after(() => new Promise((resolve) => { server.closeAllConnections(); server.close(resolve); }));
+  const server = createServer((_, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end(html);
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  t.after(() => new Promise((resolve) => {
+    server.closeAllConnections();
+    server.close(resolve);
+  }));
   const { port } = server.address();
   const { stdout, stderr } = await promisify(execFile)(browser, [
     '--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
