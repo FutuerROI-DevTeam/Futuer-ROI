@@ -19,7 +19,7 @@ Supporting Doc / Not Source of Truth。現行契約は[Product](../product-spec.
 | EVENT(d) / INTERVAL(l,r) | Fu(b)−Fu(a), a=F(l), b=F(r), eventはl=d−1,r=d | log D(a,u)+log D(b,u)−u−log(b−a) | Fu(a)+Fu(b)−1 |
 | CENSOR(c) | 1−Fu(F(c)) | log D(F(c),u)−log(1−F(c)) | Fu(F(c)) |
 
-表示CDF/PMFは倍精度近似であり、微小な正の質量が差分で0へ丸まる場合がある。比較scoreは、保存元CDFと保存uに対する数学的odds変換を上表の安定解析式で評価する。丸めた候補CDFからNLLを再計算しないため、表示PMFの差分と数値的に一致しない場合がある。表示PMF=0だけで数学的な支持なしと断言しない。元CDFの真の0/1や等しい区間端点による支持失敗はそのままとし、epsilon救済はしない。
+表示CDF/PMFは倍精度近似であり、微小な正の質量が差分で0へ丸まる場合がある。比較scoreは、保存元CDFと保存uに対する数学的odds変換を上表の安定解析式で評価する。丸めた候補CDFからNLLを再計算しないため、表示PMFの差分と数値的に一致しない場合がある。表示PMF=0だけで数学的な支持なしと断言しない。保存元CDFで0/1・等しい区間端点として表現される支持失敗はそのままとし、epsilon救済はしない。
 
 本人Goalの3episodeを等重み1/3とし、平均NLLにu²/2を加える。共通切片やa/bを同時fitしない。Hessianは1＋非負の`Fu(p)*(1−Fu(p))`項なので強凸。`|u|≤ln(1.25)`で勾配の両端を確認し、内点は二分法、境界は射影KKT残差で判定する。構造的支持がないlabelはFAILED/u=0とし、tiny epsilonを入れて尤度を作らない。確率0のcensorは損失0・勾配0なので未達を必ず情報不足と呼ぶのも、必ず情報があると呼ぶのも誤りである。
 

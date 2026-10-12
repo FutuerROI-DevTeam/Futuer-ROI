@@ -1,6 +1,6 @@
 # #248 途中到達補正の検証記録
 
-Supporting Artifact / Not Source of Truth。2026-10-12。正式契約は[Product](../product-spec.md#途中到達の個人補正比較248既定off)/[Architecture](../architecture.md#d-248-途中到達による個人補正248)、コード・テストは[対応表](../change-map.md#途中到達の個人補正248)。[Issue #248](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/248)の限定実装。CONDITIONAL、Human Review・実利用は未完了。
+Supporting Artifact / Not Source of Truth。2026-10-12。正式契約は[Product](../product-spec.md#途中到達の個人補正比較248既定off)/[Architecture](../architecture.md#d-248-途中到達による個人補正248)、コード・テストは[対応表](../change-map.md#途中到達の個人補正248)。[Issue #248](https://github.com/FutureROI-DevTeam/Future-ROI/issues/248)の限定実装。CONDITIONAL、Human Review・実利用は未完了。
 
 ## 固定範囲
 
@@ -65,3 +65,32 @@ UIは追加せず、実ブラウザ/初見理解は未検証。実DB migration�
 ## 既存migration保全回帰の追加schema対応
 
 0fcの全回帰で、後着migration保全テストの期待適用一覧が0006まで固定され、新規0008を含めていない失敗を確認した。0008を一覧へ追加し、既存Goalの追加同意CAS版が0であることを検査してから、その追加列だけを除いて旧行全体を照合する。新規補助3tableが空であることも検査する。旧Goal/log/marker/auth行の全体比較、旧0004のmigration行保全、再適用が空になる検査は維持する。runtime・migration本体・元予測は変更しない。修正後の対象別試験と全workspace回帰を新しい固定HEADで実行する。
+
+
+## 最終ローカル検証（固定a04f3abc）
+
+検証source HEADは`a04f3abc2f057509e1d62c262136933f85e5a968`。Node24.21.0/npm11.19.0で以下の終了code0を確認した。実行childのDATABASE_URLを除外し、新規専用embedded PostgreSQLだけを使用した。
+
+| 確認 | 実測結果 |
+| --- | --- |
+| 全workspace prediction | 77/77 PASS、fail0/cancel0/skip0 |
+| 全workspace api | 277/277 PASS、fail0/cancel0/skip0 |
+| 全workspace web | 164/165 PASS、fail0/cancel0/skip1 |
+| 途中到達機能 | 全API回帰内の27/27 PASS。core9、assessment9、合成HTTP/DB9 |
+| UUID境界 | 大文字/小文字の参加一致、同一参加ID、1行。外部1/1 PASS。HTTP9ケースも大文字全endpointでPASS |
+| migration保全 | 0008と既定CAS版0、補助3table空を含む対象別1/1と全回帰PASS。旧行全体比較を維持 |
+| advisory lock | 正しい対象別1/1の後、最終全回帰でも該当case PASS |
+| 全型検査 | PASS |
+| Vercel用build | 81,498,484bytes/10,721files/1104asset references/1098fonts、PASS |
+| 生成物検証 | 9/9 PASS。隔離Function import/HTTP/SPA/assets/hash/秘密file・境界外拒否。deploy未実施 |
+| foundation | PASS。アプリ試験とは別。検証記録追記後にも再確認する |
+| 独立Decimal oracle | 70桁の直接確率EVENT/CENSOR内点照合PASS |
+| 独立AI差分レビュー | f8のUUID修正とa04の保全fixture修正に新Blocking/Should Fixなし |
+
+旧70bはtransport中断で完全summaryなし。旧0fc全回帰は専用cluster停止timeoutと、0008を含めていない保全fixtureの失敗を記録した。最初のpool対象別再試験は別fileを指定し、実caseを実行していなかったため合格証拠から除外した。正しいpool-responsibility.test.tsの再実行は1/1 PASS。本固定HEADの全回帰も完走した。f8候補はbuildがPASSした後、生成物検証が8/9で失敗した。隔離FunctionのHTTP/SPA/全asset検証childが既存50000ms上限でETIMEDOUTとなり、全回帰の開始前にrunnerが終了した。process停止監視は操作を行わず終了した。既存制限値は変更せず、本固定版を全回帰後に再build・再検証した。timeoutの原因は断定せず、旧失敗・部分ログを成功扱いしない。
+
+Dは固定0fcで旧JOINの撤回/期限/purge後409、新CAS版204、初回DONEの成熟EVENT、UTC/Berlin両sessionの3tableで2160時間受理/+1ms拒否を別合成API/DBで確認した。score9ケースは別100桁Decimalと一致し、最大絶対誤差3.2598169387566154e-15、pure18件と独立API/DB1件もPASS。D確認のcore/assessment/store/migrationは本HEADと同一blobである。Dは後続UUID/保全fixture差分や全回帰を代行確認したものではない。Human Approveは別途必要である。
+
+合成diagnosticはu=0.22314355131420976、odds倍率=1.25、KKT残差=0。未学習の次の途中到達NLLは0.6061358035703156→0.5108256237659907。標準Today一致、final scoreは両方0で最終Goal改善は未検証。
+
+本追記は文書だけの後続commitとし、manifestで実装/testsの同一blob、最終HEAD、各終了code・ログhash・元prior/Engine/Todayと旧研究helperのhashを照合する。通常push・Draft PR・同SHA CIは明示承認に従い実結果を提出記録へ追記する。実DB・本番有効化・merge/deployは対象外。
