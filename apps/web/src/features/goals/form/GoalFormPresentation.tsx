@@ -112,22 +112,34 @@ export function SaveFailure({ error, mode, onReloadLatest, reloadingLatest, onRe
   if (isUnauthenticated(error)) {
     return <SignedOutPanel body={c.signedOut.formBody} newTab />;
   }
-  if (mode === 'create' && (createFailureKind(error) === 'recovery' || createFailureKind(error) === 'conflict')) return (
-    <ErrorPanel
-      title={createFailureKind(error) === 'recovery' ? f.createRecovery.unreadableTitle : f.createRecovery.conflictTitle}
-      action={<>{onResumeCorrection ? <Button onClick={onResumeCorrection}>{f.createRecovery.resumeCorrection}</Button> : null}<Link to="/goals" className="fr-btn fr-btn--secondary">{f.createRecovery.checkList}</Link></>}
-    >
-      {onResumeCorrection ? f.createRecovery.rejectedCleanupBody : f.createRecovery.checkBody}
-    </ErrorPanel>
-  );
-  if (mode === 'create' && createFailureKind(error) === 'owner') return (
-    <SignedOutPanel body={f.createRecovery.ownerBody} newTab />
-  );
-  if (mode === 'create' && isCreateResultDeleted(error)) return (
-    <ErrorPanel title={f.createRecovery.deletedTitle} action={onRestartCreate ? <Button onClick={onRestartCreate}>{f.createRecovery.restart}</Button> : undefined}>
-      {f.createRecovery.deletedBody}
-    </ErrorPanel>
-  );
+  if (mode === 'create' && (createFailureKind(error) === 'recovery' || createFailureKind(error) === 'conflict')) {
+    return (
+      <ErrorPanel
+        title={createFailureKind(error) === 'recovery' ? f.createRecovery.unreadableTitle : f.createRecovery.conflictTitle}
+        action={
+          <>
+            {onResumeCorrection ? <Button onClick={onResumeCorrection}>{f.createRecovery.resumeCorrection}</Button> : null}
+            <Link to="/goals" className="fr-btn fr-btn--secondary">{f.createRecovery.checkList}</Link>
+          </>
+        }
+      >
+        {onResumeCorrection ? f.createRecovery.rejectedCleanupBody : f.createRecovery.checkBody}
+      </ErrorPanel>
+    );
+  }
+  if (mode === 'create' && createFailureKind(error) === 'owner') {
+    return <SignedOutPanel body={f.createRecovery.ownerBody} newTab />;
+  }
+  if (mode === 'create' && isCreateResultDeleted(error)) {
+    return (
+      <ErrorPanel
+        title={f.createRecovery.deletedTitle}
+        action={onRestartCreate ? <Button onClick={onRestartCreate}>{f.createRecovery.restart}</Button> : undefined}
+      >
+        {f.createRecovery.deletedBody}
+      </ErrorPanel>
+    );
+  }
   if (isEditConflict(error)) {
     // 回答またはGoal設定の版が古い。保存済みに見せず、入力を残して最新を読み直してもらう。
     return (

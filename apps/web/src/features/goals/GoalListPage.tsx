@@ -42,17 +42,29 @@ export function GoalListPage() {
   const current = usePrivateEpoch();
   const capability = useEvaluationCapability();
   const ready = privateDataReady(current);
-  const query = useQuery({ queryKey: goalKeys.list(), queryFn: ({ signal }) => goalsHttp.listGoals(signal), enabled: ready, ...fetchPolicy });
+  const query = useQuery({
+    queryKey: goalKeys.list(),
+    queryFn: ({ signal }) => goalsHttp.listGoals(signal),
+    enabled: ready,
+    ...fetchPolicy,
+  });
   const fresh = ready && query.dataUpdatedAt > current.clearedAt;
   const footprintGoals = [...new Map((fresh && !query.isError ? query.data ?? [] : []).map(goal => [goal.id, goal] as const)).values()];
-  const histories = useQueries({ queries: footprintGoals.map(goal => ({
-    queryKey: todayKeys.logs(goal.id), queryFn: ({ signal }: { signal: AbortSignal }) => todayHttp.listLogs(goal.id, signal),
-    enabled: ready, ...fetchPolicy,
-  })) });
+  const histories = useQueries({
+    queries: footprintGoals.map(goal => ({
+      queryKey: todayKeys.logs(goal.id),
+      queryFn: ({ signal }: { signal: AbortSignal }) => todayHttp.listLogs(goal.id, signal),
+      enabled: ready,
+      ...fetchPolicy,
+    })),
+  });
   const footprintSources = footprintGoals.map((goal, index) => {
     const history = histories[index];
-    return { goal, logs: history && !history.isError && !history.isFetching && !query.isFetching
-      && history.dataUpdatedAt > current.clearedAt ? history.data ?? null : null };
+    return {
+      goal,
+      logs: history && !history.isError && !history.isFetching && !query.isFetching
+        && history.dataUpdatedAt > current.clearedAt ? history.data ?? null : null,
+    };
   });
   useEffect(() => {
     if (!fresh || !query.data || query.isFetching) return;

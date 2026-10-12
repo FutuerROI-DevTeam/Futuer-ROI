@@ -430,7 +430,11 @@ function GoalForm({
     const inProgress = attempt !== null || prepareError !== null || saving.current || deleting.current || reloadInFlight.current
       || save.isPending || failedSave !== null || remove.isPending || remove.isError || reloadingLatest;
     onDraftChange?.(inProgress ? undefined : currentDraft());
-  }, [values, baseline, goal, submitted, priorOpen, priorChosen, latestAnswers, reloadingLatest, save.isPending, failedSave, remove.isPending, remove.isError, attempt, prepareError, onDraftChange]);
+  }, [
+    values, baseline, goal, submitted, priorOpen, priorChosen, latestAnswers,
+    reloadingLatest, save.isPending, failedSave, remove.isPending, remove.isError,
+    attempt, prepareError, onDraftChange,
+  ]);
   useLayoutEffect(() => {
     if ((failedSave !== null || prepareError !== null)
       && !save.isPending && !saving.current && !deleting.current && !remove.isPending && !remove.isError) {
@@ -442,7 +446,11 @@ function GoalForm({
         operation: failedSave === null ? attempt : lastOperation,
       });
     }
-  }, [failedSave, prepareError, values, baseline, goal, submitted, priorOpen, priorChosen, latestAnswers, serverErrors, save.isPending, save.variables, retainedOperation, attempt, remove.isPending, remove.isError, onFailureChange]);
+  }, [
+    failedSave, prepareError, values, baseline, goal, submitted, priorOpen, priorChosen,
+    latestAnswers, serverErrors, save.isPending, save.variables, retainedOperation,
+    attempt, remove.isPending, remove.isError, onFailureChange,
+  ]);
 
   // 保存・削除が終わったとき、この画面がまだ表示されていれば一覧へ戻る（離れた後なら、いま表示中の別の画面を動かさない）
   const leaveToList = () => {

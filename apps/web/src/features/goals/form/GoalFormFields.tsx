@@ -139,7 +139,14 @@ export function GoalFormFields({
               <Link to="/goals/new" className="fr-goalform__new-goal">{f.createNewGoal}</Link>
             </>
           ) : undefined}>
-            <fieldset id="goal-unit" className="fr-unit-radio" aria-labelledby="goal-unit-label" {...fieldAria('goal-unit', { help: unitLocked, error: errors.unit })} disabled={inputDisabled || incompleteTime || unitLocked} tabIndex={-1}>
+            <fieldset
+              id="goal-unit"
+              className="fr-unit-radio"
+              aria-labelledby="goal-unit-label"
+              {...fieldAria('goal-unit', { help: unitLocked, error: errors.unit })}
+              disabled={inputDisabled || incompleteTime || unitLocked}
+              tabIndex={-1}
+            >
               <label><input type="radio" name="goal-unit" value="minutes" checked={values.unit === 'minutes'} onChange={() => switchUnit('minutes')} />時間</label>
               <label><input type="radio" name="goal-unit" value="sessions" checked={values.unit === 'sessions'} onChange={() => switchUnit('sessions')} />回数</label>
             </fieldset>
@@ -156,9 +163,35 @@ export function GoalFormFields({
         <div className="fr-goalform__group-fields">
           {/* デスクトップ幅では2列に並べる（デザイン Desk-create）。スマートフォン幅では1列のまま */}
           <div className="fr-goalform__pair">
-            {values.unit === 'minutes' ? <TimeAmountField id="goal-totalRequired" label={f.totalRequired} value={values.totalRequired} error={errors.totalRequired} disabled={inputDisabled} onChange={v => update('totalRequired', v)} /> :
-              <AmountField id="goal-totalRequired" label={f.totalRequired} unit={unit} value={values.totalRequired} error={errors.totalRequired} disabled={inputDisabled} onChange={(v) => update('totalRequired', v)} />}
-            <AmountField id="goal-sessionAmount" label={f.sessionAmount} unit={unit} value={values.sessionAmount} error={errors.sessionAmount} disabled={inputDisabled} onChange={(v) => update('sessionAmount', v)} />
+            {values.unit === 'minutes' ? (
+              <TimeAmountField
+                id="goal-totalRequired"
+                label={f.totalRequired}
+                value={values.totalRequired}
+                error={errors.totalRequired}
+                disabled={inputDisabled}
+                onChange={v => update('totalRequired', v)}
+              />
+            ) : (
+              <AmountField
+                id="goal-totalRequired"
+                label={f.totalRequired}
+                unit={unit}
+                value={values.totalRequired}
+                error={errors.totalRequired}
+                disabled={inputDisabled}
+                onChange={(v) => update('totalRequired', v)}
+              />
+            )}
+            <AmountField
+              id="goal-sessionAmount"
+              label={f.sessionAmount}
+              unit={unit}
+              value={values.sessionAmount}
+              error={errors.sessionAmount}
+              disabled={inputDisabled}
+              onChange={(v) => update('sessionAmount', v)}
+            />
           </div>
           {values.unit === 'minutes' ? (
             <TimeAmountField
