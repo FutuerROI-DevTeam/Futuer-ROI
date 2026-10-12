@@ -95,20 +95,22 @@ export function exactIntegratedReached(
     return false;
   }
 
-  const I = Number(initialState === 'SKIPPED');
-  const m = N - I;
-  const A = integerMasses(m, posterior.a.beta, posterior.a.alpha);
-  const B = integerMasses(day - m, posterior.b.alpha, posterior.b.beta);
-  const tail: bigint[] = Array<bigint>(B.masses.length + 1).fill(0n);
-  for (let k = B.masses.length - 1; k >= 0; k--) {
-    tail[k] = tail[k + 1]! + B.masses[k]!;
+  // I=開始SKIPPEDの1回、m=N-IはDONE起点の試行数。離脱Rと再開数の分布を整数比で持つ。
+  const initialSkipCount = Number(initialState === 'SKIPPED');
+  const doneOriginTrials = N - initialSkipCount;
+  const departures = integerMasses(doneOriginTrials, posterior.a.beta, posterior.a.alpha);
+  const resumptions = integerMasses(day - doneOriginTrials, posterior.b.alpha, posterior.b.beta);
+  const resumptionTail: bigint[] = Array<bigint>(resumptions.masses.length + 1).fill(0n);
+  for (let k = resumptions.masses.length - 1; k >= 0; k--) {
+    resumptionTail[k] = resumptionTail[k + 1]! + resumptions.masses[k]!;
   }
 
+  // d日以内の完了条件は再開数>=R+I。分母を共有したまま、各Rの尾を加重する。
   let numerator = 0n;
-  for (let r = 0; r < A.masses.length; r++) {
-    numerator += A.masses[r]! * (tail[r + I] ?? 0n);
+  for (let r = 0; r < departures.masses.length; r++) {
+    numerator += departures.masses[r]! * (resumptionTail[r + initialSkipCount] ?? 0n);
   }
-  const denominator = A.denominator * B.denominator;
+  const denominator = departures.denominator * resumptions.denominator;
   if (numerator < 0n || numerator > denominator) {
     throw new NumericalUncertainty();
   }
@@ -148,33 +150,37 @@ export function integratedCompletionCdf(
   }
 
   const { a, b } = posterior;
-  const I = Number(initialState === 'SKIPPED');
-  const m = N - I;
-  const weights = new Float64Array(m + 1);
-  let logWeight = logZero(m, a.beta, a.alpha);
-  weights[0] = Math.exp(logWeight);
-  for (let r = 1; r <= m; r++) {
-    logWeight += Math.log((m - r + 1) / r) + Math.log((a.beta + r - 1) / (a.alpha + m - r));
-    weights[r] = Math.exp(logWeight);
+  const initialSkipCount = Number(initialState === 'SKIPPED');
+  const doneOriginTrials = N - initialSkipCount;
+
+  // DONE起点m=N-I回で離脱する回数RのBeta-binomial質量。再開側の尾へ掛ける重みになる。
+  const departureWeights = new Float64Array(doneOriginTrials + 1);
+  let logWeight = logZero(doneOriginTrials, a.beta, a.alpha);
+  departureWeights[0] = Math.exp(logWeight);
+  for (let r = 1; r <= doneOriginTrials; r++) {
+    logWeight += Math.log((doneOriginTrials - r + 1) / r) +
+      Math.log((a.beta + r - 1) / (a.alpha + doneOriginTrials - r));
+    departureWeights[r] = Math.exp(logWeight);
   }
-  const mass = compensatedSum(weights);
+  const mass = compensatedSum(departureWeights);
   if (!Number.isFinite(mass) || Math.abs(mass - 1) > NUMERICAL_MARGIN) {
     throw new NumericalUncertainty();
   }
 
-  const zero = new Float64Array(H - m + 1);
-  const coefficient = new Float64Array(N);
+  // L=d-m回のSKIPPED起点試行で再開0回となるlog質量と、次の質量への漸化式係数。
+  const logNoResumptions = new Float64Array(H - doneOriginTrials + 1);
+  const resumptionLogCoefficient = new Float64Array(N);
   let sum = 0;
   let correction = 0;
-  for (let L = 1; L < zero.length; L++) {
-    const next = logFailure(b.alpha, b.beta + L - 1) - correction;
+  for (let skipOriginTrials = 1; skipOriginTrials < logNoResumptions.length; skipOriginTrials++) {
+    const next = logFailure(b.alpha, b.beta + skipOriginTrials - 1) - correction;
     const total = sum + next;
     correction = (total - sum) - next;
     sum = total;
-    zero[L] = sum;
+    logNoResumptions[skipOriginTrials] = sum;
   }
-  for (let j = 1; j < coefficient.length; j++) {
-    coefficient[j] = Math.log((b.alpha + j - 1) / j);
+  for (let j = 1; j < resumptionLogCoefficient.length; j++) {
+    resumptionLogCoefficient[j] = Math.log((b.alpha + j - 1) / j);
   }
 
   // この要求のP50/P80だけで共有する。ownerを跨ぐ状態や全体cacheは持たない。
@@ -191,23 +197,26 @@ export function integratedCompletionCdf(
       return 0;
     }
 
-    const L = day - m;
-    let logProbability = zero[L]!;
-    let lower = 0;
-    let lowerCorrection = 0;
-    let cdf = I ? 0 : weights[0]!;
+    const skipOriginTrials = day - doneOriginTrials;
+    let logResumptionMass = logNoResumptions[skipOriginTrials]!;
+    let lowerResumptionCdf = 0;
+    let lowerResumptionCorrection = 0;
+    let cdf = initialSkipCount ? 0 : departureWeights[0]!;
     let cdfCorrection = 0;
-    for (let k = 1; k <= Math.min(N, L); k++) {
+    for (let k = 1; k <= Math.min(N, skipOriginTrials); k++) {
       const j = k - 1;
       if (j > 0) {
-        logProbability += coefficient[j]! + Math.log((L - j + 1) / (b.beta + L - j));
+        logResumptionMass += resumptionLogCoefficient[j]! +
+          Math.log((skipOriginTrials - j + 1) / (b.beta + skipOriginTrials - j));
       }
-      const next = Math.exp(logProbability) - lowerCorrection;
-      const total = lower + next;
-      lowerCorrection = (total - lower) - next;
-      lower = total;
+      const next = Math.exp(logResumptionMass) - lowerResumptionCorrection;
+      const total = lowerResumptionCdf + next;
+      lowerResumptionCorrection = (total - lowerResumptionCdf) - next;
+      lowerResumptionCdf = total;
 
-      const weighted = weights[k - I]! * (1 - lower) - cdfCorrection;
+      // k=R+I回以上の再開を要する離脱経路へ、再開分布の尾を掛ける。
+      const weighted = departureWeights[k - initialSkipCount]! *
+        (1 - lowerResumptionCdf) - cdfCorrection;
       const updated = cdf + weighted;
       cdfCorrection = (updated - cdf) - weighted;
       cdf = updated;
