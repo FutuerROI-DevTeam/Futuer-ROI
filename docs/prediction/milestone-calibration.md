@@ -35,8 +35,8 @@ CDFのodds変換は条件付けと非可換。F(1)=1/5,F(2)=1/2,exp(u)=5/4なら
 
 ## 再現と運用の境界
 
-元のquantile計算が選んだcompletion methodを保存する。H30表現の丸め補正だけは既存1e-10 margin内で境界/単調性へ戻す。u=0のquantileは元Engineの有限H30値を保持し、補正後のmilestone quantileは保存CDF内で求める。最終Goalの元quantileは元の5000日探索のまま、比較CDF/scoreはH30に限るため、両者を同じ探索範囲とは表示しない。
+元のquantile計算が選んだcompletion methodを保存する。H30表現の丸め補正だけは既存1e-10 margin内で境界/単調性へ戻す。u=0のquantileは元Engineの有限H30値を保持し、補正後のmilestone quantileは保存CDF内で求める。最終Goalの元quantileは発行時に保存したsource.config.horizonDays（現既定1095日）の探索のまま、比較CDF/scoreはH30に限るため、両者を同じ探索範囲とは表示しない。
 
-凍結候補はid/hash・参加世代・文脈・fit世代・入力receiptで照合する。GETの比較は保存せず、POST発行は明示候補がなければidentity。過去に凍結した比較は現在の候補失効でも書き換えないが、発行のINVALID状態を返す。版戻しやtitleだけの編集も設定版を保守的に変える。
+凍結候補はid/hash・参加世代・文脈・fit世代・入力receiptで照合する。GETの比較は保存せず、POST発行は明示候補がなければidentity。過去に凍結した比較は現在の候補失効でも書き換えない。fit世代変更だけでは既存発行の観測はINVALIDにならず、発行の文脈/prefixが変わる場合にINVALIDとなる。版戻しやtitleだけの編集も設定版を保守的に変える。
 
 物理削除は`purgeExpiredMilestone`またはAPI workspaceの`npm run milestone:purge -- --confirm-milestone-purge`で行う。接続先/バックアップ方針を確認した運用者だけが実行する手順で、今回実DBには実行していない。既定OFFのままでもpurgeできる。期限切れの非表示は実際の削除時刻を保証せず、定期実行とバックアップは実利用前のOPEN条件である。
