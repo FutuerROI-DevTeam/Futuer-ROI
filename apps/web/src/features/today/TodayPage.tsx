@@ -261,20 +261,24 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
       <AppBar
         title={recordGoal?.title ?? ''}
         leading={
-          <Link to="/goals" className="fr-icon-btn" aria-label="Goal一覧へ戻る">
+          // 「‹」だけでは行き先が分からないため、文字を添える（#251）。読み上げ名は見える文字を含む「Goal一覧へ戻る」
+          <Link to="/goals" className="fr-today__back" aria-label={todayCopy.backToList}>
             <Icon name="back" />
+            <span>{todayCopy.backToListShort}</span>
           </Link>
         }
         trailing={goal ? <GoalMenu goalId={goalId} onCorrectYesterday={startYesterdayCorrection} /> : undefined}
       />
-      {/* デスクトップ幅では上のバーの代わりに「Goal一覧 / Goal名」とメニューを出す（デザイン Desk-today） */}
+      {/* デスクトップ幅では上のバーの代わりに「Goal一覧」への戻り口とメニューを出す（デザイン Desk-today）。
+          Goal名はリンクに含めず、その下に見出しとして出す（リンク先がGoal名に見えないようにする、#251） */}
       <nav className="fr-today__desknav" aria-label={todayCopy.breadcrumb}>
         <Link to="/goals" className="fr-btn fr-btn--text fr-today__crumb">
           <Icon name="back" size={18} />
-          {todayCopy.breadcrumbTrail(recordGoal?.title ?? '')}
+          {todayCopy.backToListLabel}
         </Link>
         {goal ? <GoalMenu goalId={goalId} onCorrectYesterday={startYesterdayCorrection} /> : null}
       </nav>
+      {recordGoal ? <p className="fr-today__goalname">{recordGoal.title}</p> : null}
       {/* 同じsnapshotをareaで排他的に描画し、DOMをprimary→記録→detailsの順にする。
           TodayContentは表示のみで取得/保存をせず、分割しても予測計算や操作部品を二重に実行しない。 */}
       <div className="fr-today-layout">

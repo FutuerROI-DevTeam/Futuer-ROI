@@ -86,6 +86,9 @@ export const todayCopy = {
   recentDays: '直近7日の記録',
   recentToday: '今日',
   breadcrumbTrail: (title: string) => `Goal一覧 / ${title}`,
+  /** Todayの左上の戻り口（#251）。デスクトップ幅は「Goal一覧」、スマートフォン幅は狭いので「一覧」。 */
+  backToListLabel: 'Goal一覧',
+  backToListShort: '一覧',
   menuEdit: 'Goalを編集',
   menuCorrectYesterday: '昨日の記録を訂正',
   // 今日から記録を始めたGoal（デザインキャンバス E4、Product Spec P-14の画面文言）

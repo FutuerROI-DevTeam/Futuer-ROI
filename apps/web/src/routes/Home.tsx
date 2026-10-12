@@ -33,7 +33,6 @@ export function Home() {
             <div className="fr-auth__actions">
               <Link to="/register" search={{ redirect: '/goals' }} className="fr-btn fr-btn--primary fr-btn--block">{c.register}</Link>
               <div className="fr-auth__returning">
-                <span>{c.returning}</span>
                 <Link to="/login" search={{ redirect: '/goals' }} className="fr-btn fr-btn--secondary">{c.login}</Link>
               </div>
             </div>
