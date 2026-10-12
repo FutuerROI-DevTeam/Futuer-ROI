@@ -493,7 +493,9 @@ Deploy productionが `Production migration (approval required)` で承認待ち�
 
 この手順は #275 のPR作成時点で、実際のworkflow実行（Token・Environment・bypassを使う部分、`vercel env pull` で直結URLを取得できるか、promote／rollbackの挙動）を確認していない。初回の有効化で12-B 6の結果を #275 に記録してから確認済みとする。
 
-PR #276のレビュー修正では[切替回帰](../../.github/scripts/production-switch.test.mjs)のmock CLI／API／時計、[shell回帰](../../.github/scripts/smoke-deployment.test.mjs)のlocalhost HTTP server＋実curl、[gate回帰](../../.github/scripts/deploy-gate.test.mjs)をApplication CIへ追加する。成功、CLI通信断後の遅延完了、取消後の復旧、partial alias失敗、rollback失敗、未知状態、HTTP 200途中停止、古いイベントの待機置換を合成で確認する。通常のGitHub Cancelの実runner実行、Hobby上のAPI終端・直前版rollback、Secret・bypass・DB／メールは未実施で、担当者の承認後に有効化前受入として記録する。長時間のAPI障害・force cancel・runner消失で自動復旧を保証しない。CDは無効のまま保ち、手動確認の対象とする。
+**2026-10-13の担当者報告：** [初回実行記録](https://github.com/FutureROI-DevTeam/Future-ROI/issues/275#issuecomment-6129097041)では、担当者がCDを有効化し、gateと直結URL取得は成功したが、8件のchecksum不一致でschema確認が停止した。本番切替には到達していない。`34d7497`と`e56f208`の8 SQLはGit blobが同一で、GitのLF版と旧Windowsの全CRLF版のhash差は再現できる。[限定互換helper](../../apps/api/src/db/migration-checksum.ts)は、この8全文名の固定pairに現在hash・履歴hashが両方一致する場合だけ許容する。履歴の書換え、SQL再実行、hashや実行SQLの正規化は行わない。未知履歴・その他のchecksum不一致は従来どおり停止し、未適用はdb:checkのdriftとして承認付きmigrationの対象にする。全8件の本番full hashは未取得のため、この修正だけで本番の不一致解消を保証しない。`0001`の関数／`0002`のDO原文はdollar quote内も改行が異なり、DB定義のbyte同一を確認したものではない。属性のLF固定は新しいcheckoutで作用し、既存CRLF作業ファイルやDB履歴を修復しない。再実行・本番照合・切替の受入は担当者の別判断とする。
+
+PR #276のレビュー修正では[切替回帰](../../.github/scripts/production-switch.test.mjs)のmock CLI／API／時計、[shell回帰](../../.github/scripts/smoke-deployment.test.mjs)のlocalhost HTTP server＋実curl、[gate回帰](../../.github/scripts/deploy-gate.test.mjs)をApplication CIへ追加する。成功、CLI通信断後の遅延完了、取消後の復旧、partial alias失敗、rollback失敗、未知状態、HTTP 200途中停止、古いイベントの待機置換を合成で確認する。通常のGitHub Cancelの実runner実行、Hobby上のAPI終端・直前版rollback、Secret・bypass・DB／メールは未実施で、担当者の承認後に有効化前受入として記録する。長時間のAPI障害・force cancel・runner消失で自動復旧を保証しない。CDの有効化／停止・再実行は担当者の別判断とし、本コード修正では実設定を変更しない。
 
 ## 実施記録のひな形
 
