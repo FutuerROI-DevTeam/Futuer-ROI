@@ -6,8 +6,12 @@ export function timeParts(raw: string): [string, string] {
   if (raw.startsWith('@hm:')) {
     try {
       const p: unknown = JSON.parse(raw.slice(4));
-      if (Array.isArray(p) && p.length === 2 && typeof p[0] === 'string' && typeof p[1] === 'string') return [p[0], p[1]];
-    } catch { /* 不正なdraftは消さず時間側に残す。 */ }
+      if (Array.isArray(p) && p.length === 2 && typeof p[0] === 'string' && typeof p[1] === 'string') {
+        return [p[0], p[1]];
+      }
+    } catch {
+      // 不正なdraftは消さず時間側に残す。
+    }
   }
   const n = parseGoalAmount(raw);
   return n !== null && Number.isFinite(n) ? [String(Math.floor(n / 60)), String(n % 60)] : [raw, '0'];
@@ -15,8 +19,13 @@ export function timeParts(raw: string): [string, string] {
 
 /** 入力文字列を親の既存draftへ保持する。表示形式の切替は量やAPI bodyを変えない。 */
 export function TimeAmountField({ id, label, value, error, disabled, onChange, help }: {
-  id: string; label: string; value: string; error?: string | undefined; disabled: boolean;
-  onChange: (raw: string) => void; help?: ReactNode;
+  id: string;
+  label: string;
+  value: string;
+  error?: string | undefined;
+  disabled: boolean;
+  onChange: (raw: string) => void;
+  help?: ReactNode;
 }) {
   const [mode, setMode] = useState<'minutes' | 'parts'>('parts');
   const parts = timeParts(value);
@@ -28,10 +37,16 @@ export function TimeAmountField({ id, label, value, error, disabled, onChange, h
   </>}>
     <fieldset className="fr-time-mode" disabled={disabled} aria-label={`${label}の入力方式`}>
       <label><input type="radio" name={`${id}-mode`} checked={mode === 'parts'} disabled={!canSwitch && mode !== 'parts'} onChange={() => {
-        if (canSwitch) { onChange(value === '' ? '' : String(amount)); setMode('parts'); }
+        if (canSwitch) {
+          onChange(value === '' ? '' : String(amount));
+          setMode('parts');
+        }
       }} />時間＋分</label>
       <label><input type="radio" name={`${id}-mode`} checked={mode === 'minutes'} disabled={!canSwitch && mode !== 'minutes'} onChange={() => {
-        if (canSwitch) { onChange(value === '' ? '' : String(amount)); setMode('minutes'); }
+        if (canSwitch) {
+          onChange(value === '' ? '' : String(amount));
+          setMode('minutes');
+        }
       }} />分だけ</label>
     </fieldset>
     {mode === 'minutes' ? <NumberInput id={id} suffix="分" value={value} disabled={disabled} invalid={Boolean(error)}

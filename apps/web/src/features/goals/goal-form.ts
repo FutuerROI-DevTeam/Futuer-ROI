@@ -34,14 +34,32 @@ export type FieldName = keyof FormValues;
 export type FieldErrors = Partial<Record<FieldName, string>>;
 
 /** 画面に並ぶ順。エラーの件数を数え、最初のエラー項目へ移るときに使う。 */
-export const FIELD_ORDER: readonly FieldName[] = ['title', 'unit', 'totalRequired', 'sessionAmount', 'initialProgress', 'questionPrior', 'targetDate', 'timezone'];
+export const FIELD_ORDER: readonly FieldName[] = [
+  'title',
+  'unit',
+  'totalRequired',
+  'sessionAmount',
+  'initialProgress',
+  'questionPrior',
+  'targetDate',
+  'timezone',
+];
 
 const INT4_MAX = 2_147_483_647;
 export const TITLE_MAX = 100;
 const e = goalsCopy.errors;
 
 export function emptyValues(timezone: string): FormValues {
-  return { title: '', unit: 'minutes', totalRequired: '', sessionAmount: '', initialProgress: '0', timezone, targetDate: '', questionPrior: NO_ANSWERS };
+  return {
+    title: '',
+    unit: 'minutes',
+    totalRequired: '',
+    sessionAmount: '',
+    initialProgress: '0',
+    timezone,
+    targetDate: '',
+    questionPrior: NO_ANSWERS,
+  };
 }
 
 export function valuesFromGoal(goal: GoalWithAnswers): FormValues {
@@ -62,51 +80,87 @@ export const titleLength = (title: string) => [...title].length;
 
 /** 全角数字も受け付け、桁区切りのカンマは外す。整数でなければ null。 */
 export function parseInteger(raw: string): number | null {
-  const text = raw.trim().replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[,，]/g, '');
-  if (!/^\d+$/.test(text)) return null;
+  const text = raw.trim()
+    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/[,，]/g, '');
+  if (!/^\d+$/.test(text)) {
+    return null;
+  }
   const value = Number(text);
   return Number.isSafeInteger(value) ? value : Number.POSITIVE_INFINITY;
 }
 
 function amountError(raw: string, minimum: 0 | 1, allowTime = false): string | undefined {
   const value = allowTime ? parseGoalAmount(raw) : parseInteger(raw);
-  if (allowTime && raw.startsWith('@hm:') && value === null) return '時間は0以上の整数、分は0〜59の整数で入力してください。';
-  if (value === null || value < minimum) return minimum === 1 ? e.positiveInteger : e.nonNegativeInteger;
-  if (value > INT4_MAX) return e.tooLarge;
+  if (allowTime && raw.startsWith('@hm:') && value === null) {
+    return '時間は0以上の整数、分は0〜59の整数で入力してください。';
+  }
+  if (value === null || value < minimum) {
+    return minimum === 1 ? e.positiveInteger : e.nonNegativeInteger;
+  }
+  if (value > INT4_MAX) {
+    return e.tooLarge;
+  }
   return undefined;
 }
 
 /**
- * 送る前の検査。編集中で記録があるGoalは、変更できない2項目を検査しない（送らないため）。
- * today は到達予定日の比較に使う「今日」（選んだ timezone の今日）。API でも同じ検査をする。
- * savedTargetDate は編集前の到達予定日。変えていなければ送らないので（toPatchBody）、今日以前になっていても止めない（P-19）。
+ * 記録があるGoalの timezone・initialProgress は送らないため検査しない。
+ * today は選択中timezoneの今日。保存済みの日付を変えない編集は期限経過後も許可する（P-19）。
  */
 export function validate(
   values: FormValues,
-  { locked = false, today, savedTargetDate, goal }: { locked?: boolean; today?: string; savedTargetDate?: string; goal?: Goal } = {},
+  { locked = false, today, savedTargetDate, goal }: {
+    locked?: boolean;
+    today?: string;
+    savedTargetDate?: string;
+    goal?: Goal;
+  } = {},
 ): FieldErrors {
   const errors: FieldErrors = {};
-  if (goal?.unitLocked && values.unit !== goal.unit) errors.unit = e.unitLocked;
-  if (!/\S/.test(values.title)) errors.title = e.titleRequired;
-  else if (titleLength(values.title) > TITLE_MAX) errors.title = e.titleTooLong;
+  if (goal?.unitLocked && values.unit !== goal.unit) {
+    errors.unit = e.unitLocked;
+  }
+  if (!/\S/.test(values.title)) {
+    errors.title = e.titleRequired;
+  } else if (titleLength(values.title) > TITLE_MAX) {
+    errors.title = e.titleTooLong;
+  }
+
   const total = amountError(values.totalRequired, 1, values.unit === 'minutes');
-  if (total) errors.totalRequired = total;
+  if (total) {
+    errors.totalRequired = total;
+  }
   const session = amountError(values.sessionAmount, 1);
-  if (session) errors.sessionAmount = session;
+  if (session) {
+    errors.sessionAmount = session;
+  }
+
   // YYYY-MM-DD どうしなので文字列の比較で日付の前後が分かる
-  if (values.targetDate && (!/^\d{4}-\d{2}-\d{2}$/.test(values.targetDate) || (today !== undefined && values.targetDate !== savedTargetDate && values.targetDate <= today))) {
+  if (values.targetDate && (
+    !/^\d{4}-\d{2}-\d{2}$/.test(values.targetDate)
+    || (today !== undefined && values.targetDate !== savedTargetDate && values.targetDate <= today)
+  )) {
     errors.targetDate = e.targetDatePast;
   }
   if (!locked) {
     const initial = amountError(values.initialProgress, 0, values.unit === 'minutes');
-    if (initial) errors.initialProgress = initial;
-    if (!isValidTimezone(values.timezone)) errors.timezone = e.timezone;
+    if (initial) {
+      errors.initialProgress = initial;
+    }
+    if (!isValidTimezone(values.timezone)) {
+      errors.timezone = e.timezone;
+    }
   }
   return errors;
 }
 
 /** 到達予定日の条件。表示・送信の両経路から使い、検査のたびに選択中timezoneの今日を求める。 */
-export function targetDateChecks(timezone: string, savedTargetDate: string | null | undefined, now: Date): { today?: string; savedTargetDate?: string } {
+export function targetDateChecks(
+  timezone: string,
+  savedTargetDate: string | null | undefined,
+  now: Date,
+): { today?: string; savedTargetDate?: string } {
   const today = localDateIn(timezone, now);
   return { ...(today ? { today } : {}), ...(savedTargetDate !== undefined ? { savedTargetDate: savedTargetDate ?? '' } : {}) };
 }
@@ -114,7 +168,13 @@ export function targetDateChecks(timezone: string, savedTargetDate: string | nul
 /** 表示時と送信時で同じ検査を使う。選択中のtimezoneと編集の比較元から、日付の条件を毎回組み立てる。 */
 export function validateGoalForm(
   values: FormValues,
-  { locked = false, baseline, goal = baseline, recoveryBody, now = new Date() }: { locked?: boolean; baseline?: GoalWithAnswers | undefined; goal?: Goal | undefined; recoveryBody?: GoalCreate | undefined; now?: Date } = {},
+  { locked = false, baseline, goal = baseline, recoveryBody, now = new Date() }: {
+    locked?: boolean;
+    baseline?: GoalWithAnswers | undefined;
+    goal?: Goal | undefined;
+    recoveryBody?: GoalCreate | undefined;
+    now?: Date;
+  } = {},
 ): FieldErrors {
   // 結果不明の作成は元bodyのまま再送する。期限経過で新規作成と同じ検査を掛けてreplayを妨げない。
   const savedTargetDate = baseline ? baseline.targetDate : recoveryBody?.targetDate;
@@ -125,16 +185,24 @@ export const errorCount = (errors: FieldErrors) => FIELD_ORDER.filter((name) => 
 
 /** FEの時間＋分draftだけを整数分へ変換する。不正な途中入力はnullで保持し、API bodyへ出さない。 */
 export function parseGoalAmount(raw: string): number | null {
-  if (!raw.startsWith('@hm:')) return parseInteger(raw);
+  if (!raw.startsWith('@hm:')) {
+    return parseInteger(raw);
+  }
   try {
     const parts: unknown = JSON.parse(raw.slice(4));
-    if (!Array.isArray(parts) || parts.length !== 2 || parts.some(p => typeof p !== 'string')) return null;
+    if (!Array.isArray(parts) || parts.length !== 2 || parts.some(p => typeof p !== 'string')) {
+      return null;
+    }
     const hours = parseInteger(parts[0]);
     const minutes = parseInteger(parts[1]);
-    if (hours === null || minutes === null || minutes > 59) return null;
+    if (hours === null || minutes === null || minutes > 59) {
+      return null;
+    }
     const total = hours * 60 + minutes;
     return Number.isSafeInteger(total) ? total : Number.POSITIVE_INFINITY;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 const int = (raw: string) => parseGoalAmount(raw) ?? 0;
@@ -156,8 +224,15 @@ export function toCreateBody(values: FormValues): GoalCreate {
 
 /** 回復した作成bodyを入力表示へ戻す。元bodyは変えず、nullable日付と整数量だけを文字列へ正規化する。 */
 export function valuesFromCreateBody(body: GoalCreate): FormValues {
-  return { ...emptyValues(body.timezone), ...body, totalRequired: String(body.totalRequired), sessionAmount: String(body.sessionAmount),
-    initialProgress: String(body.initialProgress ?? 0), targetDate: body.targetDate ?? '', questionPrior: body.questionPrior ?? NO_ANSWERS };
+  return {
+    ...emptyValues(body.timezone),
+    ...body,
+    totalRequired: String(body.totalRequired),
+    sessionAmount: String(body.sessionAmount),
+    initialProgress: String(body.initialProgress ?? 0),
+    targetDate: body.targetDate ?? '',
+    questionPrior: body.questionPrior ?? NO_ANSWERS,
+  };
 }
 
 const sameAnswers = (x: QuestionAnswers, y: QuestionAnswers) => x.a === y.a && x.b === y.b;
@@ -168,13 +243,12 @@ export function changesAnswerContext(values: FormValues, goal: Goal): boolean {
 }
 
 /**
- * 初期質問の各問で、利用者がどれかの選択肢（「回答しない」を含む）を選んだか（#259）。
- * 回答の値は null を「回答しない」として送るため、未選択と区別できない。値の意味は変えず、選んだかどうかだけを画面側で持つ。
+ * 各問で選択したかを画面側で持つ（#259）。APIの null は「回答しない」と未選択を区別できない。
  */
 export type PriorChosen = Readonly<{ a: boolean; b: boolean }>;
 export const ALL_CHOSEN: PriorChosen = { a: true, b: true };
 
-/** 最初の選択状態。作成は未選択、編集は保存済みの回答がある問だけ選択済みにする（保存済みの null は「回答しない」と未回答を区別できないため、選び直してもらう）。 */
+/** 作成は未選択。編集の null は選択履歴が分からないため、選び直してもらう。 */
 export function initialPriorChosen(mode: 'create' | 'edit', answers: QuestionAnswers): PriorChosen {
   return mode === 'create' ? { a: false, b: false } : { a: answers.a !== null, b: answers.b !== null };
 }
@@ -190,13 +264,14 @@ export function priorChoiceError(chosen: PriorChosen, locked: boolean): string |
  * - notSaved：保存済みの回答はないが、入力しても一緒には保存できない
  */
 export function answersLockReason(values: FormValues, goal: GoalWithAnswers): 'withdrawn' | 'notSaved' | null {
-  if (!changesAnswerContext(values, goal)) return null;
+  if (!changesAnswerContext(values, goal)) {
+    return null;
+  }
   return sameAnswers(goal.questionPrior ?? NO_ANSWERS, NO_ANSWERS) ? 'notSaved' : 'withdrawn';
 }
 
 /**
- * 古い版で保存できなかった（409）後に最新の Goal を読み直したとき、入力を新しい比較元へ合わせる。
- * 触っていない項目（入力が古い比較元と同じ）は最新の値にし、別の画面での変更を古い値で巻き戻さない。触った項目は入力を残す。
+ * 409後の再取得では、未変更項目だけ最新値にする。変更した入力を保ち、他画面の更新を巻き戻さない。
  */
 export function rebaseValues(values: FormValues, previous: GoalWithAnswers, latest: GoalWithAnswers): FormValues {
   const before = valuesFromGoal(previous);
@@ -220,7 +295,9 @@ export function rebaseValues(values: FormValues, previous: GoalWithAnswers, late
 }
 
 /** 失敗した再取得にも古いdataが残るため、成功した結果だけを409の新しい比較元にする。 */
-export async function reloadLatestGoal(refetch: () => Promise<{ isSuccess: boolean; data: GoalWithAnswers | undefined }>): Promise<GoalWithAnswers | undefined> {
+export async function reloadLatestGoal(
+  refetch: () => Promise<{ isSuccess: boolean; data: GoalWithAnswers | undefined }>,
+): Promise<GoalWithAnswers | undefined> {
   try {
     const result = await refetch();
     return result.isSuccess ? result.data : undefined;
@@ -239,17 +316,33 @@ export async function reloadLatestGoal(refetch: () => Promise<{ isSuccess: boole
  * - 回答にも単位・1回の量にも触れていなければ、版は送らない（無関係な更新に版を付けると 422）
  */
 export function toPatchBody(values: FormValues, goal: GoalWithAnswers): GoalPatch | null {
-  if (goal.unitLocked && values.unit !== goal.unit) throw new Error(e.unitLocked);
+  if (goal.unitLocked && values.unit !== goal.unit) {
+    throw new Error(e.unitLocked);
+  }
   const patch: Partial<{ -readonly [K in keyof GoalPatch]: GoalPatch[K] }> = {};
-  if (values.title !== goal.title) patch.title = values.title;
-  if (values.unit !== goal.unit) patch.unit = values.unit;
-  if (int(values.totalRequired) !== goal.totalRequired) patch.totalRequired = int(values.totalRequired);
-  if (int(values.sessionAmount) !== goal.sessionAmount) patch.sessionAmount = int(values.sessionAmount);
+  if (values.title !== goal.title) {
+    patch.title = values.title;
+  }
+  if (values.unit !== goal.unit) {
+    patch.unit = values.unit;
+  }
+  if (int(values.totalRequired) !== goal.totalRequired) {
+    patch.totalRequired = int(values.totalRequired);
+  }
+  if (int(values.sessionAmount) !== goal.sessionAmount) {
+    patch.sessionAmount = int(values.sessionAmount);
+  }
   // 到達予定日は記録があっても変えられる。空にしたら null で未設定に戻す
-  if ((values.targetDate || null) !== (goal.targetDate ?? null)) patch.targetDate = values.targetDate || null;
+  if ((values.targetDate || null) !== (goal.targetDate ?? null)) {
+    patch.targetDate = values.targetDate || null;
+  }
   if (!goal.hasLogs) {
-    if (int(values.initialProgress) !== goal.initialProgress) patch.initialProgress = int(values.initialProgress);
-    if (values.timezone !== goal.timezone) patch.timezone = values.timezone;
+    if (int(values.initialProgress) !== goal.initialProgress) {
+      patch.initialProgress = int(values.initialProgress);
+    }
+    if (values.timezone !== goal.timezone) {
+      patch.timezone = values.timezone;
+    }
   }
   if (goal.answerRevision !== undefined) {
     if (changesAnswerContext(values, goal)) {
@@ -278,25 +371,30 @@ const serverMessage: Record<FieldName, string> = {
  * 記録があるため変更できない（GOAL_HAS_LOGS）ときは、その理由を出す。422 でなければ null。
  */
 export function fieldErrorsFromApi(error: unknown): FieldErrors | null {
-  if (!(error instanceof ApiError) || error.status !== 422 || !error.body) return null;
+  if (!(error instanceof ApiError) || error.status !== 422 || !error.body) {
+    return null;
+  }
   const errors: FieldErrors = {};
 
   const locked = error.body.error.code === 'GOAL_HAS_LOGS';
   const unitLocked = error.body.error.code === 'GOAL_UNIT_LOCKED';
-  if (unitLocked) return { unit: e.unitLocked };
+  if (unitLocked) {
+    return { unit: e.unitLocked };
+  }
   for (const field of error.body.error.fields ?? []) {
     // 回答の版（expectedAnswerRevision）の誤りも、回答の欄のエラーとして出す
     const raw = field.path.replace(/^body\//, '').split('/')[0];
     const name = (raw === 'expectedAnswerRevision' ? 'questionPrior' : raw) as FieldName;
-    if (FIELD_ORDER.includes(name) && !errors[name]) errors[name] = locked ? e.locked : serverMessage[name];
+    if (FIELD_ORDER.includes(name) && !errors[name]) {
+      errors[name] = locked ? e.locked : serverMessage[name];
+    }
   }
   return errors;
 }
 
 /**
- * 編集の保存（PATCH）の結果が分からないか（R5「回答の見直し：保存を確認できない」、#146）。
- * 応答が届かなかった（通信の失敗）・サーバーの不調（5xx）・成功応答の形が契約と違う場合は、保存されたかどうか分からない。
- * サーバーがはっきり断った（4xx）場合だけ「まだ保存されていません」と言い切れる。
+ * PATCHの通信失敗・5xx・不正な成功応答は結果不明（R5、#146）。
+ * 明示的な4xx拒否だけ「まだ保存されていません」と言い切れる。
  */
 export function isEditSaveResultUnknown(error: unknown): boolean {
   return !(error instanceof ApiError) || error.status >= 500;
