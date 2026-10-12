@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { authClient, describeAuthError, retryAfterSeconds } from '../auth/client.ts';
 import { runAuthAction } from '../auth/action.ts';
 import { validateAuth, waitUntil, type AuthFieldErrors, type AuthMode } from '../auth/form.ts';
-import type { AuthReason } from '../auth/redirect.ts';
+import { afterAuthTarget, type AuthReason } from '../auth/redirect.ts';
 import { appCopy, authCopy } from '../copy/app.ts';
 import { Button } from '../ui/components/Button.tsx';
 import { Field, TextInput, fieldAria } from '../ui/components/FormField.tsx';
@@ -84,8 +84,8 @@ export function AuthPage({ mode, redirectTo, reason }: { mode: AuthMode; redirec
         onError: (failure) => {
           if (!limited) setServerError(describeAuthError(failure.code, failure.message));
         },
-        // ログイン後に「戻る」でこの画面へ戻らないよう、履歴を置き換える
-        onSuccess: () => navigate({ to: redirectTo, replace: true }),
+        // ログイン後に「戻る」でこの画面へ戻らないよう、履歴を置き換える。新規登録の後はGoal一覧へ（#249）
+        onSuccess: () => navigate({ to: afterAuthTarget(mode, redirectTo), replace: true }),
       },
     );
   }
