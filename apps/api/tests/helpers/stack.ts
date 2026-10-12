@@ -95,7 +95,7 @@ export class Client {
 
 /** mailsは既定の捕捉mailerが受け取った再設定メール（外部へは送らない）。 */
 export type Stack = { app: FastifyInstance; close: () => Promise<void>; mails: MailMessage[] };
-export type StackOptions = { baseURL?: string; signInMax?: number; resetMax?: number; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation']; mailer?: Mailer };
+export type StackOptions = { baseURL?: string; signInMax?: number; resetMax?: number; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation']; milestoneCalibration?: AppOptions['milestoneCalibration']; mailer?: Mailer };
 
 type StackFactories = { createAuthPool: typeof createAuthPool; createAuth: typeof createAuth; buildApp: typeof buildApp };
 
@@ -125,6 +125,7 @@ export async function startStack(db: TestDatabase, o: StackOptions = {}, factori
       auth: { instance: auth, baseURL, allowedOrigins: [baseURL], trustProxyHops: o.trustProxyHops ?? 0 },
       ...(o.now ? { now: o.now } : {}),
       ...(o.evaluation ? { evaluation: o.evaluation } : {}),
+      ...(o.milestoneCalibration ? { milestoneCalibration: o.milestoneCalibration } : {}),
     });
     return { app, close, mails };
   } catch (error) { return cleanupAfterFailure(error, close); }

@@ -163,7 +163,9 @@
   /* 空は上端から山並みの手前まで途切れずに変わる青空（Todayの --dawn-sky-top／--dawn-sky-bottom と同じ値、#221） */
   background: url('../features/today/assets/dawn-ridge.png') center bottom / 100% auto no-repeat, linear-gradient(#c4e4f6, #eef8fb);
 }
-.fr-auth--home .fr-auth__name { font-size: 24px; }
+/* 公開トップの名前は中央にそろえ、大きくして印象を強める（#255） */
+.fr-auth--home .fr-welcome-hero > .fr-auth__head { align-items: center; text-align: center; }
+.fr-auth--home .fr-auth__name { font-size: 40px; letter-spacing: .02em; }
 .fr-welcome { display: grid; gap: 24px; }
 .fr-welcome__body { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .fr-welcome__eyebrow { font-size: 14px; font-weight: 700; color: var(--fr-ink-2); }
@@ -190,6 +192,7 @@
   /* 名前と本文のかたまりを同じ幅の1列にして中央へ置く。かたまりの中の左揃えと位置関係は変えない（#251） */
   .fr-welcome-hero > .fr-auth__head,
   .fr-welcome-hero > .fr-welcome { width: min(600px, 100%); margin-inline: auto; }
+  .fr-auth--home .fr-auth__name { font-size: 56px; }
   .fr-welcome__body { padding-block: 16px; }
   .fr-welcome__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 }

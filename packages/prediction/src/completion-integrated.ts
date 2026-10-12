@@ -6,7 +6,7 @@ import type { CompletionComputation, Posterior, PredictionConfig } from './types
 // 既存比較の有限fixtureで観測したCDF誤差<=5.77e-15より広い近傍幅。
 // 全域の誤差上界の証明ではない。MAX_CLOSED_*や漸化式を変える場合は
 // 独立oracle・閾値境界・数値gateを再検証する（#203の検証資料）。
-const NUMERICAL_MARGIN = 1e-10;
+export const NUMERICAL_MARGIN = 1e-10;
 const QUANTILE_TOLERANCE = 1e-12;
 const MAX_CLOSED_HORIZON = 1095;
 const MAX_CLOSED_SHAPE = 1_000_000;

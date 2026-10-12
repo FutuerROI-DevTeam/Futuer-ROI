@@ -89,8 +89,8 @@ test('0004適用済みDBへ0003を後から適用しても、既存Goal/log/mark
   const before = await allRows();
   const migration = await migrate(db.pool, 'app');
   assert.ok(migration.app);
-  // 後着0003、#157の0005、#225の0006を適用しても既存業務/認証行は保全する。
-  assert.deepEqual(migration.app.applied, ['0003_goal_question_prior.sql', '0005_goal_target_date.sql', '0006_prediction_evaluation.sql']);
+  // 後着0003、#157の0005、#225の0006、#248の0008でも既存業務/認証行は保全する。
+  assert.deepEqual(migration.app.applied, ['0003_goal_question_prior.sql', '0005_goal_target_date.sql', '0006_prediction_evaluation.sql', '0008_session_milestone.sql']);
   const after = await allRows();
   for (const row of after.goal!) {
     assert.deepEqual(row.row.question_prior, { a: null, b: null });
@@ -102,8 +102,14 @@ test('0004適用済みDBへ0003を後から適用しても、既存Goal/log/mark
     // 0005：既存Goalは到達予定日なし
     assert.equal(row.row.target_date, null);
     delete row.row.target_date;
+    // 0008：既存Goalは未同意の初期CAS版。追加列の値を検査してから旧行全体を照合する。
+    assert.equal(row.row.milestone_consent_revision, 0);
+    delete row.row.milestone_consent_revision;
   }
   assert.deepEqual(after.goal, before.goal);
+  for (const table of ['milestone_participation', 'milestone_forecast', 'milestone_artifact']) {
+    assert.equal((await db.pool.query(`select count(*)::int as count from ${table}`)).rows[0]!.count, 0);
+  }
   for (const table of ['action_log', 'demo_seed_goal', 'user', 'account', 'session', 'rateLimit']) assert.deepEqual(after[table], before[table]);
   const markerMigration = (rows: { row: Record<string, unknown> }[]) => rows.filter(row => row.row.name === '0004_demo_seed_goal.sql');
   assert.deepEqual(markerMigration(after.schema_migrations!), markerMigration(before.schema_migrations!));

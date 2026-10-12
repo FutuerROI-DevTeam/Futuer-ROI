@@ -56,6 +56,8 @@ const set = async (selector: string, value: string) => act(async () => {
   }
 });
 const navigate = async (to: string) => { await act(async () => { void router.navigate({ to }); await tick(); }); await settle(); };
+// 初期質問は必須（#259）。両問で「回答しない」を選ぶ（押せない間は何もしない）
+const choosePrior = async () => act(async () => { host.querySelectorAll<HTMLInputElement>('.r11-qp fieldset input[value=""]').forEach(radio => radio.click()); await tick(); });
 const click = async (selector: string) => act(async () => { host.querySelector<HTMLButtonElement>(selector)!.click(); await tick(); });
 const realNow = Date.now; let advance = 0; let visibility = 'visible';
 Date.now = () => realNow() + advance;
@@ -70,7 +72,7 @@ async function prepare(page = 'create') {
   const path = page === 'create' ? '/goals/new' : `/goals/goal/${page}`;
   await navigate(path); await visible(6); await settle();
   if (page === 'history') { await click('button[aria-label="前の月"]'); ensure(values().month?.includes('9月'), 'September not selected'); }
-  else { ensure(input(), 'form not ready'); await set('#goal-title', 'A-PRIVATE-UX-DRAFT'); await set('#goal-totalRequired', '123'); await set('#goal-sessionAmount', '17'); input()!.focus(); }
+  else { ensure(input(), 'form not ready'); await set('#goal-title', 'A-PRIVATE-UX-DRAFT'); await set('#goal-totalRequired', '123'); await set('#goal-sessionAmount', '17'); await choosePrior(); input()!.focus(); }
   return path;
 }
 async function operation(label: string, action: (path: string) => Promise<unknown>, page = 'create') {

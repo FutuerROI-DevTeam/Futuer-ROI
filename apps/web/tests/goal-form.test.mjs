@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { MutationObserver, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { ApiError } from '../src/api/client.ts';
 import { goalsCopy } from '../src/copy/goals.ts';
-import { answersLockReason, changesAnswerContext, emptyValues, errorCount, fieldErrorsFromApi, isEditSaveResultUnknown, parseInteger, rebaseValues, reloadLatestGoal, targetDateChecks, toCreateBody, toPatchBody, validate, validateGoalForm, valuesFromGoal } from '../src/features/goals/goal-form.ts';
+import { answersLockReason, changesAnswerContext, emptyValues, errorCount, initialPriorChosen, priorChoiceError, fieldErrorsFromApi, isEditSaveResultUnknown, parseInteger, rebaseValues, reloadLatestGoal, targetDateChecks, toCreateBody, toPatchBody, validate, validateGoalForm, valuesFromGoal } from '../src/features/goals/goal-form.ts';
 
 const e = goalsCopy.errors;
 const valid = { title: '英単語アプリ', unit: 'minutes', totalRequired: '3000', sessionAmount: '20', initialProgress: '0', timezone: 'Asia/Tokyo', targetDate: '', questionPrior: { a: null, b: null } };
@@ -272,4 +272,20 @@ test('編集の保存結果が分からない失敗（通信・5xx・形の違�
   for (const status of [500, 502, 503, 504]) assert.equal(isEditSaveResultUnknown(new ApiError(status, null)), true, String(status));
   // サーバーがはっきり断った：まだ保存されていないと言い切れる
   for (const status of [400, 401, 403, 404, 409, 410, 422, 429]) assert.equal(isEditSaveResultUnknown(new ApiError(status, null)), false, String(status));
+});
+
+test('初期質問は2問ともどれかを選ぶまで保存させず、「回答しない」も1つの選択として認める（#259）', () => {
+  // 作成は未選択から始める。値の null（回答しない）と未選択は区別できないため、選んだかどうかを別に持つ
+  assert.deepEqual(initialPriorChosen('create', { a: 'HIGH', b: null }), { a: false, b: false });
+  // 編集は、保存済みの回答がある問だけ選択済み。保存済みの null は選び直してもらう
+  assert.deepEqual(initialPriorChosen('edit', { a: 'HIGH', b: null }), { a: true, b: false });
+  assert.deepEqual(initialPriorChosen('edit', { a: 'UNKNOWN', b: 'LOW' }), { a: true, b: true });
+  assert.equal(priorChoiceError({ a: false, b: false }, false), goalsCopy.form.answersRequired);
+  assert.equal(priorChoiceError({ a: true, b: false }, false), goalsCopy.form.answersRequired);
+  assert.equal(priorChoiceError({ a: false, b: true }, false), goalsCopy.form.answersRequired);
+  assert.equal(priorChoiceError({ a: true, b: true }, false), undefined);
+  // 単位か1回の量を変えて回答欄を押せない間は求めない（回答を一緒に送れないため）
+  assert.equal(priorChoiceError({ a: false, b: false }, true), undefined);
+  // 「回答しない」を選んだ2問は、従来どおり null として送る
+  assert.deepEqual(toCreateBody(valid).questionPrior, { a: null, b: null });
 });

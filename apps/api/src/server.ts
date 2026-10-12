@@ -4,6 +4,7 @@ import { createAuth } from './auth/options.ts';
 import { loadAuthConfig, loadConfig, loadMailConfig } from './config.ts';
 import { createAppPool, createAuthPool } from './db/pool.ts';
 import { loadEvaluationOptions } from './evaluation/policy.ts';
+import { loadMilestoneOptions } from './milestone/policy.ts';
 
 const config = loadConfig();
 const authConfig = loadAuthConfig(process.env, config);
@@ -26,6 +27,7 @@ const app = await buildApp({
   webDist: config.webDist,
   logLevel: config.logLevel,
   evaluation: loadEvaluationOptions(),
+  milestoneCalibration: loadMilestoneOptions(),
   auth: {
     instance: auth,
     baseURL: authConfig.baseURL,

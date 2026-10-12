@@ -1,5 +1,6 @@
 export { DEFAULT_CONFIG } from './config.js';
 export { predict } from './predict.js';
+export { frozenCompletionCdf, completionDistributionForFrozenState } from './frozen-completion-cdf.js';
 // Engineの公開例外をexportする。HTTP応答・DBエラーへの変換は外側の責務。
 export { PredictionInputError, PredictionConfigError } from './errors.js';
 export type { LocalDate, PredictionInput, TransitionCounts, Posterior, CoreMetric,

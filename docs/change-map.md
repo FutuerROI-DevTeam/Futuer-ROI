@@ -104,8 +104,8 @@ FE結合は[#137](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/1
 
 | #137の変更 | 実装 | 確認 |
 | --- | --- | --- |
-| Goalの作成・編集で初期質問に答える・撤回する、回答版の競合（409）を読み込み直す | [goals-http.ts](../apps/web/src/api/goals-http.ts)（`?view=r11`）、[goal-form.ts](../apps/web/src/features/goals/goal-form.ts)（送る本文と回答版の規則）、[GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)、[QuestionPriorFields](../apps/web/src/features/prior/QuestionPriorFields.tsx) | [goal-form.test.mjs](../apps/web/tests/goal-form.test.mjs)（回答・撤回・回答版の付け方、422の項目対応、409後の通信中断・503で旧cacheを採用せず取得成功後に最新の版を使う回帰）、合成DBの実ブラウザで409→GET503／中断→入力・競合保持→再取得成功→再保存を確認する |
-| 中心の数字の材料が足りず、まだ質問に答えていないGoalのTodayに、質問に答える任意の導線を出す（出所・planの表示と、予測に使った設定の照合はPR #129（#81）へ移した） | [TodayPage](../apps/web/src/features/today/TodayPage.tsx) | ローカル実ブラウザ |
+| Goalの作成・編集で初期質問に答える（2問とも選ぶまで保存しない、#259・P-24）・撤回する、回答版の競合（409）を読み込み直す | [goals-http.ts](../apps/web/src/api/goals-http.ts)（`?view=r11`）、[goal-form.ts](../apps/web/src/features/goals/goal-form.ts)（送る本文と回答版の規則）、[GoalFormPage](../apps/web/src/features/goals/GoalFormPage.tsx)、[QuestionPriorFields](../apps/web/src/features/prior/QuestionPriorFields.tsx) | [goal-form.test.mjs](../apps/web/tests/goal-form.test.mjs)（回答・撤回・回答版の付け方、必須の選択（#259）、422の項目対応、409後の通信中断・503で旧cacheを採用せず取得成功後に最新の版を使う回帰）、合成DBの実ブラウザで409→GET503／中断→入力・競合保持→再取得成功→再保存を確認する |
+| Todayから初期質問の回答を変える入口「Goalの編集で、初期質問の回答を変える」（編集画面の一番上へ）。旧「質問に答えて…（任意）」は#259で削除（出所・planの表示と、予測に使った設定の照合はPR #129（#81）へ移した） | [TodayPage](../apps/web/src/features/today/TodayPage.tsx) | ローカル実ブラウザ |
 
 以下は2026-10-05時点の分担・未決履歴。[P-15](product-spec.md#p-15-質問由来の見通しのmust追加方針)で機能ScopeのMust追加と分担を採択し、当時の実現方式はD-26でOPENだった。追加UIは[#117](https://github.com/jogi-hack-2026-team/jogi-hack-2026/issues/117)（Kaito、ネイティブ親#88）、Engineは#90配下の#71〜#73、BEは#89配下の#76・#77、FEの既存画面・組み込みは#88配下の#78・#81へ追跡する。#107は提案公開・文書追跡Taskであり、追加UIの親ではない。現在の保存・公開API追加は上の#133で分け、個別期限・Hard依存・Ready/BLOCKED・元の完了チェックは採択から自動変更しない。
 
@@ -165,6 +165,19 @@ PR #131の実Engine混合負荷は[2026-10-07の訂正・追加報告](../experi
 [P-18の限定採択・理由・他案・受入条件](product-spec.md#p-18-整数分を保った時間分表示)と[表示・入力の規則](product-spec.md#時間量の表示と整数分の保持)を正本とする。#157で実装した（C案の小数時間・記録の単位は[P-19](product-spec.md#p-19-到達予定日b案)で採用しない）。時間＋分への変換は[amount.ts](../apps/web/src/copy/amount.ts)の`hoursMinutes`・`amountFormat`だけで行い、[GoalListPage](../apps/web/src/features/goals/GoalListPage.tsx)、[ProgressSummary](../apps/web/src/features/today/ProgressSummary.tsx)、[RecordedSummary](../apps/web/src/features/today/RecordedSummary.tsx)、[OutlookPanel](../apps/web/src/features/today/OutlookPanel.tsx)の残量が使う。P-23では1回量・日々の量の表示に`recordDisplay`を使い、60分以上を時間＋分で出す。日々の入力は分のまま。総量・初期量の時間＋分入力、編集の初期値と整数分の送信は[goal-form.ts](../apps/web/src/features/goals/goal-form.ts)。
 
 P-18の0／1／59／60／61／1240分と達成まで残り1分（2999／3000分）の固定例は[amount.test.mjs](../apps/web/tests/amount.test.mjs)、1240分の初期量を整数分の入力欄に出し未変更なら送らないこと・小数を受け付けないことは[goal-form.test.mjs](../apps/web/tests/goal-form.test.mjs)で確認する。達成判定・予測はAPI・Engineの整数分のままで、表示の文字から逆算しない。狭い画面での折返しと累計・総量・残量の区別は機能QAで確認する。
+
+## 途中到達の個人補正（#248）
+
+限定契約は[Product](product-spec.md#途中到達の個人補正比較248既定off)/[P-248](product-spec.md#p-248-途中到達の個人補正比較248)、実現方式は[D-248](architecture.md#d-248-途中到達による個人補正248)。既定OFF・別同意・本人1Goalの合成検証で、実利用・UI・MVP採択・最終到達改善の受入は含まない。
+
+| 契約・経路 | 実装 | 検証・残る条件 |
+| --- | --- | --- |
+| 発行時CDFを元の計算法で凍結し、別offsetを有界fit | [CDF入口](../packages/prediction/src/frozen-completion-cdf.ts)、[core](../apps/api/src/milestone/core.ts)、[設計補助](prediction/milestone-calibration.md) | [pure core](../apps/api/tests/milestone-core.test.ts)のNLL/gradient、独立[70桁oracle](../experiments/session-milestone-oracle/oracle.py)、非ゼロ・KKT・identity・重複・分離・roundoff |
+| 実量到達、d+2成熟、欠測、打切り、固定cutoffと訂正 | [assessment](../apps/api/src/milestone/assessment.ts) | [assessment回帰](../apps/api/tests/milestone-assessment.test.ts)：DST、interval、UNKNOWN、部分censor、構造的ゼロ、版/期限/訂正、実Engineの極小質量で有限scoreを保持する解析評価。欠測機構の実証は未実施 |
+| 別同意、期待版/世代、凍結候補、競合、撤回と90日 | [contracts](../apps/api/src/contracts/milestone.ts)、[routes](../apps/api/src/milestone/routes.ts)、[store](../apps/api/src/milestone/store.ts)、[0008](../apps/api/migrations/0008_session_milestone.sql)、[policy](../apps/api/src/milestone/policy.ts) | [合成HTTP/DB](../apps/api/tests/milestone.test.ts)：default OFFでtableなし、既存同意から分離、owner/Goal FK、非ゼロ前向き比較、標準Today一致、CAS、ABA、期限/withdraw/Goal delete、物理purge |
+| 明示の期限切れ物理削除 | [purge CLI](../apps/api/src/milestone/purge-cli.ts)、[環境例](../.env.example) | 上の合成DBで関数を検証。実DBへCLIは実行しない。定期purge・backup反映・公開負荷・実ユーザー効果はOPEN |
+
+固定base・検証結果・初回レビュー修正・未確認範囲は[履歴](changes/issue-248-milestone-verification.md)。IssueのStatus/ScopeはGitHub Projectsで確認し、この文書や合成成功でDoneへ更新しない。
 
 ## 確認記録と残課題
 

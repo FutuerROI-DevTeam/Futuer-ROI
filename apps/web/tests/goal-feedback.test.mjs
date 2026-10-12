@@ -4,7 +4,7 @@ import { parseGoalAmount, parseInteger, toCreateBody, toPatchBody, rebaseValues,
 import { confirmedSaveFeedback } from '../src/features/logs/save-feedback.ts';
 import { cumulativeChart } from '../src/features/today/chart-geometry.ts';
 import { draftProgress, recordPreviewBaseline } from '../src/features/logs/draft-preview.ts';
-import { progressPercent, progressPercentLabel } from '../src/copy/progress.ts';
+import { progressPercent, progressPercentLabel, progressPercentQualifier } from '../src/copy/progress.ts';
 import { amountFormat, recordDisplay } from '../src/copy/amount.ts';
 
 test('時間＋分を丸めず整数分へ変換し、不正な途中入力を拒否する', () => {
@@ -114,8 +114,27 @@ test('小さい実績を0%にせず、未達を丸めで100%にしない。超�
   assert.equal(progressPercentLabel(120, 18000), '0.67');
   assert.ok(Math.abs(progressPercent(120, 18000) - 2 / 3) < 1e-12);
   assert.equal(progressPercentLabel(0, 18000), '0');
-  assert.equal(progressPercentLabel(1, 2147483647), '<0.01');
-  assert.equal(progressPercentLabel(99999, 100000), '<100');
+  // 端の書き方（#255）：0.01%を下回るときは「0.01%以下」、未達で丸めると100になるときは「99.99%」
+  assert.equal(progressPercentLabel(1, 2147483647), '0.01');
+  assert.equal(progressPercentQualifier(1, 2147483647), '以下');
+  assert.equal(progressPercentLabel(1, 100000), '0.01');
+  assert.equal(progressPercentQualifier(1, 100000), '以下');
+  assert.equal(progressPercentLabel(1, 10000), '0.01');
+  assert.equal(progressPercentQualifier(1, 10000), '');
+  // 丸めると0.01になる0.005%・0.009%も、0.01%を下回るので「以下」を付ける。ちょうど0.01%には付けない
+  assert.equal(progressPercentLabel(5, 100000), '0.01');
+  assert.equal(progressPercentQualifier(5, 100000), '以下');
+  assert.equal(progressPercentLabel(9, 100000), '0.01');
+  assert.equal(progressPercentQualifier(9, 100000), '以下');
+  assert.equal(progressPercentLabel(10, 100000), '0.01');
+  assert.equal(progressPercentQualifier(10, 100000), '');
+  assert.equal(progressPercentQualifier(11, 100000), '');
+  assert.equal(progressPercentQualifier(0, 18000), '');
+  assert.equal(progressPercentLabel(9999, 10000), '99.99');
+  assert.equal(progressPercentLabel(99999, 100000), '99.99');
+  assert.equal(progressPercentLabel(99996, 100000), '99.99');
+  assert.equal(progressPercentQualifier(99999, 100000), '');
+  assert.equal(progressPercentQualifier(100000, 100000), '');
   assert.equal(progressPercentLabel(100000, 100000), '100');
   assert.equal(progressPercentLabel(125, 100), '125');
   assert.equal(progressPercent(125, 100), 100, 'バーだけは100%まで');
