@@ -97,6 +97,39 @@ async function run() {
   }
   results.push('unreachable (network/503): stays on the URL with the connection message and recovers by retry');
 
+  // ログイン後の画面で、ウィンドウへ戻ったときの再確認（固定版の visibilitychange 再取得）が失敗したら、
+  // 「読み込み中」のまま止めず「接続できませんでした」を出し、ログインへ送らず、「再読み込み」で回復する（#279）
+  await go('/goals');
+  ensure(path() === '/goals', 'goal list did not open before the recheck failure: ' + path());
+  const realNow = Date.now;
+  let clockAdvance = 0;
+  Date.now = () => realNow() + clockAdvance;
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+  // テスト時計だけを進め、固定版の5秒 focus throttle を越える。製品の設定は変更しない。
+  const focus = async () => { const before = transport.reads; clockAdvance += 6000; await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await tick(); }); await settle(); ensure(transport.reads > before, 'visibilitychange did not request a session refetch'); };
+  for (const failure of ['network', '503']) {
+    const listBefore = listCalls;
+    transport.failure = failure; await focus();
+    ensure(path() === '/goals', failure + ': recheck failure moved to ' + path());
+    ensure(text().includes(c.error.unreachableTitle) && text().includes(c.error.unreachable), failure + ': recheck failure message missing');
+    ensure(!text().includes(c.error.title), failure + ': generic error shown for a recheck failure');
+    ensure(!host.querySelector('.fr-goals__row:not(.fr-goals__row--skeleton)'), failure + ': private list stayed visible after the recheck failure');
+    oneMain(failure + ' recheck failure');
+    const retry = [...host.querySelectorAll<HTMLButtonElement>('main button')].find((b) => b.textContent?.includes(c.error.retry));
+    ensure(retry, failure + ': recheck retry button missing');
+    // 失敗が続く間は案内が残り、ログインへも送らない
+    await act(async () => { retry!.click(); await tick(); }); await settle();
+    ensure(path() === '/goals' && text().includes(c.error.unreachableTitle), failure + ': retry while still failing hid the message or moved: ' + path());
+    transport.failure = null;
+    const retryAgain = [...host.querySelectorAll<HTMLButtonElement>('main button')].find((b) => b.textContent?.includes(c.error.retry));
+    await act(async () => { retryAgain!.click(); await tick(); });
+    await until(() => !text().includes(c.error.unreachableTitle) && listCalls > listBefore);
+    ensure(!text().includes(c.error.unreachableTitle) && listCalls > listBefore && path() === '/goals', failure + ': recheck retry did not recover: reads=' + transport.reads + ' list=' + listCalls + ' | ' + text().slice(0, 120));
+  }
+  Date.now = realNow;
+  results.push('signed-in recheck failure (network/503): connection message in place of loading, no login redirect, retry recovers');
+  await go('/');
+
   // 定義していないURLは日本語の404（英語の Not Found を出さない）
   await go('/no-such-page');
   ensure(text().includes(c.notFound.title) && text().includes(c.notFound.body), '404 page missing');

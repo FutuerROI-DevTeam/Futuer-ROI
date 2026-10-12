@@ -2,6 +2,7 @@ import { Link, Outlet } from '@tanstack/react-router';
 import { appCopy } from '../copy/app.ts';
 import { AccountMenu } from '../features/account/AccountMenu.tsx';
 import { MainLandmark } from './MainLandmark.tsx';
+import { SessionFailure } from './SessionFailure.tsx';
 import '../ui/tokens.css';
 import './app-shell.css';
 
@@ -9,6 +10,7 @@ import './app-shell.css';
  * ログインが必要な画面の外側（router.tsx の [app] のまとまり）。
  * デスクトップ幅では、画面の幅いっぱいの上のバー（アプリ名とアカウント）を出す（デザイン Desk-home・Desk-today）。
  * スマートフォン幅では出さず、各画面の上のバー（AppBar）を使う。
+ * ウィンドウへ戻ったときの session の再確認が失敗したときの案内（SessionFailure、#279）も、この外側で1回だけ出す。
  */
 export function AppShell() {
   return (
@@ -18,6 +20,7 @@ export function AppShell() {
         <AccountMenu variant="email" />
       </header>
       <MainLandmark>
+        <SessionFailure />
         <Outlet />
       </MainLandmark>
     </>
