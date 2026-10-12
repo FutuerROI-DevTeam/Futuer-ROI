@@ -56,7 +56,7 @@ jobs:
           npm exec --no -- tsc --version
       - name: Typecheck public contracts and source
         run: npm run typecheck
-      - name: Run numerical and regression tests
+      - name: Run recursive numerical, independent-oracle and boundary regressions
         run: npm test
       - name: Verify candidate adapter with independent completion CDF
         # PR118の未採択候補の再現。公開predict・正式契約の採択を意味しない。

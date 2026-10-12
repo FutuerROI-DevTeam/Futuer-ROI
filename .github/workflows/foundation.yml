@@ -26,8 +26,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
-      - name: Check documentation and configuration
-        run: node .github/scripts/ci-report.mjs run foundation -- pwsh -NoProfile -File ./scripts/check-foundation.ps1
+      - name: Check text encoding, local links, environment examples and diff whitespace
+        run: node .github/scripts/ci-report.mjs run foundation -- npm run verify:foundation
       - name: Check diagram synchronization regressions
         run: pwsh -NoProfile -File ./scripts/tests/check-document-diagrams.test.ps1
       - name: Summarize verification
