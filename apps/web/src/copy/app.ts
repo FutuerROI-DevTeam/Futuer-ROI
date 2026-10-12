@@ -64,4 +64,33 @@ export const authCopy = {
     `${action}の試行が続いたため、一時的に受け付けを止めています。約${minutes}分後（${clock}ごろ）から、もう一度${action}できます。`,
   waitButton: (clock: string, action: string) => `${clock}から${action}できます`,
   expired: 'ログインの有効期限が切れました。もう一度ログインすると、開いていた画面に戻ります。',
+  forgotLink: 'パスワードを忘れた方',
+  // パスワード再設定（/forgot-password・/reset-password）
+  reset: {
+    requestTitle: 'パスワードの再設定',
+    requestIntro: '登録したメールアドレスを入力してください。再設定用のリンクをメールで送ります。',
+    requestSubmit: '再設定メールを送る',
+    requestSending: '送信しています…',
+    requestAction: '再設定メールの送信',
+    sentTitle: 'メールを送りました',
+    // 登録の有無を画面で区別しない（APIも同じ応答を返す）
+    sentBody: (email: string) =>
+      `${email} が登録されていれば、パスワード再設定のメールが届きます。リンクは1時間で無効になります。届かない場合は、迷惑メールとメールアドレスの綴りを確認してください。`,
+    resend: '別のメールアドレスで送る',
+    backToLogin: 'ログインへ戻る',
+    newTitle: '新しいパスワード',
+    newIntro: '新しいパスワードを入力してください。8文字以上にします。',
+    newPassword: '新しいパスワード',
+    confirm: '新しいパスワード（確認）',
+    confirmRequired: '確認のため、もう一度入力してください',
+    confirmMismatch: '新しいパスワードと一致しません',
+    newSubmit: 'パスワードを変更する',
+    newSending: '変更しています…',
+    newAction: 'パスワードの変更',
+    doneTitle: 'パスワードを変更しました',
+    doneBody: '新しいパスワードでログインしてください。',
+    invalidTitle: 'このリンクは使えません',
+    invalidBody: '再設定のリンクが無効か、有効期限（1時間）が切れています。もう一度、再設定メールの送信からやり直してください。',
+    requestAgain: '再設定メールをもう一度送る',
+  },
 } as const;

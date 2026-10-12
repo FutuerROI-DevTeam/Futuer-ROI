@@ -1,10 +1,12 @@
+import { waitUntil } from '@vercel/functions';
 import { attachDatabasePool } from '@vercel/functions/db-connections';
 import type { FastifyInstance } from 'fastify';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { buildApp } from './app.ts';
+import { createMailer } from './auth/mail-transport.ts';
 import { createAuth } from './auth/options.ts';
-import { loadAuthConfig, loadConfig } from './config.ts';
+import { loadAuthConfig, loadConfig, loadMailConfig } from './config.ts';
 import { createAppPool, createAuthPool } from './db/pool.ts';
 import { errorBody } from './http/errors.ts';
 import { loadEvaluationOptions } from './evaluation/policy.ts';
@@ -16,6 +18,7 @@ async function initialize(): Promise<FastifyInstance> {
   if (process.env.NODE_ENV !== 'production') throw new Error('Vercel runtime requires NODE_ENV=production');
   const config = loadConfig();
   const authConfig = loadAuthConfig(process.env, config);
+  const mailConfig = loadMailConfig(process.env);
   const pool = createAppPool({ connectionString: config.databaseUrl });
   let authPool: ReturnType<typeof createAuthPool> | undefined;
   let app: FastifyInstance | undefined;
@@ -25,7 +28,10 @@ async function initialize(): Promise<FastifyInstance> {
     attachDatabasePool(pool);
     attachDatabasePool(authPool);
     const auth = createAuth({ pool: authPool, secret: authConfig.secret, baseURL: authConfig.baseURL,
-      trustedOrigins: authConfig.trustedOrigins, signInMax: authConfig.signInMax, signUpMax: authConfig.signUpMax });
+      trustedOrigins: authConfig.trustedOrigins, signInMax: authConfig.signInMax, signUpMax: authConfig.signUpMax,
+      resetMax: authConfig.resetMax, mailer: createMailer(mailConfig),
+      // 応答後の再設定メール送信を、公式waitUntilでFunctionの終了前に完了させる。
+      background: waitUntil });
     app = await buildApp({ pool,
       // cwd/ProviderのWEB_DISTに依存せず、配備物内のWebを使う。SPA fallbackはbuildAppの既存実装。
       webDist: fileURLToPath(new URL('../../web/dist/', import.meta.url)),

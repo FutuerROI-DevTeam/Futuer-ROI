@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import test from 'node:test';
 import { isDeepStrictEqual } from 'node:util';
 import { buildApp } from '../src/app.ts';
+import { createBackgroundTasks } from '../src/auth/background.ts';
 import { createAuth } from '../src/auth/options.ts';
 import { migrate } from '../src/db/migrate.ts';
 import { createAuthPool } from '../src/db/pool.ts';
@@ -50,12 +51,14 @@ test('DB保存の認証制限は2instanceへの並列sign-in/sign-up・再起動
   async function start(): Promise<Stack> {
     const authPool = createAuthPool({ connectionString: db.connectionString, max: 2 });
     try {
-      const auth = createAuth({ pool: authPool, secret, baseURL: origin, signInMax: max, signUpMax: max });
+      const background = createBackgroundTasks();
+      const auth = createAuth({ pool: authPool, secret, baseURL: origin, signInMax: max, signUpMax: max, resetMax: max, mailer: async () => {}, background: background.run });
       const app = await buildApp({
         pool: db.pool, logger: false,
         auth: { instance: auth, baseURL: origin, allowedOrigins: [origin], trustProxyHops: 1 },
       });
-      const stack = { app, close: async () => { try { await app.close(); } finally { await authPool.end(); } } };
+      const stack = { app, mails: [], settle: background.drain,
+        close: async () => { try { await app.close(); await background.drain(); } finally { await authPool.end(); } } };
       stacks.push(stack);
       return stack;
     } catch (error) {

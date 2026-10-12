@@ -3,6 +3,8 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type test from 'node:test';
 import type { FastifyInstance } from 'fastify';
 import { buildApp, type AppOptions } from '../../src/app.ts';
+import { createBackgroundTasks } from '../../src/auth/background.ts';
+import type { MailMessage, Mailer } from '../../src/auth/mailer.ts';
 import { createAuth } from '../../src/auth/options.ts';
 import { migrate } from '../../src/db/migrate.ts';
 import { createAuthPool } from '../../src/db/pool.ts';
@@ -92,8 +94,14 @@ export class Client {
   }
 }
 
-export type Stack = { app: FastifyInstance; close: () => Promise<void> };
-export type StackOptions = { baseURL?: string; signInMax?: number; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation']; milestoneCalibration?: AppOptions['milestoneCalibration'] };
+/**
+ * mailsは既定の捕捉mailerが受け取った再設定メール（外部へは送らない）。
+ * 送信は本番と同じく応答と切り離して走るため、mailsを見る前に`settle()`で預かった処理の完了を待つ。
+ */
+export type Stack = { app: FastifyInstance; close: () => Promise<void>; mails: MailMessage[]; settle: () => Promise<void> };
+export type StackOptions = { baseURL?: string; signInMax?: number; resetMax?: number; trustProxyHops?: number; now?: () => Date; evaluation?: AppOptions['evaluation']; milestoneCalibration?: AppOptions['milestoneCalibration']; mailer?: Mailer;
+  /** 指定すると要求ログを有効にしてここへ書く（既定はログなし）。 */
+  logStream?: AppOptions['logStream'] };
 
 type StackFactories = { createAuthPool: typeof createAuthPool; createAuth: typeof createAuth; buildApp: typeof buildApp };
 
@@ -102,10 +110,13 @@ export async function startStack(db: TestDatabase, o: StackOptions = {}, factori
   const baseURL = o.baseURL ?? 'http://127.0.0.1:3000';
   const authPool = deps.createAuthPool({ connectionString: db.connectionString, max: 2 });
   let app: FastifyInstance | undefined;
+  const background = createBackgroundTasks();
   const close = closeOnce(() => cleanupAll([
     async () => { await app?.close(); },
+    () => background.drain(),
     () => authPool.end(),
   ]));
+  const mails: MailMessage[] = [];
   try {
     const auth = deps.createAuth({
       pool: authPool,
@@ -113,16 +124,19 @@ export async function startStack(db: TestDatabase, o: StackOptions = {}, factori
       baseURL,
       signInMax: o.signInMax ?? 50,
       signUpMax: 50,
+      resetMax: o.resetMax ?? 50,
+      mailer: o.mailer ?? (async (message) => { mails.push(message); }),
+      background: background.run,
     });
     app = await deps.buildApp({
       pool: db.pool,
-      logger: false,
+      ...(o.logStream ? { logStream: o.logStream } : { logger: false }),
       auth: { instance: auth, baseURL, allowedOrigins: [baseURL], trustProxyHops: o.trustProxyHops ?? 0 },
       ...(o.now ? { now: o.now } : {}),
       ...(o.evaluation ? { evaluation: o.evaluation } : {}),
       ...(o.milestoneCalibration ? { milestoneCalibration: o.milestoneCalibration } : {}),
     });
-    return { app, close };
+    return { app, close, mails, settle: background.drain };
   } catch (error) { return cleanupAfterFailure(error, close); }
 }
 

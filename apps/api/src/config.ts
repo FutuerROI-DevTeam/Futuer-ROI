@@ -20,7 +20,11 @@ export type AuthConfig = {
   trustProxyHops: number;
   signInMax: number;
   signUpMax: number;
+  resetMax: number;
 };
+
+/** パスワード再設定メールの送信手段。本番の既定はResend、開発・Compose・smoke testはログ出力。 */
+export type MailConfig = { transport: 'log' } | { transport: 'resend'; apiKey: string; from: string };
 
 function integer(name: string, raw: string | undefined, fallback: number, min: number, max: number): number {
   if (raw === undefined || raw === '') return fallback;
@@ -101,5 +105,23 @@ export function loadAuthConfig(env: NodeJS.ProcessEnv, api: Pick<ApiConfig, 'por
     trustProxyHops: integer('TRUST_PROXY_HOPS', env.TRUST_PROXY_HOPS, 0, 0, 10),
     signInMax: integer('AUTH_SIGN_IN_MAX', env.AUTH_SIGN_IN_MAX, 5, 1, 1_000),
     signUpMax: integer('AUTH_SIGN_UP_MAX', env.AUTH_SIGN_UP_MAX, 5, 1, 1_000),
+    resetMax: integer('AUTH_RESET_MAX', env.AUTH_RESET_MAX, 5, 1, 1_000),
   };
+}
+
+// `Name <local@domain>` かアドレスだけ。送信元の形式ミスをResendの応答ではなく起動時に止める。
+const MAIL_FROM_PATTERN = /^(?:[^<>@\n]+<[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>|[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)$/;
+
+// メール送信の設定。実値（APIキー）はエラーやログに出さない。
+export function loadMailConfig(env: NodeJS.ProcessEnv): MailConfig {
+  const production = env.NODE_ENV === 'production';
+  const transport = env.MAIL_TRANSPORT || (production ? 'resend' : 'log');
+  if (transport === 'log') return { transport: 'log' };
+  if (transport !== 'resend') throw new Error('環境変数 MAIL_TRANSPORT は resend か log を指定してください。');
+  const apiKey = env.RESEND_API_KEY || '';
+  if (!apiKey) throw new Error('環境変数 RESEND_API_KEY が未設定です（MAIL_TRANSPORT=resend では必須。開発環境では MAIL_TRANSPORT=log でログ出力にできます）。');
+  const from = (env.MAIL_FROM || '').trim();
+  if (!from) throw new Error('環境変数 MAIL_FROM が未設定です（MAIL_TRANSPORT=resend では必須。例: Future ROI <no-reply@example.com>）。');
+  if (!MAIL_FROM_PATTERN.test(from)) throw new Error('環境変数 MAIL_FROM は「表示名 <アドレス>」かアドレスだけの形式で指定してください。');
+  return { transport: 'resend', apiKey, from };
 }

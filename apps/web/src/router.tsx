@@ -1,8 +1,11 @@
 import { createRootRoute, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router';
 import { authSearch } from './auth/redirect.ts';
+import { resetSearch } from './auth/reset.ts';
 import { checkSession, SessionUnreachableError } from './auth/session.ts';
 import { AppShell } from './routes/AppShell.tsx';
 import { AuthPage } from './routes/AuthPage.tsx';
+import { ForgotPasswordPage } from './routes/ForgotPasswordPage.tsx';
+import { ResetPasswordPage } from './routes/ResetPasswordPage.tsx';
 import { HealthPage } from './routes/HealthPage.tsx';
 import { Home } from './routes/Home.tsx';
 import { NotFoundPage, RouteErrorPage, RoutePendingPage } from './routes/RouteStates.tsx';
@@ -18,6 +21,9 @@ import { EvaluationPage } from './features/evaluation/EvaluationPage.tsx';
  *   /                          公開トップ（ログイン不要）
  *   [auth]                     ログイン・新規登録。ログイン済みなら戻り先へ移る
  *     /login, /register
+ *   /forgot-password           再設定メールの要求（ログイン中でも無効リンクから再要求できる）
+ *   /reset-password            メールのリンクから戻り、新しいパスワードを保存（?token= か ?error=INVALID_TOKEN）。
+ *                              ログイン中のブラウザで開いても（別端末から要求した・別アカウントでログイン中）フォームを出す
  *   [app]                      ログインが必要な画面。ログインの確認はここ1か所で行う
  *     /goals                   Goal一覧
  *     /goals/new               Goalの作成
@@ -66,6 +72,26 @@ const registerRoute = createRoute({
   component: function RegisterRoute() {
     const { redirect: redirectTo, reason } = registerRoute.useSearch();
     return <AuthPage mode="register" redirectTo={redirectTo} reason={reason} />;
+  },
+});
+
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/forgot-password',
+  validateSearch: authSearch,
+  component: ForgotPasswordPage,
+});
+
+// 復旧用の画面なので[auth]（ログイン済みなら戻り先へ移す）の外に置く。中に置くと、ログイン中のブラウザで
+// 有効なメールのリンクを開いてもGoal一覧へ移され、フォームに到達できない。
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  // メールのリンクが付けたtoken／errorだけを受け取る
+  validateSearch: resetSearch,
+  component: function ResetPasswordRoute() {
+    const { token, error } = resetPasswordRoute.useSearch();
+    return <ResetPasswordPage search={token ? { token } : error ? { error } : {}} />;
   },
 });
 
@@ -128,6 +154,8 @@ const evaluationRoute = createRoute({
 export const routeTree = rootRoute.addChildren([
   indexRoute,
   authLayout.addChildren([loginRoute, registerRoute]),
+  forgotPasswordRoute,
+  resetPasswordRoute,
   appLayout.addChildren([goalsRoute, goalNewRoute, goalEditRoute, todayRoute, historyRoute, evaluationRoute]),
   healthRoute,
 ]);

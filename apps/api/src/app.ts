@@ -10,6 +10,7 @@ import { registerGoalRoutes } from './goals/routes.ts';
 import { isValidTimeZone } from './goals/local-date.ts';
 import { apiBoundary } from './http/api-boundary.ts';
 import { errorBody } from './http/errors.ts';
+import { redactLogUrl } from './http/log-url.ts';
 import { registerApiGuards } from './http/guards.ts';
 import { registerLogRoutes } from './logs/routes.ts';
 import { PredictionFailed } from './prediction/engine.ts';
@@ -26,6 +27,8 @@ export type AppOptions = {
   /** false でログを止める（テスト用）。 */
   logger?: boolean;
   logLevel?: string;
+  /** ログの出力先（既定は標準出力）。テストでログの内容を検査するために差し替える。 */
+  logStream?: { write: (line: string) => void };
   /** 認証。未指定なら`/api/auth/*`と保護hookを登録しない（配信・healthだけのテスト用）。 */
   auth?: {
     instance: Auth;
@@ -57,6 +60,16 @@ export async function buildApp(o: AppOptions): Promise<FastifyInstance> {
             level: o.logLevel ?? 'info',
             // 認証情報・Cookieはログへ出さない（障害調査に必要な最小ログに留める）。
             redact: ['req.headers.cookie', 'req.headers.authorization', 'res.headers["set-cookie"]'],
+            // 既定の要求ログ（Fastify 5.12.5のreq serializer）と同じ項目のまま、URLの再設定トークンだけを除く。
+            serializers: {
+              req: (req) => {
+                const version = req.headers?.['accept-version'];
+                const remotePort = req.socket?.remotePort;
+                return { method: req.method, url: redactLogUrl(req.url), host: req.host, remoteAddress: req.ip,
+                  ...(typeof version === 'string' ? { version } : {}), ...(remotePort === undefined ? {} : { remotePort }) };
+              },
+            },
+            ...(o.logStream ? { stream: o.logStream } : {}),
           },
     // 契約違反を黙って受理しない: 未知の項目を削らず、型を変換せず、違反をすべて報告する。
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false, allErrors: true, formats: { 'iana-timezone': isValidTimeZone } } },

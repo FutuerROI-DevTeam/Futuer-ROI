@@ -26,6 +26,7 @@ docker run --rm --network host --env DATABASE_URL="$DATABASE_URL" "$IMAGE" \
 docker run --detach --name "$NAME" --network host \
   --env DATABASE_URL="$DATABASE_URL" --env PORT="$PORT" \
   --env BETTER_AUTH_SECRET="$AUTH_SECRET" --env BETTER_AUTH_URL="$AUTH_URL" --env BETTER_AUTH_ALLOW_HTTP=1 \
+  --env MAIL_TRANSPORT=log \
   "$IMAGE" >/dev/null
 
 base="http://127.0.0.1:$PORT"

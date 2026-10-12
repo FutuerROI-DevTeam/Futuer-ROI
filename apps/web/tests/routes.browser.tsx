@@ -5,7 +5,7 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet
 import { router } from '../src/router.tsx';
 import { goalsHttp } from '../src/api/goals-http.ts';
 import { PrivateCacheGuard } from '../src/api/session-cache.ts';
-import { appCopy } from '../src/copy/app.ts';
+import { appCopy, authCopy } from '../src/copy/app.ts';
 import { NotFoundPage, RouteErrorPage } from '../src/routes/RouteStates.tsx';
 import { MainLandmark } from '../src/routes/MainLandmark.tsx';
 
@@ -55,6 +55,28 @@ async function run() {
   await act(async () => { router.history.back(); await tick(); }); await settle();
   ensure(path() === '/', 'back after the login redirect returned to the login page: ' + path());
   results.push('signed-in: /login redirects to the return target with replace (back skips login)');
+
+  // ログイン中のブラウザで、メールの再設定リンク（?token=）を開いてもGoal一覧へ移さずフォームを出す
+  // （別端末から要求した・別アカウントでログイン中の場合。#258のレビュー）
+  await act(async () => { void router.navigate({ to: '/reset-password', search: { token: 'synthetic-reset-token' } } as never); await tick(); }); await settle();
+  ensure(path() === '/reset-password', 'signed-in user was moved away from the reset form: ' + path());
+  ensure((router.state.location.search as { token?: string }).token === 'synthetic-reset-token', 'reset token was dropped from the URL');
+  ensure(host.querySelector('input[name="password"]') && text().includes(authCopy.reset.newTitle), 'reset form missing for a signed-in user');
+  oneMain('reset form while signed in');
+  results.push('signed-in: a mail reset link (/reset-password?token=) shows the form instead of redirecting');
+  await go('/');
+
+  // 無効・期限切れ・使用済みリンクからの再要求も、ログイン中にGoal一覧へ移さず進める。
+  await act(async () => { void router.navigate({ to: '/reset-password', search: { error: 'INVALID_TOKEN' } } as never); await tick(); }); await settle();
+  ensure(text().includes(authCopy.reset.invalidTitle), 'invalid reset link message missing while signed in');
+  const requestAgain = [...host.querySelectorAll<HTMLAnchorElement>('a')].find((a) => a.textContent === authCopy.reset.requestAgain);
+  ensure(requestAgain, 'invalid reset link has no request-again action');
+  await act(async () => { requestAgain!.click(); await tick(); }); await settle();
+  ensure(path() === '/forgot-password', 'signed-in reset retry was redirected away: ' + path());
+  ensure(host.querySelector('input[name="email"]') && text().includes(authCopy.reset.requestTitle), 'reset request form missing while signed in');
+  oneMain('reset retry while signed in');
+  results.push('signed-in: invalid/expired/used reset link can request another email');
+  await go('/');
 
   // 通信の失敗（例外・503）は未ログインと取り違えず、「接続できませんでした」を出してログインへ送らない
   for (const failure of ['network', '503']) {
