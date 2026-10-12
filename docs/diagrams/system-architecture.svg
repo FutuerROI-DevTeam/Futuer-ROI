@@ -1,70 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="860" viewBox="0 0 480 860" role="img" aria-labelledby="system-architecture-title" data-source-sha256="03be7bc65fda79db0e6928bfcbd051efb520bc673986f00d0970585abf72c960">
-<title id="system-architecture-title">ローカル Docker の構成</title>
-<desc>Future ROI main の説明図。編集元は同名 draw.io ファイル。</desc>
-<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#526976"/></marker></defs>
-<rect width="100%" height="100%" rx="16" fill="#fafcfd"/>
-<g font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif">
-<rect data-cell-id="container" x="82" y="244" width="378" height="354" rx="12" fill="#fff4e9" stroke="#9aaab3"/>
-<polyline data-cell-id="http-edge" points="270,188 270,244" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<polyline data-cell-id="engine-edge" points="270,400 270,476" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<polyline data-cell-id="db-edge" points="100,350 42,350 42,721 100,721" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<g data-cell-id="title"><rect x="20" y="12" width="440" height="40" rx="12" fill="none" stroke="none"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="32">ローカル Docker の構成</tspan>
-</text>
-</g>
-<g data-cell-id="browser"><rect x="100" y="76" width="340" height="112" rx="12" fill="#eef5fb" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="270" y="104">ブラウザ</tspan>
-<tspan x="270" y="132">React + Vite</tspan>
-<tspan x="270" y="160">Router / Query</tspan>
-</text>
-</g>
-<g data-cell-id="container-title"><rect x="90" y="250" width="360" height="32" rx="12" fill="none" stroke="none"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="18" font-weight="600" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="270" y="266">app：単一 Node コンテナ</tspan>
-</text>
-</g>
-<g data-cell-id="api"><rect x="100" y="300" width="340" height="100" rx="12" fill="#ffffff" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="270" y="322">Fastify API / SPA 配信</tspan>
-<tspan x="270" y="350">Better Auth / 所有者確認</tspan>
-<tspan x="270" y="378">入出力検証 / pg</tspan>
-</text>
-</g>
-<g data-cell-id="engine"><rect x="100" y="476" width="340" height="96" rx="12" fill="#e9f4ed" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="270" y="496">Prediction Engine</tspan>
-<tspan x="270" y="524">純粋 TypeScript・同期計算</tspan>
-<tspan x="270" y="552">HTTP / DB / 時計を読まない</tspan>
-</text>
-</g>
-<g data-cell-id="db"><rect x="100" y="666" width="340" height="110" rx="12" fill="#eef5fb" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="270" y="693">PostgreSQL 18</tspan>
-<tspan x="270" y="721">Goal / 日々の記録 / 回答</tspan>
-<tspan x="270" y="749">認証・session / volume保存</tspan>
-</text>
-</g>
-<g data-cell-id="http"><rect x="20" y="204" width="440" height="30" rx="12" fill="#fafcfd" stroke="none"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="18" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="219">同一 origin の /api と SPA</tspan>
-</text>
-</g>
-<g data-cell-id="sync"><rect x="100" y="424" width="340" height="30" rx="12" fill="#fff4e9" stroke="none"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="18" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="270" y="439">同期呼出し → 結果をAPIへ</tspan>
-</text>
-</g>
-<g data-cell-id="db-note"><rect x="20" y="614" width="440" height="40" rx="12" fill="none" stroke="none"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="18" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="634">DB I/O は API が担当</tspan>
-</text>
-</g>
-<g data-cell-id="scope"><rect x="20" y="804" width="440" height="40" rx="12" fill="none" stroke="none"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="18" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="824">公開候補の Vercel / Neon は別計画</tspan>
-</text>
-</g>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="480" viewBox="0 0 1000 480" role="img"><title>system-architecture</title><desc>ローカルDocker Composeの実装。FastifyのWeb/APIと純粋Prediction Engineは単一Node.jsプロセス。PostgreSQLは別コンテナで永続volumeを使用。</desc><rect width="100%" height="100%" fill="white"/><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#708898"/></marker></defs>
+<rect x="280" y="25" width="690" height="430" rx="0" fill="#FFFFFF" stroke="#A9B8C4" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="470.0" y="50.6" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">Docker Compose（ローカル実装）</text>
+<rect x="300" y="80" width="405" height="355" rx="0" fill="#FAFCFE" stroke="#7A97AD" stroke-width="1.5"/>
+<text x="502.5" y="105.25" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="15">Web / API コンテナ · 単一 Node.js process</text>
+<rect x="325" y="125" width="355" height="60" rx="5" fill="#F0F5FA" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="502.5" y="160.95" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">Fastify · Web 資産配信</text>
+<rect x="325" y="210" width="355" height="70" rx="5" fill="#F6F9FC" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="502.5" y="239.0" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">Fastify API</text>
+<text x="502.5" y="262.2" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">Better Auth · 入力検証 · 所有者確認</text>
+<rect x="385" y="350" width="235" height="55" rx="5" fill="#F0F8F4" stroke="#387E6C" stroke-width="1.5"/>
+<text x="502.5" y="371.5" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">Prediction Engine</text>
+<text x="502.5" y="394.7" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">純粋 TypeScript</text>
+<text x="502.5" y="422.55" fill="#387E6C" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="13">HTTP・DB・時計への依存なし</text>
+<rect x="30" y="135" width="195" height="160" rx="5" fill="#F6F9FC" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="127.5" y="183.975" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">ブラウザ</text>
+<text x="127.5" y="208.625" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">React / Vite</text>
+<text x="127.5" y="233.27499999999998" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">TanStack Router</text>
+<text x="127.5" y="257.92499999999995" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">TanStack Query</text>
+<path d="M765 210 C765 190,935 190,935 210 L935 290 C935 310,765 310,765 290Z M765 210 C765 230,935 230,935 210" fill="#F0F8F4" stroke="#387E6C" stroke-width="1.5"/>
+<text x="850.0" y="243.625" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">PostgreSQL 18</text>
+<text x="850.0" y="268.275" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">別コンテナ</text>
+<rect x="780" y="365" width="140" height="45" rx="5" fill="#FFFFFF" stroke="#387E6C" stroke-width="1.5"/>
+<text x="850.0" y="393.1" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">永続 volume</text>
+<text x="274.0" y="291.2" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="12">同一 origin</text>
+<text x="440.0" y="320.55" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="13">入力 / 予測</text>
+<path d="M225 160 L325 160" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<rect x="228" y="130" width="90" height="22" fill="white"/><text x="273.0" y="146" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">HTML / JS</text>
+<path d="M225 245 L325 245" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<rect x="228" y="217" width="90" height="22" fill="white"/><text x="273.0" y="233" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">HTTP / JSON</text>
+<path d="M503 280 L503 350" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<rect x="515" y="295" width="85" height="22" fill="white"/><text x="557.5" y="311" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">同期呼出し</text>
+<path d="M680 245 L765 245" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<rect x="686" y="217" width="72" height="22" fill="white"/><text x="722.0" y="233" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">SQL · pg</text>
+<path d="M850 305 L850 365" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<rect x="860" y="320" width="65" height="22" fill="white"/><text x="892.5" y="336" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">永続化</text>
 </svg>

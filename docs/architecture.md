@@ -27,12 +27,13 @@ Productと予測仕様から必要になる性質は「本人だけが記録を�
 
 1〜2年の保守・継続開発は、2026-10-02に依頼者が説明整理の中心として指定した**比較の観点**であり、チーム合意済みの保守期間の受入条件ではない。2026-10-08、公開構成の検討条件を**本人アカウント・厳密に費用0円**とする依頼を受けた。[D-25](#d-25)の第一候補を更新し、無料枠上限では停止を受け入れる。1〜2年の無料継続や可用性を保証するものではなく、Product Specへ新しい要件を追加しない。3人での開発、Code Freeze（2026-10-12）までの学習・実装・検証への影響も[共通ルール](../AGENTS.md#11-技術選定)に従って確認する。TypeScript経験や締切の近さを技術の採用理由には使わず、実現可能性・負担の確認と分ける。全員に必要な操作と保守を説明できるかは採択前に確認する。
 
-```mermaid
-flowchart LR
-  B[Browser<br>React SPA] -->|同一origin /api/*| A[Fastify app<br>auth / goals / logs / prediction adapter]
-  A --> P[packages/prediction<br>純粋関数 predict]
-  A --> D[(PostgreSQL<br>user・session・goal・action_log)]
-```
+次の図は main `af98368` のローカル Docker Compose 実装を示す。Web 静的配信・API・純粋 Prediction Engine は同じ app コンテナの Node.js process 内で動き、PostgreSQL は別の db コンテナで保存を担う。永続 volume は DB の保存領域。技術採択の条件と公開構成の判断は D-24 / D-25 のまま維持する。
+
+![ブラウザから同一originのFastifyへ接続し、appコンテナ内の静的配信・API・純粋Engineと、別コンテナのPostgreSQL・永続volumeの境界を示すローカル構成図](diagrams/system-architecture.svg)
+
+[原寸の構成図](diagrams/system-architecture.svg) · [編集用 draw.io](diagrams/system-architecture.drawio) · [図の検査・保守](diagrams/README.md)
+
+公開候補の Vercel / Neon はこのローカル図へ接続済みとして含めない。条件・未確認の範囲は [Deployment](#deployment) を参照する。
 
 | モジュール | 責務 | 依存してよいもの |
 | --- | --- | --- |

@@ -1,64 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="1112" viewBox="0 0 480 1112" role="img" aria-labelledby="user-flow-title" data-source-sha256="361feb6098b3b0c7dd1f9654297925f5c8c3d953fdf870af3a987fd9767d4a93">
-<title id="user-flow-title">利用の流れ</title>
-<desc>Future ROI main の説明図。編集元は同名 draw.io ファイル。</desc>
-<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#526976"/></marker></defs>
-<rect width="100%" height="100%" rx="16" fill="#fafcfd"/>
-<g font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif">
-
-<polyline data-cell-id="e1" points="240,168 240,214" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<polyline data-cell-id="e2" points="240,340 240,386" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<polyline data-cell-id="e3" points="240,480 240,526" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<polyline data-cell-id="e4" points="240,650 240,696" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<polyline data-cell-id="e5" points="240,790 240,836" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<polyline data-cell-id="e6" points="240,930 240,976" fill="none" stroke="#526976" stroke-width="2" marker-end="url(#arrow)"/>
-<g data-cell-id="title"><rect x="20" y="12" width="440" height="40" rx="12" fill="none" stroke="none"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="32">利用の流れ</tspan>
-</text>
-</g>
-<g data-cell-id="start"><rect x="40" y="76" width="400" height="92" rx="12" fill="#eef5fb" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="108">公開トップ → 登録 / ログイン</tspan>
-<tspan x="240" y="136">自分の Goal 一覧へ</tspan>
-</text>
-</g>
-<g data-cell-id="goal"><rect x="40" y="214" width="400" height="126" rx="12" fill="#ffffff" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="249">Goal を作る</tspan>
-<tspan x="240" y="277">総量・1回の量・初期量</tspan>
-<tspan x="240" y="305">単位（分 / 回）・任意の予定日</tspan>
-</text>
-</g>
-<g data-cell-id="question"><rect x="40" y="386" width="400" height="94" rx="12" fill="#ffffff" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="419">任意の2問に回答</tspan>
-<tspan x="240" y="447">初期の仮定を置く / 後で変更可</tspan>
-</text>
-</g>
-<g data-cell-id="today"><rect x="40" y="526" width="400" height="124" rx="12" fill="#fff4e9" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="560">Today を見る</tspan>
-<tspan x="240" y="588">再開待ち / 完了の目安</tspan>
-<tspan x="240" y="616">材料不足・出所も表示</tspan>
-</text>
-</g>
-<g data-cell-id="record"><rect x="40" y="696" width="400" height="94" rx="12" fill="#e9f4ed" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="729">「やった」量 / 「今日は休む」</tspan>
-<tspan x="240" y="757">今日の記録を保存</tspan>
-</text>
-</g>
-<g data-cell-id="history"><rect x="40" y="836" width="400" height="94" rx="12" fill="#ffffff" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="869">進捗・記録済み表示 / 履歴</tspan>
-<tspan x="240" y="897">次の日も Today へ</tspan>
-</text>
-</g>
-<g data-cell-id="yesterday"><rect x="40" y="976" width="400" height="92" rx="12" fill="#ffffff" stroke="#9aaab3"/>
-<text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="400" font-family="Yu Gothic, Meiryo, Noto Sans JP, sans-serif" fill="#20323b">
-<tspan x="240" y="1008">昨日が対象期間内なら補完・訂正</tspan>
-<tspan x="240" y="1036">2日以上前の未記録は UNKNOWN</tspan>
-</text>
-</g>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="520" viewBox="0 0 1000 520" role="img"><title>user-flow</title><desc>登録・ログインからGoal作成、必須の初期2問、Today、今日の量または休みの保存、再取得と履歴まで。「分からない」という回答は未回答とは別に扱う。保存後再取得失敗は保存済み・更新待ちとして回復する。</desc><rect width="100%" height="100%" fill="white"/><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#708898"/></marker></defs>
+<rect x="30" y="35" width="175" height="65" rx="5" fill="#F6F9FC" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="117.5" y="73.45" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">登録・ログイン</text>
+<rect x="260" y="35" width="175" height="65" rx="5" fill="#F6F9FC" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="347.5" y="73.45" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">Goal を作成</text>
+<rect x="495" y="35" width="180" height="65" rx="5" fill="#F6F9FC" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="585.0" y="73.45" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">初期の2問に回答</text>
+<rect x="800" y="35" width="170" height="65" rx="5" fill="#F0F8F4" stroke="#387E6C" stroke-width="1.5"/>
+<text x="885.0" y="73.45" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">Today の目安</text>
+<text x="585.0" y="121.2" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="12">「分からない」も回答（未回答とは別）</text>
+<path d="M885.0 205L950 252.5L885.0 300L820 252.5Z" fill="#FFFFFF" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="885.0" y="246.5" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">今日の</text>
+<text x="885.0" y="269.7" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">記録</text>
+<rect x="605" y="195" width="145" height="60" rx="5" fill="#F6F9FC" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="677.5" y="230.95" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">やった量を入力</text>
+<rect x="605" y="305" width="145" height="60" rx="5" fill="#F6F9FC" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="677.5" y="340.95" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">今日は休む</text>
+<rect x="410" y="250" width="130" height="60" rx="5" fill="#F0F8F4" stroke="#387E6C" stroke-width="1.5"/>
+<text x="475.0" y="285.95" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="17">保存</text>
+<path d="M292.5 232L355 280.0L292.5 328L230 280.0Z" fill="#FFFFFF" stroke="#3F6C91" stroke-width="1.5"/>
+<text x="292.5" y="274.0" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">再取得</text>
+<text x="292.5" y="297.2" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">成功？</text>
+<rect x="30" y="250" width="140" height="60" rx="5" fill="#F0F8F4" stroke="#387E6C" stroke-width="1.5"/>
+<text x="100.0" y="274.0" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">記録済み</text>
+<text x="100.0" y="297.2" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">履歴で確認</text>
+<rect x="215" y="415" width="160" height="60" rx="5" fill="#FFFFFF" stroke="#708898" stroke-width="1.5"/>
+<text x="295.0" y="439.0" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">保存済み</text>
+<text x="295.0" y="462.2" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="16">更新待ち</text>
+<text x="100.5" y="349.7" fill="#24384A" text-anchor="middle" font-family="Noto Sans CJK JP, sans-serif" font-size="12">昨日の補完・訂正も可</text>
+<path d="M205 67 L260 67" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M435 67 L495 67" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M675 67 L800 67" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M970 67 L985 67 L985 170 L885 170 L885 205" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M820 252 L785 252 L785 225 L750 225" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="749" y="196" width="63" height="22" fill="white"/><text x="780.5" y="212" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">やった</text>
+<path d="M885 300 L885 335 L750 335" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="802" y="321" width="50" height="22" fill="white"/><text x="827.0" y="337" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">休む</text>
+<path d="M605 225 L575 225 L575 280 L540 280" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M605 335 L575 335 L575 280 L540 280" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M410 280 L355 280" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M230 280 L170 280" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="174" y="250" width="52" height="22" fill="white"/><text x="200.0" y="266" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">はい</text>
+<path d="M292 328 L292 415" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="230" y="357" width="55" height="22" fill="white"/><text x="257.5" y="373" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">いいえ</text>
+<path d="M375 445 L395 445 L395 350 L325 350 L325 304" fill="none" stroke="#708898" stroke-width="1.6" marker-end="url(#arrow)" stroke-dasharray="5 4"/>
+<rect x="336" y="364" width="55" height="22" fill="white"/><text x="363.5" y="380" text-anchor="middle" fill="#24384A" font-family="Noto Sans CJK JP, sans-serif" font-size="13">再取得</text>
 </svg>
