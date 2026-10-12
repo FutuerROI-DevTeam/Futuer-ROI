@@ -54,8 +54,14 @@ test('「後で答える」は押したときの対象日だけに効き、日�
 });
 
 test('R-11の出所と計画を、補わずにそのまま表示データへ渡す', () => {
-  const available = examples.cases.find((c) => c.prediction.coreMetric.status === 'available' && c.prediction.completion.status === 'available' && c.prediction.todayStatus === 'UNRECORDED');
-  const insufficient = examples.cases.find((c) => c.prediction.completion.status === 'insufficient' && c.prediction.todayStatus === 'UNRECORDED' && !c.prediction.progress.completed);
+  const available = examples.cases.find((c) =>
+    c.prediction.coreMetric.status === 'available' &&
+    c.prediction.completion.status === 'available' &&
+    c.prediction.todayStatus === 'UNRECORDED');
+  const insufficient = examples.cases.find((c) =>
+    c.prediction.completion.status === 'insufficient' &&
+    c.prediction.todayStatus === 'UNRECORDED' &&
+    !c.prediction.progress.completed);
   assert.ok(available && insufficient);
   // 回答由来・混合の出所を、中心の数字（bの出所）と完了の目安（a／b）へそのまま
   const mixed = toForecastView(available.prediction, 'minutes', { provenance: { a: 'QUESTION', b: 'QUESTION_AND_RECORDS' }, plan: null, sessionAmount: 15 });

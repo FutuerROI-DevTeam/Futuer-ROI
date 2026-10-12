@@ -7,7 +7,14 @@ import { toLogPut } from '../src/features/logs/record-log.ts';
 const context = { id: 'g1', unit: 'minutes', timezone: 'Asia/Tokyo', goalSettingsRevision: 0 };
 const body = { title: '合成Goal', unit: 'minutes', totalRequired: 100, sessionAmount: 10, timezone: 'Asia/Tokyo' };
 const key = '00000000-0000-4000-8000-000000000148';
-const storage = () => { const rows = new Map(); return { getItem: k => rows.get(k) ?? null, setItem: (k,v) => rows.set(k,v), removeItem: k => rows.delete(k) }; };
+const storage = () => {
+  const rows = new Map();
+  return {
+    getItem: k => rows.get(k) ?? null,
+    setItem: (k,v) => rows.set(k,v),
+    removeItem: k => rows.delete(k),
+  };
+};
 test('F02/F04: 保存操作はGoal・日・量・版を固定し、明示rebaseは版だけを替える', () => {
   const choice = { status: 'DONE', amount: 10 };
   const vars = captureSave(context, '2026-10-09', choice);

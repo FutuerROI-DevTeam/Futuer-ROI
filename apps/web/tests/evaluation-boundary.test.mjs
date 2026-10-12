@@ -49,7 +49,11 @@ function setup() {
     write: async kind => { ev.writes.push(kind); }, read: async () => { ev.reads++; return report; } };
   return useEvaluation('goal', true);
 }
-function cleanup() { ev.cleanups.forEach(callback => callback?.()); ev.client.clear(); delete globalThis.ev; }
+function cleanup() {
+  ev.cleanups.forEach(callback => callback?.());
+  ev.client.clear();
+  delete globalThis.ev;
+}
 const dispatched = () => new Promise(resolve => setImmediate(resolve));
 for (const change of ['owner', 'roundtrip', 'checking', 'unmount']) {
   test(`held capture response cannot write evaluation cache after ${change}`, async () => {
@@ -60,7 +64,11 @@ for (const change of ['owner', 'roundtrip', 'checking', 'unmount']) {
       const work = hook.action('capture');
       await dispatched();
       assert.deepEqual(ev.writes, ['capture']);
-      if (change === 'owner') { ev.epoch={owner:'B',clearedAt:2};ev.generation++;ev.queryGeneration++; }
+      if (change === 'owner') {
+        ev.epoch={owner:'B',clearedAt:2};
+        ev.generation++;
+        ev.queryGeneration++;
+      }
       if (change === 'roundtrip') { ev.generation+=2;ev.queryGeneration+=2; }
       if (change === 'checking') { ev.queryGeneration++; }
       if (change === 'unmount') ev.cleanups.forEach(callback=>callback?.());
@@ -74,33 +82,54 @@ for (const change of ['owner', 'roundtrip', 'checking', 'unmount']) {
 }
 test('handler from previous owner is blocked before dispatch', async () => {
   const hook=setup();try {
-    ev.epoch={owner:'B',clearedAt:0};ev.generation++;ev.queryGeneration++;
-    await hook.action('capture');assert.equal(ev.writes.length,0);assert.equal(ev.reads,0);
+    ev.epoch={owner:'B',clearedAt:0};
+    ev.generation++;
+    ev.queryGeneration++;
+    await hook.action('capture');
+    assert.equal(ev.writes.length,0);
+    assert.equal(ev.reads,0);
   } finally { cleanup(); }
 });
 test('one pending operation prevents double-click and competing withdrawal', async () => {
-  const hook=setup();let resolve;ev.write=kind=>{ev.writes.push(kind);return new Promise(done=>resolve=done);};
+  const hook=setup();
+  let resolve;
+  ev.write=kind=>{ev.writes.push(kind);return new Promise(done=>resolve=done);};
   try {
-    const work=hook.action('capture');await hook.action('capture');await hook.action('withdraw');
+    const work=hook.action('capture');
+    await hook.action('capture');
+    await hook.action('withdraw');
     await dispatched();
-    assert.deepEqual(ev.writes,['capture']);resolve();await work;
+    assert.deepEqual(ev.writes,['capture']);
+    resolve();
+    await work;
     assert.equal(ev.reads,1);assert.equal(ev.client.getQueryData(['goals','evaluation','goal']),ev.query.data);
   } finally { cleanup(); }
 });
 test('held assessment GET cannot resurrect withdrawn-owner data after A→B→A', async () => {
-  const hook=setup();let resolve;ev.read=()=>{ev.reads++;return new Promise(done=>resolve=done);};
+  const hook=setup();
+  let resolve;
+  ev.read=()=>{ev.reads++;return new Promise(done=>resolve=done);};
   try {
-    const work=hook.action('assess');await dispatched();ev.generation+=2;ev.queryGeneration+=2;
+    const work=hook.action('assess');
+    await dispatched();
+    ev.generation+=2;
+    ev.queryGeneration+=2;
     resolve({forecasts:[{id:'A-PRIVATE'}]});await work;
     assert.equal(ev.client.getQueryData(['goals','evaluation','goal']),undefined);assert.deepEqual(ev.writes,[]);
   } finally { cleanup(); }
 });
 test('capability and report reads reject late replies even if transport ignores AbortSignal', async () => {
-  setup();let resolve;ev.read=()=>new Promise(done=>resolve=done);
+  setup();
+  let resolve;
+  ev.read=()=>new Promise(done=>resolve=done);
   try {
-    useEvaluationCapability();const read=ev.options.queryFn({});ev.queryGeneration++;
+    useEvaluationCapability();
+    const read=ev.options.queryFn({});
+    ev.queryGeneration++;
     resolve({enabled:true});await assert.rejects(read,EvaluationBoundaryError);
-    useEvaluation('goal',true);const report=ev.options.queryFn({});ev.generation++;
+    useEvaluation('goal',true);
+    const report=ev.options.queryFn({});
+    ev.generation++;
     resolve({forecasts:[{id:'A-PRIVATE'}]});await assert.rejects(report,EvaluationBoundaryError);
     assert.equal(ev.options.retry,false);assert.equal(ev.options.refetchOnWindowFocus,false);
   } finally { cleanup(); }
@@ -110,7 +139,9 @@ test('default-off report is disabled and no write retry occurs after failure', a
     const hook=useEvaluation('goal',false);assert.equal(ev.options.enabled,false);
     await hook.action('capture');assert.equal(ev.writes.length,0);
     const active=useEvaluation('goal',true);ev.write=async kind=>{ev.writes.push(kind);throw Error('network');};
-    await active.action('capture');assert.deepEqual(ev.writes,['capture']);assert.equal(ev.reads,0);
+    await active.action('capture');
+    assert.deepEqual(ev.writes,['capture']);
+    assert.equal(ev.reads,0);
   } finally { cleanup(); }
 });
 test('successful withdrawal clears displayed data even if follow-up GET fails', async () => {
@@ -138,7 +169,9 @@ test('same-owner withdrawal cancels a real QueryClient pending report and reject
     await hook.action('withdraw');
     assert.deepEqual(ev.writes,['withdraw']);assert.equal(reads,2);
     assert.deepEqual(ev.client.getQueryData(key),empty);
-    release(previous);await pending;await dispatched();
+    release(previous);
+    await pending;
+    await dispatched();
     assert.deepEqual(ev.client.getQueryData(key),empty,'cancelled automatic GET must not resurrect prior participation');
   } finally { cleanup(); }
 });
@@ -155,7 +188,9 @@ test('report transport cannot start during a pending withdrawal even through fet
 });
 for (const status of [404, 500]) {
   test(`real QueryClient cached report after HTTP ${status} ${status===404?'is hidden':'remains a transient error snapshot'}`, async () => {
-    setup();const key=['goals','evaluation','goal'];const previous={...ev.query.data,forecasts:[{id:'OLD'}]};
+    setup();
+    const key=['goals','evaluation','goal'];
+    const previous={...ev.query.data,forecasts:[{id:'OLD'}]};
     ev.client.setQueryData(key,previous);ev.read=async()=>{throw new ApiError(status,null);};
     try {
       await assert.rejects(ev.client.fetchQuery(ev.options),ApiError);
@@ -177,7 +212,9 @@ test('manual assessment authoritative404 removes old report cache', async () => 
 });
 for(const status of [401,404]) {
   test(`action HTTP${status} is superseded by a successful real report GET, including same-millisecond recovery`,async()=>{
-    setup();ev.persistState=true;ev.stateIndex=0;
+    setup();
+    ev.persistState=true;
+    ev.stateIndex=0;
     const clock=Date.now,instant=clock();Date.now=()=>instant;
     const hook=useEvaluation('goal',true),key=['goals','evaluation','goal'];
     ev.client.setQueryData(key,ev.query.data);
@@ -200,7 +237,9 @@ for(const status of [401,404]) {
 }
 for(const status of [401,404]) {
   test(`action HTTP${status} remains superseded after recovery followed by a transient500`,async()=>{
-    setup();ev.persistState=true;ev.stateIndex=0;
+    setup();
+    ev.persistState=true;
+    ev.stateIndex=0;
     const hook=useEvaluation('goal',true),key=['goals','evaluation','goal'];
     ev.client.setQueryData(key,ev.query.data);ev.read=async()=>{throw new ApiError(status,null);};
     try {
