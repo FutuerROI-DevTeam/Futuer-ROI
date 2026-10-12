@@ -61,3 +61,7 @@ UIは追加せず、実ブラウザ/初見理解は未検証。実DB migration�
 固定0fcで、既存Goal GETが受理する大文字UUIDを新規補正APIだけが別Goalとして扱うことを、履歴を作らない新規専用合成DBで確認した。大文字URLのJOINは204・参加1行を作ったが、同じ大文字URLのGETはparticipating=false、正規小文字URLはtrueだった。SQL UUIDと文字列scope比較の表記差による不具合であり、別Goalや別本人のデータ取得ではない。
 
 補正6endpointのGoal UUIDをroute境界で小文字へ正規化し、本人IDや係数・数式・成熟条件・版/期限の照合は変えない。既存HTTP9ケースは全endpointを大文字UUID経路で実行し、正規経路との同一参加も照合する。外部の小さい境界再現を修正後に再実行し、27件・全回帰・bundle・独立差分レビューを新しい固定版で確認してから公開する。
+
+## 既存migration保全回帰の追加schema対応
+
+0fcの全回帰で、後着migration保全テストの期待適用一覧が0006まで固定され、新規0008を含めていない失敗を確認した。0008を一覧へ追加し、既存Goalの追加同意CAS版が0であることを検査してから、その追加列だけを除いて旧行全体を照合する。新規補助3tableが空であることも検査する。旧Goal/log/marker/auth行の全体比較、旧0004のmigration行保全、再適用が空になる検査は維持する。runtime・migration本体・元予測は変更しない。修正後の対象別試験と全workspace回帰を新しい固定HEADで実行する。
