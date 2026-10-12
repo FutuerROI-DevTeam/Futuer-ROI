@@ -140,13 +140,13 @@ test('Today responsive details: real viewport, native keyboard and preserved use
     const value = await view(); assert.ok(value.inputs.some(event => event.type === 'keyup' && event.key === ' ' && event.trusted));
     evidence.push({ scenario: 'native Space', ...value });
   });
-  await t.test('actual cumulative quantity stays exact while percent/remaining cap at the goal', async () => {
+  await t.test('actual quantity and fractional/over-goal rate stay exact while bar/remaining cap at the goal', async () => {
     const cases = [
-      { unit: 'sessions', done: 125, total: 100, percent: '100%', amount: '累計 125回', balances: { '目標量': '100回', '残り': '0回', '目標を超えた量': '25回' } },
+      { unit: 'sessions', done: 125, total: 100, percent: '125%', amount: '累計 125回', balances: { '目標量': '100回', '残り': '0回', '目標を超えた量': '25回' } },
       { unit: 'sessions', done: 100, total: 100, percent: '100%', amount: '累計 100回', balances: { '目標量': '100回', '残り': '0回' } },
       { unit: 'sessions', done: 99, total: 100, percent: '99%', amount: '累計 99回', balances: { '目標量': '100回', '残り': '1回' } },
-      { unit: 'sessions', done: 999, total: 1000, percent: '99%', amount: '累計 999回', balances: { '目標量': '1,000回', '残り': '1回' } },
-      { unit: 'minutes', done: 125, total: 100, percent: '100%', amount: '累計 2時間5分', balances: { '目標量': '1時間40分', '残り': '0時間0分', '目標を超えた量': '0時間25分' } },
+      { unit: 'sessions', done: 999, total: 1000, percent: '99.9%', amount: '累計 999回', balances: { '目標量': '1,000回', '残り': '1回' } },
+      { unit: 'minutes', done: 125, total: 100, percent: '125%', amount: '累計 2時間5分', balances: { '目標量': '1時間40分', '残り': '0時間0分', '目標を超えた量': '0時間25分' } },
       { unit: 'minutes', done: 100, total: 100, percent: '100%', amount: '累計 1時間40分', balances: { '目標量': '1時間40分', '残り': '0時間0分' } },
       { unit: 'minutes', done: 25, total: 100, percent: '25%', amount: '累計 0時間25分', balances: { '目標量': '1時間40分', '残り': '1時間15分' } },
     ];
@@ -154,7 +154,7 @@ test('Today responsive details: real viewport, native keyboard and preserved use
       await evaluate('window.__responsiveFixture.mountProgress(' + JSON.stringify(expected.unit) + ',' + expected.done + ',' + expected.total + ')');
       const value = await until(view, value => value?.amount === expected.amount, 'progress did not mount');
       assert.equal(value.amount, expected.amount); assert.equal(value.percent, expected.percent);
-      assert.equal(value.ariaPercent, expected.percent.replace('%', '')); assert.deepEqual(value.balances, expected.balances);
+      assert.equal(value.ariaPercent, String(Math.min(100, expected.done / expected.total * 100))); assert.deepEqual(value.balances, expected.balances);
       evidence.push({ scenario: 'actual quantity', unit: expected.unit, done: expected.done, total: expected.total, amount: value.amount, percent: value.percent, balances: value.balances });
     }
   });

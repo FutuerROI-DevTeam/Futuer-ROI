@@ -8,6 +8,9 @@ import { cumulativeChart, DEFAULT_CHART_WIDTH } from './chart-geometry.ts';
 
 const CUMULATIVE_HEIGHT = 250;
 import type { ActualProgress } from '../prior/presentation-types.ts';
+import { progressPercent, progressPercentLabel } from '../../copy/progress.ts';
+import type { DraftProgress } from '../logs/draft-preview.ts';
+import { DraftProgressPreview } from './DraftProgressPreview.tsx';
 
 interface Props {
   progress: ActualProgress;
@@ -19,12 +22,12 @@ interface Props {
   fmt: AmountFormat;
   showDetails?: boolean;
   brief?: ReactNode;
+  preview?: DraftProgress | null;
 }
 
 /** これまでの積み上げ。％は進捗だけに使い、累計は記録開始日〜今日の範囲で描く（今日より先の線は引かない）。 */
-export function ProgressSummary({ progress, initialProgress, logs, recordStartDate, today, fmt, showDetails = true, brief }: Props) {
-  // 100% は達成したときだけ出す（未達で切り上げて 100% と見せない）
-  const percent = Math.min(100, Math.floor((progress.done / progress.total) * 100));
+export function ProgressSummary({ progress, initialProgress, logs, recordStartDate, today, fmt, showDetails = true, brief, preview = null }: Props) {
+  const percent = progressPercent(progress.done, progress.total);
   return (
     <Section labelledBy="fr-progress-title">
       <div className="fr-progress__header">
@@ -35,13 +38,14 @@ export function ProgressSummary({ progress, initialProgress, logs, recordStartDa
       </div>
       <div className="fr-progress">
         <p className="fr-progress__percent">
-          {percent}
+          {progressPercentLabel(progress.done, progress.total)}
           <small>%</small>
         </p>
         <p className="fr-progress__amount">
           {todayCopy.progressActual(fmt.total(progress.done))}
         </p>
       </div>
+      <DraftProgressPreview value={preview} />
       <dl className="fr-progress__balance">
         <div><dt>{todayCopy.progressGoal}</dt><dd>{fmt.total(progress.total)}</dd></div>
         <div><dt>{todayCopy.progressRemaining}</dt><dd>{fmt.total(Math.max(0, progress.total - progress.done))}</dd></div>

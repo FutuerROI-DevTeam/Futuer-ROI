@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { authClient } from '../src/auth/client.ts';
 import { PrivateCacheGuard } from '../src/api/session-cache.ts';
 import { goalKeys, goalsHttp } from '../src/api/goals-http.ts';
+import { todayHttp } from '../src/api/today-http.ts';
 import { GoalCreatePage } from '../src/features/goals/GoalFormPage.tsx';
 import { GoalListPage } from '../src/features/goals/GoalListPage.tsx';
 
@@ -18,6 +19,8 @@ let resolveGoal: ((data: unknown) => void) | undefined;
 let goalHold: Promise<unknown> | undefined;
 goalsHttp.listGoals = () => goalHold ?? Promise.resolve([goal(transport.owner)]);
 goalsHttp.createGoal = async () => { transport.writes++; throw new Error('unexpected auto-submit'); };
+// 履歴はこのGoal form/session fixtureの対象外。足跡を未確認にし、未知のwrite検出は維持する。
+todayHttp.listLogs = async () => { throw new TypeError('synthetic history unavailable in session fixture'); };
 const host = document.getElementById('app')!;
 const root = createRoot(host);
 const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

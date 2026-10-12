@@ -36,3 +36,5 @@
 
 
 #244のGoal量入力・Today配置と差分表示は[Product P-23](../../../../docs/product-spec.md#p-23-goalの量入力と保存後の増分244)に従う。総量・初期量の時間＋分は整数分へ変換し、TodayのグラフはPCの週履歴下／スマホの見通し後に一つだけ置く。主数字・見出しは既存Gothicの700、本文の大きさと行間は共有tokensを保つ。差分通知には「保存前の表示との差」を常に示し、今回のPUTの原子的増分とは表現しない。減少や不確かな再試行に増加演出を付けない。質問は未回答で進む操作と、選択を保持して欄を閉じる操作を区別する。
+
+10月12日の[未保存試算](../features/today/DraftProgressPreview.tsx)は保存済み実績と別の枠に条件・未保存を示す。日々の量は[amount](../copy/amount.ts)の分／回、累計・総量は時間＋分／回、率の細かい表示は[progress](../copy/progress.ts)で調整する。[共通足跡](../features/goals/GoalFootprint.tsx)は一覧見出しの下に一つだけ置き、44pxの日付button・矢印キー移動・選択日のGoal入口を持つ。取得はPage、集計は[footprint](../features/goals/footprint.ts)に置く。色だけでDONE・休み・未確認を区別しない。画像案のbitmapを画面へ埋め込まず、既存tokens・部品・字体を保つ。

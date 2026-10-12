@@ -6,6 +6,7 @@ import { router } from '../src/router.tsx';
 import { authClient } from '../src/auth/client.ts';
 import { PrivateCacheGuard, privateDataReady, usePrivateEpoch } from '../src/api/session-cache.ts';
 import { goalsHttp } from '../src/api/goals-http.ts';
+import { todayHttp } from '../src/api/today-http.ts';
 import { ApiError } from '../src/api/client.ts';
 
 // Actual hooks/Router/Better Auth; only API transport, visibility events and wall clock are synthetic.
@@ -27,6 +28,8 @@ const savedResponse = async () => {
 };
 const writes: { mode: string; body: unknown; key?: string; owner?: string }[] = [];
 goalsHttp.listGoals = async () => [goal()];
+// 履歴はこの保存失敗fixtureの対象外。足跡を未確認にし、auth/private write検出を緩めない。
+todayHttp.listLogs = async () => { throw new TypeError('synthetic history unavailable in Goal failure fixture'); };
 goalsHttp.getGoal = async id => { if (getError) throw getError; return { ...goal(id), ...fresh }; };
 goalsHttp.updateGoal = async (_id, body) => { writes.push({ mode: 'edit', body }); return savedResponse(); };
 goalsHttp.createGoal = async (body, key, owner) => { writes.push({ mode: 'create', body, key, owner }); return savedResponse(); };

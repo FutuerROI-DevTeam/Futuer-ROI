@@ -22,6 +22,7 @@ export function useRecordAmount({
   blocked,
   editingAmount,
   onEditingAmountChange,
+  onDraftChange,
 }: {
   date: string;
   sessionAmount: number;
@@ -31,6 +32,7 @@ export function useRecordAmount({
   blocked: boolean;
   editingAmount: boolean;
   onEditingAmountChange: (editing: boolean) => void;
+  onDraftChange?: (amount: number) => void;
 }) {
   const currentAmount = current?.status === 'DONE' && current.amount !== null ? current.amount : sessionAmount;
   // −／＋で変えた、まだ保存していない量。保存し終えたとき・日付や今の記録が変わったときは捨てる
@@ -57,6 +59,7 @@ export function useRecordAmount({
     canDecrease: stepRecordAmount(shownAmount, stepSize, -1) !== shownAmount,
     canIncrease: shownAmount < RECORD_AMOUNT_MAX,
     hasDifferentAmount: shownAmount !== sessionAmount,
+    hasDraft: draftAmount !== null,
     steppedInitial,
     amountLink,
     // 入力欄は、−／＋で変えた量（なければ今の量）から始める
@@ -68,7 +71,9 @@ export function useRecordAmount({
     // その場で量を変える（保存しない）
     stepAmount: (direction: -1 | 1) => {
       if (blocked) return;
-      setDraftAmount(stepRecordAmount(shownAmount, stepSize, direction));
+      const next = stepRecordAmount(shownAmount, stepSize, direction);
+      setDraftAmount(next);
+      onDraftChange?.(next);
     },
     // 押した側が次の量で押せなくなるか（押せなくなるボタンにフォーカスを残すと、フォーカスが画面から外れる）
     reachesLimit: (direction: -1 | 1) => {
@@ -78,6 +83,12 @@ export function useRecordAmount({
     closeAmount: () => {
       returnFocus.current = true;
       setSteppedInitial(null);
+      onEditingAmountChange(false);
+    },
+    resetAmount: () => {
+      setDraftAmount(null);
+      setSteppedInitial(null);
+      returnFocus.current = true;
       onEditingAmountChange(false);
     },
   };

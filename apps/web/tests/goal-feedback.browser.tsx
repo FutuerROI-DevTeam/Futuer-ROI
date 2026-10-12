@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { authClient } from '../src/auth/client.ts';
 import { PrivateCacheGuard } from '../src/api/session-cache.ts';
@@ -7,6 +8,7 @@ import { todayHttp } from '../src/api/today-http.ts';
 import { GoalCreatePage, GoalEditPage } from '../src/features/goals/GoalFormPage.tsx';
 import { GoalListPage } from '../src/features/goals/GoalListPage.tsx';
 import { TodayPage } from '../src/features/today/TodayPage.tsx';
+import { AppShell } from '../src/routes/AppShell.tsx';
 import { ApiError } from '../src/api/client.ts';
 import '@fontsource/zen-maru-gothic/400.css';
 import '@fontsource/zen-maru-gothic/500.css';
@@ -29,6 +31,11 @@ let creates: unknown[] = [];
 let patches: unknown[] = [];
 let hold = false;
 const held: (() => void)[] = [];
+let achievedVisible = true;
+let historyFailure: string | null = null;
+let historyHold = false;
+const heldHistory: (() => void)[] = [];
+const achievedLogs = [{ localDate: shift(-10), status: 'DONE', amount: 10 }];
 const goal = () => ({ ...base, todayStatus: logs.find(l => l.localDate === date)?.status ?? 'UNRECORDED',
   progressDone: logs.reduce((n, l) => n + (l.status === 'DONE' ? l.amount ?? 0 : 0), base.initialProgress) });
 const today = () => {
@@ -46,11 +53,15 @@ const today = () => {
     provenance: { a: 'RECORDS', b: 'RECORDS' }, plan: null };
 };
 goalsHttp.getGoal = async () => structuredClone(goal()) as never;
-goalsHttp.listGoals = async () => [goal(), { ...goal(), id: 'achieved', title: '読み終えた本', unit: 'sessions', totalRequired: 10, initialProgress: 2, progressDone: 12, todayStatus: 'UNRECORDED' }] as never;
+goalsHttp.listGoals = async () => [goal(), ...(achievedVisible ? [{ ...goal(), id: 'achieved', title: '読み終えた本', unit: 'sessions', totalRequired: 10, initialProgress: 2, progressDone: 12, todayStatus: 'UNRECORDED' }] : [])] as never;
 goalsHttp.createGoal = async (...args: unknown[]) => { creates.push(structuredClone(args)); return goal() as never; };
 goalsHttp.updateGoal = async (...args: unknown[]) => { patches.push(structuredClone(args)); return goal() as never; };
 todayHttp.getToday = async () => structuredClone(today()) as never;
-todayHttp.listLogs = async () => structuredClone(logs) as never;
+todayHttp.listLogs = async id => {
+  if (id === historyFailure) throw new TypeError('synthetic history offline');
+  if (id === base.id && historyHold) await new Promise<void>(resolve => heldHistory.push(resolve));
+  return structuredClone(id === 'achieved' ? achievedLogs : logs) as never;
+};
 todayHttp.putLog = async (_id, localDate, body) => {
   puts.push(structuredClone({ localDate, body }));
   if (hold) await new Promise<void>(resolve => held.push(resolve));
@@ -66,19 +77,32 @@ const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }
 let visit = 0;
 function mount(mode: string) {
   failure = null; hold = false; puts = []; creates = []; patches = [];
+  achievedVisible = true; historyFailure = null; historyHold = mode === 'list-loading';
+  base.unit = 'minutes'; base.totalRequired = 12000; base.sessionAmount = 30; base.goalSettingsRevision = 0; base.answerRevision = 0;
   logs = Array.from({ length: 28 }, (_, i) => ({ localDate: shift(i - 28), status: i % 2 ? 'DONE' : 'SKIPPED', amount: i % 2 ? 30 : null }));
+  if (mode === 'today-small' || mode === 'list-small') { base.totalRequired = 18000; base.sessionAmount = 120; logs = [{ localDate: shift(-1), status: 'DONE', amount: 120 }]; }
+  if (mode === 'today-counts') { base.unit = 'sessions'; base.totalRequired = 4; base.sessionAmount = 1; logs = [{ localDate: date, status: 'DONE', amount: 3 }]; }
+  if (mode === 'today-empty') logs = [];
   if (mode === 'edit') base.initialProgress = 1240; else base.initialProgress = 0;
   base.hasLogs = mode !== 'edit';
+  base.unitLocked = mode !== 'today-empty';
+  if (mode === 'today-empty') base.hasLogs = false;
   client.clear();
-  root.render(<QueryClientProvider client={client}><PrivateCacheGuard />
-    <div key={++visit}>{mode === 'create' ? <GoalCreatePage /> : mode === 'edit' ? <GoalEditPage goalId={base.id} /> : mode === 'list' ? <GoalListPage /> : <TodayPage goalId={base.id} />}</div>
-  </QueryClientProvider>);
+  (window as unknown as { __fePage: () => ReactNode }).__fePage = () => mode === 'create' ? <GoalCreatePage /> : mode === 'edit' ? <GoalEditPage goalId={base.id} /> : mode.startsWith('list') ? <GoalListPage /> : <TodayPage goalId={base.id} />;
+  root.render(<QueryClientProvider client={client}><PrivateCacheGuard /><AppShell key={++visit} /></QueryClientProvider>);
 }
 (window as unknown as { __goalQA: unknown }).__goalQA = { mount, date,
   failure: (value: typeof failure) => { failure = value; },
   hold: () => { hold = true; },
   release: () => { hold = false; held.splice(0).forEach(resolve => resolve()); },
+  configure: (settings: Partial<typeof base>) => { Object.assign(base, settings); void client.invalidateQueries({ queryKey: ['goals'] }); },
+  historyOffline: (id: string | null, refresh = true) => { historyFailure = id; if (refresh) void client.invalidateQueries({ queryKey: ['goals'] }); },
+  releaseHistory: () => { historyHold = false; heldHistory.splice(0).forEach(resolve => resolve()); },
+  removeAchieved: () => { achievedVisible = false; void client.invalidateQueries({ queryKey: ['goals'] }); },
   state: () => ({ puts, creates, patches, logs, text: document.getElementById('app')?.textContent,
-    feedback: document.querySelector('.fr-save-feedback')?.textContent, active: document.activeElement?.id }),
+    feedback: document.querySelector('.fr-save-feedback')?.textContent, active: document.activeElement?.id,
+    preview: document.querySelector('.fr-draft-preview:not(.fr-draft-preview--compact)')?.textContent ?? '',
+    percent: document.querySelector('.fr-progress__percent')?.textContent, cumulative: document.querySelector('.fr-progress__amount')?.textContent,
+    footprint: document.querySelector('.fr-footprint')?.textContent }),
 };
 mount('today');

@@ -32,6 +32,9 @@ import { AchievedFacts, AchievedPanel, ChangeHeader, RecordedSummary, TodayRecor
 import { useTodayData } from './useTodayData.ts';
 import { toForecastView } from './forecast-view.ts';
 import { SaveFeedback } from '../logs/SaveFeedback.tsx';
+import { draftProgress, recordPreviewBaseline, type RecordDraft, type DraftProgress } from '../logs/draft-preview.ts';
+import { DraftProgressPreview } from './DraftProgressPreview.tsx';
+import { StickyActionBar } from '../../ui/components/StickyActionBar.tsx';
 import { useSaveLog } from '../logs/useSaveLog.ts';
 import { showYesterdayPrompt } from './yesterday-later.ts';
 import { YesterdayCorrection } from '../logs/YesterdayCorrection.tsx';
@@ -82,6 +85,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
   const [changing, setChanging] = useState(false);
   // 今日の量の入力を開いている。開いている間は昨日の訂正を始めない（今日と昨日を同時に編集しない、#88）
   const [amountEditing, setAmountEditing] = useState(false);
+  const [recordDraft, setRecordDraft] = useState<RecordDraft | null>(null);
   // 開いた量の入力・記録変更は開始した日を保持する。翌日の入力へ黙って付け替えない
   const [todayEditDate, setTodayEditDate] = useState<string | undefined>();
   const queryClient = useQueryClient();
@@ -101,6 +105,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
       setChanging(false);
       setAmountEditing(false);
       setTodayEditDate(undefined);
+      setRecordDraft(null);
     },
     localDate: todayEditDate ?? snapshot?.today.today ?? acceptedGoal?.today,
     // 再描画前のクリックでも、QueryClient に到着済みの API 日付を検査する
@@ -203,6 +208,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
     setChanging(false);
     setAmountEditing(false);
     setTodayEditDate(undefined);
+    setRecordDraft(null);
   };
 
   let yesterdayArea = null;
@@ -265,6 +271,13 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
   }
 
   const validSnapshot = snapshot && !todayQuery.isError && !goalQuery.isError && !logsQuery.isError && !resyncFailed;
+  // 最後の整合表示を残していても、取得中の部分更新へ試算を載せない。
+  const previewSnapshot = validSnapshot && snapshot && snapshot.goal === goalQuery.data
+    && snapshot.today === todayQuery.data && snapshot.logs === logsQuery.data ? snapshot : null;
+  const previewBaseline = previewSnapshot ? recordPreviewBaseline(previewSnapshot) : undefined;
+  const preview = previewSnapshot && showChoices && canRecordToday && privateDataReady(getPrivateEpoch())
+    && !todaySaver.isSaving && !todaySaver.failure && !yesterdayEdit
+    ? draftProgress(previewSnapshot, recordDraft) : null;
   const historyArea = validSnapshot ? <ForecastBoundary resetKey={todayQuery.dataUpdatedAt}>
     <TodayContent area="history" goal={snapshot.goal} today={snapshot.today} logs={snapshot.logs} changing={changing} changeDisabled={!!yesterdayEdit} onChange={startTodayChange} />
   </ForecastBoundary> : null;
@@ -311,6 +324,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
             changing={changing}
             changeDisabled={!!yesterdayEdit}
             onChange={startTodayChange}
+            preview={preview}
           />
         </ForecastBoundary>
       ) : (
@@ -346,6 +360,7 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
             changing={changing}
             changeDisabled={!!yesterdayEdit}
             onChange={startTodayChange}
+            preview={preview}
           />
         </ForecastBoundary>
       ) : null}
@@ -367,8 +382,11 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
           today={recordDate}
           sessionAmount={recordGoal.sessionAmount}
           fmt={amountFormat(recordGoal)}
+          recordSettings={JSON.stringify([recordGoal.id, recordGoal.unit, recordGoal.timezone, recordGoal.goalSettingsRevision, recordGoal.sessionAmount])}
           current={changing && today ? today.todayLog : null}
           saver={todaySaver}
+          previewBaseline={previewBaseline}
+          onPreviewChange={setRecordDraft}
           {...(changing ? { onCancelChange: cancelChange } : {})}
           locked={locks.todayLocked}
           editingAmount={locks.todayAmountEditing}
@@ -381,9 +399,19 @@ function TodayScreen({ goalId, notBefore }: { goalId: string; notBefore: number 
             setChanging(false);
             setAmountEditing(false);
             setTodayEditDate(undefined);
+            setRecordDraft(null);
             refresh();
           }}
         />
+        <DraftProgressPreview value={preview} compact />
+        </section>
+      ) : null}
+      {!showChoices && validSnapshot && goal && today?.todayLog ? (
+        <section className="fr-today__dock" aria-label="今日の記録を変更する">
+          <p className="fr-today__record-day"><span>{todayCopy.todayRecordTitle}</span><time dateTime={today.today}>{longDate(today.today)}</time></p>
+          <StickyActionBar note={<span>{today.todayLog.status === 'DONE' ? `やった ${amountFormat(goal).record(today.todayLog.amount ?? 0)}` : todayCopy.recordedRest}</span>}>
+            <Button variant="secondary" icon="edit" disabled={!!yesterdayEdit || todaySaver.isSaving} onClick={startTodayChange}>{todayCopy.changeRecord}</Button>
+          </StickyActionBar>
         </section>
       ) : null}
       </div>
@@ -399,6 +427,7 @@ function TodayContent({
   changing,
   changeDisabled,
   onChange,
+  preview = null,
 }: {
   area: 'primary' | 'details' | 'history';
   goal: Goal;
@@ -409,6 +438,7 @@ function TodayContent({
   /** 昨日を訂正している間は「記録を変更」を押せない（startTodayChange も同じ条件で何もしない）。 */
   changeDisabled: boolean;
   onChange: () => void;
+  preview?: DraftProgress | null;
 }) {
   // 変換と検査は Boundary の内側で行う（失敗しても記録の2択は残る）
   // R-11 の出所（provenance）と、材料が足りないときの計画（plan）は API の値をそのまま渡す
@@ -422,7 +452,7 @@ function TodayContent({
   const questionLink = <Link to="/goals/$goalId/edit" params={{ goalId: goal.id }} hash="fr-goalform-prior" className="fr-link">{todayCopy.answerQuestions}（任意）</Link>;
   const progress =
     view.kind === 'completed' || view.kind === 'forecast' || view.kind === 'today-recorded' ? (
-      <ProgressSummary showDetails={false} brief={view.kind === 'forecast' || view.kind === 'today-recorded' ? <CompletionBrief completion={view.completion} /> : null} progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} />
+      <ProgressSummary showDetails={false} preview={preview} brief={view.kind === 'forecast' || view.kind === 'today-recorded' ? <CompletionBrief completion={view.completion} /> : null} progress={view.progress} initialProgress={goal.initialProgress} logs={logs} recordStartDate={goal.recordStartDate} today={today.today} fmt={fmt} />
     ) : null;
   const outlookTitle = todayCopy.outlookTitle(fmt.total(goal.totalRequired));
   const changeHeader =

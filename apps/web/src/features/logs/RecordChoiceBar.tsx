@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { longDate } from '../../copy/date.ts';
 import { ErrorPanel } from '../../ui/components/Notice.tsx';
 import type { Log } from '@contracts';
@@ -10,6 +11,7 @@ import { CancelChangeButton, RecordChoices, useRecordAmount } from './RecordChoi
 import { classifySaveError, describeChoice, unlessLocked, type RecordChoice } from './record-log.ts';
 import { SaveFailure } from './SaveFailure.tsx';
 import type { useSaveLog } from './useSaveLog.ts';
+import type { RecordDraft } from './draft-preview.ts';
 import './logs.css';
 
 /**
@@ -32,6 +34,9 @@ export function RecordChoiceBar({
   locked = false,
   editingAmount,
   onEditingAmountChange,
+  previewBaseline,
+  onPreviewChange,
+  recordSettings,
 }: {
   today: string;
   sessionAmount: number;
@@ -46,7 +51,22 @@ export function RecordChoiceBar({
   /** 量の入力を開いているか（親が持つ）。 */
   editingAmount: boolean;
   onEditingAmountChange: (editing: boolean) => void;
+  previewBaseline?: string | undefined;
+  onPreviewChange?: (draft: RecordDraft | null) => void;
+  /** 入力中の量を別の単位・設定版へ読み替えない。再入力の明示操作まで固定する。 */
+  recordSettings: string;
 }) {
+  const [inputSettings, setInputSettings] = useState(recordSettings);
+  const settingsChanged = inputSettings !== recordSettings;
+  const reinputFocus = useRef(false);
+  const draftBaseline = useRef<string | undefined>(undefined);
+  const draftStarted = useRef(false);
+  const publishDraft = useCallback((value: number | null) => {
+    if (!draftStarted.current) { draftBaseline.current = previewBaseline; draftStarted.current = true; }
+    if (draftBaseline.current !== undefined) onPreviewChange?.({ baseline: draftBaseline.current, localDate: today, status: 'DONE', amount: value });
+  }, [onPreviewChange, previewBaseline, today]);
+  const clearPreview = () => { draftBaseline.current = undefined; draftStarted.current = false; onPreviewChange?.(null); };
+  useEffect(() => () => onPreviewChange?.(null), [onPreviewChange]);
   const amount = useRecordAmount({
     date: today,
     sessionAmount,
@@ -55,9 +75,17 @@ export function RecordChoiceBar({
     blocked: saver.isSaving || locked,
     editingAmount,
     onEditingAmountChange,
+    onDraftChange: publishDraft,
   });
+  useEffect(() => {
+    if (reinputFocus.current) { reinputFocus.current = false; amount.amountLink.current?.focus(); }
+  }, [inputSettings]);
   // 昨日を訂正している間は、量の入力からも送らない
-  const save = (choice: RecordChoice) => (locked ? undefined : saver.save({ localDate: today, choice }));
+  const save = (choice: RecordChoice) => {
+    if (locked || settingsChanged) return;
+    clearPreview();
+    saver.save({ localDate: today, choice });
+  };
   const saving = saver.saving?.choice;
 
   // 保存失敗後も、以前の上部の入口と同じく選び直しをやめられるようにする（#221）
@@ -89,8 +117,9 @@ export function RecordChoiceBar({
           onRetry={unlessLocked(locked, saver.retry)}
           retryLocked={locked}
           lockedNote={todayCopy.otherEditing}
-          onReselect={saver.reset}
+          onReselect={() => { clearPreview(); saver.reset(); }}
           onRefresh={() => {
+            clearPreview();
             saver.reset();
             onRefresh();
           }}
@@ -98,6 +127,19 @@ export function RecordChoiceBar({
         {cancelButton}
       </StickyActionBar>
     );
+  }
+
+  if (settingsChanged && !saver.isSaving) {
+    return <StickyActionBar>
+      <ErrorPanel title="Goalの設定が変わりました" action={<Button variant="primary" block onClick={() => {
+        clearPreview();
+        amount.resetAmount();
+        reinputFocus.current = true;
+        setInputSettings(recordSettings);
+      }}>今の設定で入力し直す</Button>}>
+        未保存の量は保存していません。単位と1回の量を確認して、入力し直してください。
+      </ErrorPanel>
+    </StickyActionBar>;
   }
 
   if (editingAmount) {
@@ -110,7 +152,8 @@ export function RecordChoiceBar({
           fmt={fmt}
           busy={saver.isSaving || locked}
           onSubmit={(value) => save({ status: 'DONE', amount: value })}
-          onCancel={amount.closeAmount}
+          onCancel={() => { if (amount.hasDraft) publishDraft(amount.shownAmount); else clearPreview(); amount.closeAmount(); }}
+          onDraftChange={publishDraft}
         />
         {/* 量の入力を開いていても、選び直しそのものをやめられる（以前の上部の入口と同じ、#221） */}
         {cancelButton}

@@ -97,7 +97,7 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-page--today .fr-outlook__p50 { font-size: 28px; color: var(--fr-dot); overflow-wrap: anywhere; }
 .fr-page--today .fr-outlook__label,
 .fr-page--today .fr-outlook__p80 { font-size: 13px; }
-.fr-page--today .fr-progress__percent { font-size: 40px; }
+.fr-page--today .fr-progress__percent { font-size: 40px; overflow-wrap: anywhere; min-width: 0; }
 .fr-page--today .fr-progress__percent small { font-size: 1em; margin-left: 0; }
 .fr-page--today .fr-progress__amount { font-size: 14px; }
 .fr-page--today .fr-progress__balance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; padding: 0; }
@@ -198,7 +198,19 @@ body:has(.fr-page--today) { background: #eef3f5; }
 .fr-save-feedback__increase { color: var(--fr-rec); animation: fr-feedback-in .35s ease-out; }
 @keyframes fr-feedback-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .fr-save-feedback__increase { animation: none; } }
+.fr-draft-preview { padding: 10px 12px; border: 1px solid var(--fr-line); border-radius: 12px; background: var(--fr-bg); color: var(--fr-ink); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.fr-draft-preview p { margin: 0; }
+.fr-draft-preview__label { color: var(--fr-ink-2); }
+.fr-draft-preview__label span { display: inline-block; margin-left: 4px; font-weight: 700; }
+.fr-draft-preview__delta { font-weight: 700; }
+.fr-draft-preview--compact { display: none; }
+@media (max-width: 959px) { .fr-draft-preview--compact { display: block; margin: 0 16px 12px; flex-shrink: 0; } }
 @media (min-width: 960px) {
   .fr-page--today .fr-today__history-chart { grid-row: 3; margin: 0; }
   .fr-page--today .fr-today__basis .fr-why summary, .fr-page--today .fr-today__detail > summary { min-height: var(--fr-tap); }
+  /* 左の入力へスクロールしても、試算と比較元の進捗を同時に読めるようにする。 */
+  .fr-page--today .fr-today__right:has(.fr-draft-preview) { align-self: stretch; }
+  .fr-page--today .fr-today__right > .fr-section:has(.fr-draft-preview) { position: sticky; top: 18px; z-index: 1; background: var(--fr-surface); }
+  /* 右の見通しをキーボードで読む間は固定を外し、focus先を試算で覆わない。 */
+  .fr-page--today .fr-today__right:focus-within > .fr-section:has(.fr-draft-preview) { position: static; }
 }

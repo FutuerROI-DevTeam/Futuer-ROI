@@ -21,6 +21,7 @@ export function AmountEditor({
   onCancel,
   submitLabel = todayCopy.saveWithAmount,
   cancelLabel = todayCopy.back,
+  onDraftChange,
 }: {
   label: string;
   initial: number;
@@ -33,6 +34,8 @@ export function AmountEditor({
   /** 主ボタンの文言（既定は「この量で記録」）。 */
   submitLabel?: string;
   cancelLabel?: string;
+  /** 入力を試算へ渡すだけ。保存はonSubmitでのみ行う。不正・空欄はnull。 */
+  onDraftChange?: (amount: number | null) => void;
 }) {
   const id = useId();
   const editor = useRef<HTMLDivElement>(null);
@@ -42,6 +45,7 @@ export function AmountEditor({
   const [error, setError] = useState<string | undefined>();
   const value = parseInteger(text);
   const valid = isRecordAmount(value);
+  useEffect(() => { onDraftChange?.(valid ? value : null); }, [onDraftChange, valid, value]);
   const hasDifferentAmount = valid && value !== sessionAmount;
   // −／＋の刻み（1回の量に合わせたきりのよい幅。copy/amount.ts）
   const stepSize = fmt.recordStep(sessionAmount);

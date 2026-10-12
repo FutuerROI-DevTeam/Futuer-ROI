@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { Goal } from '@contracts';
 import { goalKeys, goalsHttp } from '../../api/goals-http.ts';
@@ -7,6 +8,9 @@ import { appCopy } from '../../copy/app.ts';
 import { goalsCopy } from '../../copy/goals.ts';
 import { longDate } from '../../copy/date.ts';
 import { amountFormat } from '../../copy/amount.ts';
+import { progressPercent, progressPercentLabel } from '../../copy/progress.ts';
+import { todayHttp, todayKeys } from '../../api/today-http.ts';
+import { GoalFootprint } from './GoalFootprint.tsx';
 import { AppBar } from '../../ui/components/AppBar.tsx';
 import { Icon } from '../../ui/components/Icon.tsx';
 import { PageTitle } from '../../ui/components/PageTitle.tsx';
@@ -14,6 +18,7 @@ import { StatusBadge } from '../../ui/components/StatusBadge.tsx';
 import { Band } from '../../ui/components/Section.tsx';
 import { AccountMenu } from '../account/AccountMenu.tsx';
 import { fetchPolicy } from '../today/fetch-policy.ts';
+import { shouldRefetchForNewDay } from '../today/day-rollover.ts';
 import { useEvaluationCapability } from '../evaluation/useEvaluation.ts';
 import '../evaluation/evaluation.css';
 import { LoadErrorPanel, SignedOutPanel } from './GoalStates.tsx';
@@ -38,6 +43,28 @@ export function GoalListPage() {
   const ready = privateDataReady(current);
   const query = useQuery({ queryKey: goalKeys.list(), queryFn: ({ signal }) => goalsHttp.listGoals(signal), enabled: ready, ...fetchPolicy });
   const fresh = ready && query.dataUpdatedAt > current.clearedAt;
+  const footprintGoals = [...new Map((fresh && !query.isError ? query.data ?? [] : []).map(goal => [goal.id, goal] as const)).values()];
+  const histories = useQueries({ queries: footprintGoals.map(goal => ({
+    queryKey: todayKeys.logs(goal.id), queryFn: ({ signal }: { signal: AbortSignal }) => todayHttp.listLogs(goal.id, signal),
+    enabled: ready, ...fetchPolicy,
+  })) });
+  const footprintSources = footprintGoals.map((goal, index) => {
+    const history = histories[index];
+    return { goal, logs: history && !history.isError && !history.isFetching && !query.isFetching
+      && history.dataUpdatedAt > current.clearedAt ? history.data ?? null : null };
+  });
+  useEffect(() => {
+    if (!fresh || !query.data || query.isFetching) return;
+    const goals = query.data;
+    const timer = setInterval(() => {
+      if (goals.some(goal => shouldRefetchForNewDay(goal.timezone, goal.today, new Date()))) {
+        void query.refetch();
+        for (const history of histories) void history.refetch();
+      }
+    }, 30_000);
+    return () => clearInterval(timer);
+    // Goal一覧/取得状態の変更時に、その一覧の履歴observerへ付け替える。
+  }, [fresh, query.data, query.isFetching]);
 
   return (
     <div className="fr fr-page fr-page--list">
@@ -58,6 +85,11 @@ export function GoalListPage() {
           </Link>
         ) : null}
       </div>
+
+      {footprintGoals.length > 0 ? <GoalFootprint sources={footprintSources} onRefresh={() => {
+        void query.refetch();
+        for (const history of histories) void history.refetch();
+      }} /> : null}
 
       {current.owner === null ? (
         <div className="fr-goals__pad"><SignedOutPanel /></div>
@@ -88,7 +120,7 @@ export function GoalListPage() {
 function GoalRow({ goal, evaluationEnabled }: { goal: Goal; evaluationEnabled: boolean }) {
   // 累計と総量（分のGoalは時間＋分、P-18）
   const fmt = amountFormat(goal);
-  const percent = Math.min(100, Math.floor((goal.progressDone / goal.totalRequired) * 100));
+  const percent = progressPercent(goal.progressDone, goal.totalRequired);
   const achieved = goal.progressDone >= goal.totalRequired;
   return (
     <li className="fr-goals__row">
@@ -103,7 +135,7 @@ function GoalRow({ goal, evaluationEnabled }: { goal: Goal; evaluationEnabled: b
           <span className="fr-goals__amount">
             {fmt.total(goal.progressDone)}{' '}
           </span>
-          <span className="fr-goals__amount-total">目標 {fmt.total(goal.totalRequired)} · {percent}%</span>
+          <span className="fr-goals__amount-total">目標 {fmt.total(goal.totalRequired)} · {progressPercentLabel(goal.progressDone, goal.totalRequired)}%</span>
           {goal.initialProgress > 0 ? <span className="fr-goals__initial">記録開始前の {fmt.total(goal.initialProgress)} を含む</span> : null}
         </span>
         <span

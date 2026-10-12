@@ -3,6 +3,9 @@ import { test } from 'node:test';
 import { parseGoalAmount, parseInteger, toCreateBody, toPatchBody, rebaseValues, valuesFromGoal, validate } from '../src/features/goals/goal-form.ts';
 import { confirmedSaveFeedback } from '../src/features/logs/save-feedback.ts';
 import { cumulativeChart } from '../src/features/today/chart-geometry.ts';
+import { draftProgress, recordPreviewBaseline } from '../src/features/logs/draft-preview.ts';
+import { progressPercent, progressPercentLabel } from '../src/copy/progress.ts';
+import { amountFormat, recordDisplay } from '../src/copy/amount.ts';
 
 test('時間＋分を丸めず整数分へ変換し、不正な途中入力を拒否する', () => {
   const parts = (h, m) => '@hm:' + JSON.stringify([h, m]);
@@ -77,4 +80,50 @@ test('積み上げ軸は0起点の実績尺度で超過を保持し、初日に�
   const future = cumulativeChart([{ ...done(1000), localDate: '2026-10-12' }], 0, 100, date, date, 350, 1);
   assert.equal(future.last, 0);
   assert.equal(future.points[0].y, future.zeroY);
+});
+
+const draft = (s, amount, overrides = {}) => ({ baseline: recordPreviewBaseline(s), localDate: date, status: 'DONE', amount, ...overrides });
+test('未保存試算は新規分量を加算し、当日訂正は旧量を差し引く。実績snapshotを書き換えない', () => {
+  const fresh = snapshot([]), original = JSON.stringify(fresh);
+  assert.deepEqual(draftProgress(fresh, draft(fresh, 30)), { amount: 30, points: .25, done: 30, total: 12000, unit: 'minutes' });
+  assert.equal(JSON.stringify(fresh), original);
+  const recorded = snapshot([done(120)], { totalRequired: 18000 });
+  assert.deepEqual(draftProgress(recorded, draft(recorded, 200)), { amount: 80, points: 80 / 18000 * 100, done: 200, total: 18000, unit: 'minutes' });
+  assert.equal(draftProgress(recorded, draft(recorded, 60)).amount, -60);
+  assert.equal(draftProgress(recorded, draft(recorded, 120)).amount, 0);
+  const counts = snapshot([done(3)], { unit: 'sessions', totalRequired: 4 });
+  assert.deepEqual(draftProgress(counts, draft(counts, 5)), { amount: 2, points: 50, done: 5, total: 4, unit: 'sessions' });
+});
+test('不正・空欄・0・skip・別Goal/設定/日付/他日更新・不整合へ未保存試算を出さない', () => {
+  const s = snapshot([]), d = draft(s, 30);
+  for (const value of [null, 0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2147483648]) assert.equal(draftProgress(s, { ...d, amount: value }), null);
+  assert.equal(draftProgress(s, null), null);
+  assert.equal(draftProgress(s, { ...d, status: 'SKIPPED' }), null);
+  assert.equal(draftProgress(s, { ...d, localDate: '2026-10-12' }), null);
+  for (const settings of [{ id: 'other' }, { totalRequired: 6000 }, { goalSettingsRevision: 1 }, { answerRevision: 1 }, { sessionAmount: 20 }, { timezone: 'Asia/Tokyo' }]) {
+    assert.equal(draftProgress(snapshot([], settings), d), null);
+  }
+  assert.equal(draftProgress(snapshot([{ localDate: '2026-10-10', status: 'DONE', amount: 10 }]), d), null);
+  const broken = snapshot([]); broken.goal.progressDone = 5;
+  assert.equal(draftProgress(broken, d), null);
+  assert.equal(draftProgress(broken, draft(broken, 30)), null, 'Goalだけ新しい累計でも新規入力を試算しない');
+  const duplicate = snapshot([done(30), done(30)]);
+  assert.equal(draftProgress(duplicate, draft(duplicate, 20)), null);
+});
+test('小さい実績を0%にせず、未達を丸めで100%にしない。超過実績は保持する', () => {
+  assert.equal(progressPercentLabel(120, 18000), '0.67');
+  assert.ok(Math.abs(progressPercent(120, 18000) - 2 / 3) < 1e-12);
+  assert.equal(progressPercentLabel(0, 18000), '0');
+  assert.equal(progressPercentLabel(1, 2147483647), '<0.01');
+  assert.equal(progressPercentLabel(99999, 100000), '<100');
+  assert.equal(progressPercentLabel(100000, 100000), '100');
+  assert.equal(progressPercentLabel(125, 100), '125');
+  assert.equal(progressPercent(125, 100), 100, 'バーだけは100%まで');
+  const s = snapshot([done(90)], { totalRequired: 100 });
+  assert.equal(draftProgress(s, draft(s, 125)).done, 125);
+});
+test('日々の量は120分/回、総量と累計は2時間0分を保つ', () => {
+  assert.equal(recordDisplay(amountFormat({ unit: 'minutes' }), 120), '120分');
+  assert.equal(amountFormat({ unit: 'minutes' }).total(120), '2時間0分');
+  assert.equal(recordDisplay(amountFormat({ unit: 'sessions' }), 120), '120回');
 });

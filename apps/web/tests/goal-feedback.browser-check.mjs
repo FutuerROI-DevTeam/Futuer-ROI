@@ -27,6 +27,7 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
       resolveId: id => id === 'test:router' ? '\0test:router' : id.endsWith('/auth/client.ts') ? '\0test:auth' : null,
       load: id => id === '\0test:auth' ? 'export const authClient={};export const describeAuthError=(_code,fallback)=>fallback;' : id === '\0test:router' ? `import {createElement} from 'react';
         export const Link=({to,params,search,hash,children,...props})=>createElement('a',{href:to+(hash?'#'+hash:''),...props},children);
+        export const Outlet=()=>window.__fePage?.()??null;
         export const useNavigate=()=>()=>{};export const useRouter=()=>({subscribe:()=>()=>{}});export const useLocation=()=>({href:location.pathname});` : null,
     }], build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./goal-feedback.browser.tsx', import.meta.url)), formats: ['iife'], name: 'GoalQA' } } });
   t.signal.throwIfAborted();
@@ -87,16 +88,18 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
   const evidence = [];
   const mount = async mode => {
     await evaluate(`window.__goalQA.mount(${JSON.stringify(mode)})`);
-    await until(state, v => mode === 'list' ? v?.text?.includes('読み終えた本') : mode === 'create' || mode === 'edit' ? true : v?.text?.includes('ゴールが遠ざかる'), 'mount ' + mode);
+    await until(state, v => mode.startsWith('list') ? v?.text?.includes('読み終えた本') : mode === 'create' || mode === 'edit' ? true : !!v?.percent, 'mount ' + mode);
     await until(mode === 'create' || mode === 'edit' ? '!!document.querySelector("#goal-totalRequired")' : 'true', Boolean, 'form absent');
     await delay(100);
   };
   const artifacts = process.env.FEQA_ARTIFACT_DIR;
   if (artifacts) await mkdir(artifacts, { recursive: true });
+  const screenshotNames = new Set();
   const screenshot = async name => {
     if (!artifacts) return;
     const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     await writeFile(join(artifacts, name + '.png'), Buffer.from(shot.data, 'base64'));
+    screenshotNames.add(name);
   };
   for (const width of [320, 390, 768, 1440]) {
     await resize(width);
@@ -131,6 +134,133 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
       }
       evidence.push({ mode, ...layout });
     }
+  }
+  for (const width of [320, 390, 768, 1440]) {
+    await resize(width); await mount('today-small');
+    await until(state, v => v?.percent?.includes('0.67'), 'small progress must not display 0');
+    const initialLogs = (await evaluate(state)).logs;
+    await click('[...document.querySelectorAll(".fr-today__dock button")].find(e=>e.textContent.trim()==="量を変更")');
+    await input('.fr-today__dock .fr-amount input', '120');
+    const preview = await until(state, v => v?.preview?.includes('+120分') && v?.preview?.includes('+0.667パーセントポイント'), 'unsaved preview absent');
+    assert.ok(preview.percent.includes('0.67') && preview.cumulative.includes('2時間0分'));
+    assert.equal(preview.puts.length, 0);
+    assert.deepEqual(preview.logs, initialLogs, 'typing must not change saved logs');
+    const previewLayout = await evaluate(`(()=>{const p=document.querySelector('.fr-draft-preview');const compact=document.querySelector('.fr-draft-preview--compact');return {overflow:document.documentElement.scrollWidth>innerWidth,compactVisible:!!compact&&getComputedStyle(compact).display!=='none',announcers:document.querySelectorAll('.fr-draft-preview[aria-live=polite]').length,focus:document.activeElement.closest('.fr-amount')!==null}})()`);
+    assert.equal(previewLayout.overflow, false);
+    assert.equal(previewLayout.compactVisible, width < 960);
+    assert.equal(previewLayout.announcers, 1);
+    assert.equal(previewLayout.focus, true);
+    if (width >= 960) {
+      const box = await evaluate('document.querySelector(".fr-draft-preview").getBoundingClientRect().toJSON()');
+      assert.ok(box.y >= 0 && box.bottom <= 1000, 'PC input focus hid the right preview');
+    }
+    await screenshot('draft-preview-' + width);
+    for (const invalid of ['0', '-1', '1.5', 'abc']) {
+      await input('.fr-today__dock .fr-amount input', invalid);
+      await until(state, v => v?.preview === '', 'invalid draft retained preview');
+      assert.equal((await evaluate(state)).puts.length, 0);
+    }
+    await input('.fr-today__dock .fr-amount input', '30');
+    await until(state, v => v?.preview?.includes('+30分'), 'valid draft did not recover');
+    await evaluate('document.querySelector(".fr-today__dock .fr-amount input").select()');
+    await key('Backspace', 'Backspace', 8);
+    await until(state, v => v?.preview === '', 'empty draft retained preview');
+    evidence.push({ mode: 'unsaved preview/invalid/empty ' + width, ...previewLayout, ...preview });
+  }
+  await resize(1440); await mount('list-small');
+  await until(state, v => v?.footprint?.includes('連続実施 1日'), 'footprint not ready');
+  assert.equal(await evaluate('document.querySelectorAll(".fr-footprint").length'), 1);
+  assert.equal(await evaluate('document.querySelectorAll(".fr-goals__row .fr-footprint").length'), 0);
+  assert.ok((await evaluate(state)).text.includes('0.67%'));
+  const header = await evaluate(`(()=>{const a=document.querySelector('.fr-deskbar__name');return {href:a.getAttribute('href'),decoration:getComputedStyle(a).textDecorationLine,color:getComputedStyle(a).color,parentColor:getComputedStyle(a.parentElement).color}})()`);
+  assert.equal(header.href, '/'); assert.equal(header.decoration, 'none'); assert.equal(header.color, header.parentColor);
+  await activate('.fr-footprint__day[aria-pressed=true]');
+  await key('ArrowLeft', 'ArrowLeft', 37);
+  await until(state, v => v?.footprint?.includes('英語学習の積み上げ'), 'selected day goals absent');
+  assert.equal(await evaluate('document.activeElement.classList.contains("fr-footprint__day")'), true);
+  assert.ok(await evaluate('document.querySelector(".fr-footprint__selection a").getBoundingClientRect().height>=44'));
+  await screenshot('footprint-selected-1440');
+  evidence.push({ mode: 'shared footprint/header/small percent/native day selection', ...header });
+  await resize(390); await mount('list-loading');
+  await until(state, v => v?.footprint?.includes('連続実施は確認中'), 'loading must not claim streak 0');
+  assert.ok(await evaluate('document.querySelectorAll(".fr-footprint__day--unconfirmed").length>0'));
+  await evaluate('window.__goalQA.releaseHistory()');
+  await until(state, v => v?.footprint?.includes('連続実施 1日'), 'history did not recover');
+  await evaluate('window.__goalQA.historyOffline("qa-goal")');
+  await until(state, v => v?.footprint?.includes('足跡を再読み込み'), 'history failure absent');
+  assert.ok((await evaluate(state)).footprint.includes('連続実施は確認中'));
+  await evaluate('window.__goalQA.historyOffline(null, false)');
+  await click('[...document.querySelectorAll(".fr-footprint button")].find(e=>e.textContent.includes("再読み込み"))');
+  await until(state, v => v?.footprint?.includes('連続実施 1日'), 'history retry absent');
+  await evaluate('window.__goalQA.removeAchieved()');
+  await until(state, v => !v?.text?.includes('読み終えた本'), 'deleted goal remained');
+  const targets = await evaluate('[...document.querySelectorAll(".fr-footprint__day")].map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height}))');
+  assert.ok(targets.every(box => box.w >= 44 && box.h >= 44));
+  await screenshot('footprint-recovered-390');
+  evidence.push({ mode: 'footprint loading/failure/retry/deleted goal/mobile targets' });
+  await resize(390); await mount('today-counts');
+  await click('[...document.querySelectorAll(".fr-today__dock button")].find(e=>e.textContent.trim()==="記録を変更")');
+  await click('[...document.querySelectorAll(".fr-today__dock button")].find(e=>e.textContent.trim()==="量を変更")');
+  await input('.fr-today__dock .fr-amount input', '5');
+  const counted = await until(state, v => v?.preview?.includes('+2回') && v?.preview?.includes('+50パーセントポイント'), 'count correction preview absent');
+  assert.ok(counted.preview.includes('125%') && counted.preview.includes('1回'));
+  assert.ok(counted.percent.includes('75') && counted.cumulative.includes('3回'));
+  assert.equal(counted.puts.length, 0);
+  await input('.fr-today__dock .fr-amount input', '1');
+  const negative = await until(state, v => v?.preview?.includes('−2回') && v?.preview?.includes('−50パーセントポイント'), 'negative correction preview absent');
+  assert.ok(!negative.preview.includes('分'));
+  await screenshot('draft-count-correction-390');
+  evidence.push({ mode: 'count/over-goal/negative correction', counted, negative });
+  await mount('today-small');
+  await click('[...document.querySelectorAll(".fr-today__dock button")].find(e=>e.textContent.trim()==="量を変更")');
+  await input('.fr-today__dock .fr-amount input', '60');
+  await until(state, v => v?.preview?.includes('+60分'), 'settings case initial preview absent');
+  await evaluate('window.__goalQA.configure({totalRequired:9000,goalSettingsRevision:1})');
+  await until(state, v => v?.percent?.includes('1.33') && v?.preview === '', 'settings update reused old preview');
+  assert.equal((await evaluate(state)).puts.length, 0);
+  assert.ok((await evaluate(state)).text.includes('Goalの設定が変わりました'));
+  assert.equal(await evaluate('document.querySelectorAll(".fr-today__dock .fr-amount input,.fr-today__dock .fr-choice").length'), 0);
+  await screenshot('draft-settings-changed-390');
+  evidence.push({ mode: 'changed goal settings suppress old draft preview' });
+  for (const kind of ['editor', 'stepped-editor', 'stepped']) {
+    await mount('today-empty');
+    if (kind !== 'editor') await click('document.querySelector(".fr-today__dock button[aria-label^=量を増やす]")');
+    if (kind !== 'stepped') {
+      await click('[...document.querySelectorAll(".fr-today__dock button")].find(e=>e.textContent.trim()==="量を変更")');
+      await input('.fr-today__dock .fr-amount input', '120');
+    }
+    await evaluate('window.__goalQA.configure({unit:"sessions",sessionAmount:1,totalRequired:10,goalSettingsRevision:1})');
+    await until(state, v => v?.text?.includes('Goalの設定が変わりました') && v?.preview === '', 'unit update did not require reentry');
+    assert.equal((await evaluate(state)).puts.length, 0);
+    assert.equal(await evaluate('document.querySelectorAll(".fr-today__dock .fr-amount input,.fr-today__dock .fr-choice").length'), 0);
+    await click('[...document.querySelectorAll(".fr-today__dock button")].find(e=>e.textContent.trim()==="今の設定で入力し直す")');
+    await until(state, v => v?.text?.includes('今日記録する量：1回') && v?.preview === '', 'reentry kept old minute draft');
+    assert.equal(await evaluate('document.activeElement.textContent.trim()'), '量を変更', 'reentry lost keyboard focus');
+    await click('document.querySelector(".fr-today__dock button[aria-label^=量を増やす]")');
+    await until(state, v => v?.preview?.includes('+2回'), 'new count draft absent');
+    await activate('.fr-today__dock .fr-choice');
+    const newUnitSave = await until(state, v => v?.puts?.length === 1 && v?.active === 'fr-recorded-title', 'reentered count save absent');
+    assert.equal(newUnitSave.puts[0].body.amount, 2);
+    assert.equal(newUnitSave.puts[0].body.expectedGoalSettingsRevision, 1);
+    evidence.push({ mode: 'unit change requires explicit reentry ' + kind, puts: newUnitSave.puts });
+  }
+  for (const height of [600, 800]) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height, deviceScaleFactor: 1, mobile: false });
+    await mount('today-small');
+    await click('[...document.querySelectorAll(".fr-today__dock button")].find(e=>e.textContent.trim()==="量を変更")');
+    await input('.fr-today__dock .fr-amount input', '120');
+    const visible = await evaluate(`(()=>{const p=document.querySelector('.fr-draft-preview');const r=p.getBoundingClientRect();return {top:r.top,bottom:r.bottom,exposed:p.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),background:getComputedStyle(p.closest('.fr-section')).backgroundColor}})()`);
+    assert.ok(visible.top >= 0 && visible.bottom <= height && visible.exposed, 'low PC viewport hid/covered preview');
+    assert.notEqual(visible.background, 'rgba(0, 0, 0, 0)');
+    for (const selector of ['.fr-today__right a', '.fr-today__details summary']) {
+      const focus = await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.focus();const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,exposed:e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),active:document.activeElement===e}})()`);
+      assert.ok(focus.active && focus.exposed && focus.top >= 0 && focus.bottom <= height, 'sticky summary covered Outlook keyboard focus');
+    }
+    await input('.fr-today__dock .fr-amount input', '120');
+    const restored = await evaluate('document.querySelector(".fr-draft-preview").getBoundingClientRect().toJSON()');
+    assert.ok(restored.top >= 0 && restored.bottom <= height, 'return to input did not restore preview visibility');
+    await screenshot('draft-preview-1440x' + height);
+    evidence.push({ mode: 'PC preview remains visible at height ' + height, ...visible });
   }
   await resize(390); await mount('edit');
   assert.equal(await evaluate('document.querySelector("#goal-initialProgress").value'), '20');
@@ -204,12 +334,14 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
   await mount('today'); await evaluate('window.__goalQA.hold()');
   await activate('.fr-today__dock .fr-choice');
   await until(state, v => v?.puts?.length === 1, 'held save did not start');
+  await evaluate('window.__qaPeerObserved=false;window.__qaPeerProbe=new BroadcastChannel("future-roi:save:qa-goal");window.__qaPeerProbe.onmessage=e=>{if(e.data?.sender==="synthetic-second-tab"&&e.data?.type==="start")window.__qaPeerObserved=true}');
   const otherTab = await cdp.send('Target.createTarget', { url: 'http://127.0.0.1:' + server.address().port + '/peer' });
-  await delay(300);
+  await until('window.__qaPeerObserved', Boolean, 'second native tab signal did not arrive');
   await evaluate('window.__goalQA.release()');
   const peerSave = await until(state, v => v?.active === 'fr-recorded-title', 'peer save did not finish');
   assert.equal(peerSave.feedback, '', 'detected same-origin tab activity must suppress uncertain increment');
   await cdp.send('Target.closeTarget', { targetId: otherTab.targetId });
+  await evaluate('window.__qaPeerProbe.close()');
   await cdp.send('Page.bringToFront');
   evidence.push({ mode: 'second native tab signal during held PUT', ...peerSave });
   await mount('today'); await evaluate('window.__goalQA.failure("409")');
@@ -223,5 +355,5 @@ test('#244: real form/Today at 320/390/768/1440, native input, confirmed feedbac
   assert.equal(await evaluate('document.querySelectorAll(".fr-save-feedback[aria-live=polite]").length'), 1);
   evidence.push({ mode: 'failure/retry/409/reduced-motion', failed, retried, conflict });
   if (artifacts) await writeFile(join(artifacts, 'browser-evidence.json'), JSON.stringify(evidence, null, 2));
-  t.diagnostic(JSON.stringify({ scenarios: evidence.length, screenshots: artifacts ? 22 : 0, widths: [320,390,768,1440] }));
+  t.diagnostic(JSON.stringify({ scenarios: evidence.length, screenshots: screenshotNames.size, widths: [320,390,768,1440] }));
 });
