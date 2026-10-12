@@ -27,7 +27,7 @@ const { toForecastView } = await import('../src/features/today/forecast-view.ts'
 const { assertForecastPresentation, PriorForecast } = await import('../src/features/prior/PriorForecast.tsx');
 const { todayCopy, completionNoteFor } = await import('../src/copy/today.ts');
 const { amountFormat } = await import('../src/copy/amount.ts');
-const { shortDate, parseLocalDate } = await import('../src/copy/date.ts');
+const { shortDate, parseLocalDate, weekLabel } = await import('../src/copy/date.ts');
 const { buildR11Today } = await import('../../api/src/prediction/r11.ts');
 const { makeQuestionSnapshot } = await import('../../api/src/questions/snapshot.ts');
 const { TodayR11 } = await import('../../api/src/contracts/r11.ts');
@@ -105,6 +105,20 @@ test('H日目と0日の有限分位点を週丸めによって範囲外にしな
   assert.ok(!render(view.completion).includes(outsideText));
   const nextWeek = present({ p50Days: 3, p80Days: 3 });
   assert.equal(nextWeek.completion.p80Label, '10月12日の週');
+});
+
+test('週の月曜日が今日と違う年なら年を付け、同じ年なら付けない（到達予定日の年付き表示と1年ずれて読めないようにする、#278）', () => {
+  // 2026-12-29（火）から20日目は2027-01-18（月）。P50は同じ年の週（12-28の月曜）、P80は翌年の週
+  const view = present({ p50Days: 1, p80Days: 20 }, undefined, false, '2026-12-29');
+  assert.equal(view.completion.p50Label, '12月28日の週');
+  assert.equal(view.completion.p80Label, '2027年1月18日の週');
+  const html = renderToStaticMarkup(createElement(OutlookPanel, { completion: view.completion, today: '2026-12-29', sessionAmount: 20, title: '完了の目安', fmt: amountFormat({ unit: 'minutes' }) }));
+  assert.match(html, /fr-outlook__p50">12月28日の週ごろ/);
+  assert.match(html, /10回中8回は2027年1月18日の週まで/);
+  // 年明け直後に、同じ週の月曜日が前年でも、週の年をそのまま出す（今日が属する年と違う）
+  assert.equal(weekLabel('2027-01-01', 0), '2026年12月28日の週');
+  assert.equal(weekLabel('2027-01-04', 0), '1月4日の週');
+  assert.equal(weekLabel('2026-12-29', null), null);
 });
 
 test('質問・実記録・両者併用と記録済みでも、P80の意味と出所・注釈を保持する', () => {
