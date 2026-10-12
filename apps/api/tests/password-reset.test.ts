@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { REDACTED, redactLogUrl } from '../src/http/log-url.ts';
 import { Client, credentials, setup } from './helpers/stack.ts';
 
 const origin = 'http://127.0.0.1:3000';
@@ -22,6 +23,7 @@ test('登録済みメールで再設定を要求すると日本語の案内メ�
   const requested = await client.call('POST', '/api/auth/request-password-reset', { email: cred.email, redirectTo: resetPage });
   assert.equal(requested.status, 200, requested.body);
   assert.equal(requested.headers['cache-control'], 'no-store');
+  await stack.settle(); // 送信は応答と切り離して走る
   assert.equal(stack.mails.length, 1, '1通だけ送る');
   const mail = stack.mails[0]!;
   assert.equal(mail.to, cred.email);
@@ -60,6 +62,7 @@ test('未登録メールでも同じ応答を返し、メールは送らない�
   const client = new Client(stack.app, origin);
   const res = await client.call('POST', '/api/auth/request-password-reset', { email: 'nobody@example.test', redirectTo: resetPage });
   assert.equal(res.status, 200);
+  await stack.settle();
   assert.equal(stack.mails.length, 0);
   assert.equal(typeof res.json?.message, 'string');
 });
@@ -81,6 +84,7 @@ test('無効なトークンは画面へerror付きで戻し、短いパスワー
   const cred = credentials('short');
   assert.equal((await client.call('POST', '/api/auth/sign-up/email', cred)).status, 200);
   await client.call('POST', '/api/auth/request-password-reset', { email: cred.email, redirectTo: resetPage });
+  await stack.settle();
   const link = /https?:\/\/\S+/.exec(stack.mails[0]!.text)![0];
   const token = (await openMailLink(client, link)).searchParams.get('token')!;
   const short = await client.call('POST', '/api/auth/reset-password', { newPassword: 'short', token });
@@ -102,6 +106,7 @@ test('再設定の要求は1 IPあたり60秒の上限で429になり、X-Retry-
   }
   assert.deepEqual(statuses, [200, 200, 429]);
   assert.match(retry, /^\d+$/);
+  await stack.settle();
   assert.equal(stack.mails.length, 0, '未登録メールなので送信は無い');
 });
 
@@ -111,8 +116,89 @@ test('メール送信の失敗は固定版SDKがlogへ記録して握りつぶ�
   const cred = credentials('fail');
   assert.equal((await client.call('POST', '/api/auth/sign-up/email', cred)).status, 200);
   const res = await client.call('POST', '/api/auth/request-password-reset', { email: cred.email, redirectTo: resetPage });
-  assert.equal(res.status, 200, '1.7.7のrunInBackgroundOrAwaitは完了を待つが、送信例外を応答へ変えない');
+  assert.equal(res.status, 200, '送信は応答と切り離され、送信例外を応答へ変えない');
+  await stack.settle(); // 預かった送信の失敗はSDKがlogへ記録し、ここまで伝わらない
   assert.ok(!res.body.includes('synthetic delivery failure'), '例外の原文を応答へ出さない');
   // 送信できなくても再要求は可能（トークンは作られているが、利用者には届かない）
   assert.equal((await client.call('POST', '/api/auth/request-password-reset', { email: cred.email, redirectTo: resetPage })).status, 200);
+});
+
+test('別の端末で再設定すると、旧パスワードでログインしていた端末のセッションは失効する', async (t) => {
+  const { stack } = await setup(t);
+  const deviceA = new Client(stack.app, origin);
+  const deviceB = new Client(stack.app, origin);
+  const cred = credentials('revoke');
+  assert.equal((await deviceA.call('POST', '/api/auth/sign-up/email', cred)).status, 200);
+  assert.equal((await deviceA.call('GET', '/api/goals')).status, 200, '再設定前はAのCookieで保護APIを使える');
+
+  // Bはログインせずに再設定する（Aはログアウトしない）
+  assert.equal((await deviceB.call('POST', '/api/auth/request-password-reset', { email: cred.email, redirectTo: resetPage })).status, 200);
+  await stack.settle();
+  const token = (await openMailLink(deviceB, /https?:\/\/\S+/.exec(stack.mails[0]!.text)![0])).searchParams.get('token')!;
+  assert.equal((await deviceB.call('POST', '/api/auth/reset-password', { newPassword: `${cred.password}-new`, token })).status, 200);
+
+  assert.equal((await deviceA.call('GET', '/api/goals')).status, 401, '再設定後はAの既存Cookieで保護APIを使えない');
+  const session = await deviceA.call('GET', '/api/auth/get-session');
+  assert.equal(session.json, null, 'Aのセッションは残っていない');
+  assert.equal((await deviceB.call('POST', '/api/auth/sign-in/email', { email: cred.email, password: `${cred.password}-new` })).status, 200);
+});
+
+test('登録済みでも未登録でも、メール送信の完了を待たずに同じ速さで応答する（送信時間で登録の有無を推測させない）', async (t) => {
+  const delayMs = 1000;
+  let sent = 0;
+  const { stack } = await setup(t, { mailer: async () => { await new Promise((resolve) => setTimeout(resolve, delayMs)); sent++; } });
+  const client = new Client(stack.app, origin);
+  const cred = credentials('timing');
+  assert.equal((await client.call('POST', '/api/auth/sign-up/email', cred)).status, 200);
+  await client.call('POST', '/api/auth/sign-out', {});
+
+  const timed = async (email: string) => {
+    const started = performance.now();
+    const res = await client.call('POST', '/api/auth/request-password-reset', { email, redirectTo: resetPage });
+    return { res, ms: performance.now() - started };
+  };
+  const registered = await timed(cred.email);
+  const unregistered = await timed('nobody-timing@example.test');
+  assert.equal(registered.res.status, 200);
+  assert.equal(unregistered.res.status, 200);
+  assert.equal(registered.res.body, unregistered.res.body, '本文も同じ');
+  // 送信（1秒）を待っていれば登録済みだけが1秒以上かかる。待たないので両方とも送信時間より十分短い
+  assert.ok(registered.ms < delayMs / 2, `registered responded in ${registered.ms}ms`);
+  assert.ok(unregistered.ms < delayMs / 2, `unregistered responded in ${unregistered.ms}ms`);
+  assert.equal(sent, 0, '応答の時点では送信はまだ終わっていない');
+  await stack.settle();
+  assert.equal(sent, 1, '応答の後で送信は完了する（登録済みの1通だけ）');
+});
+
+test('再設定トークンはURLのパス・クエリのどちらにあっても要求ログに残らない', async (t) => {
+  const lines: string[] = [];
+  const { stack } = await setup(t, { logStream: { write: (line) => { lines.push(line); } } });
+  const client = new Client(stack.app, origin);
+  const cred = credentials('logs');
+  assert.equal((await client.call('POST', '/api/auth/sign-up/email', cred)).status, 200);
+  await client.call('POST', '/api/auth/request-password-reset', { email: cred.email, redirectTo: resetPage });
+  await stack.settle();
+  const link = /https?:\/\/\S+/.exec(stack.mails[0]!.text)![0];
+  const token = (await openMailLink(client, link)).searchParams.get('token')!;
+  assert.ok(token.length >= 16, 'synthetic flow issued a real token');
+  // redirect先の画面（SPA）と、queryでtokenを渡す保存も通す
+  await client.rawCall('GET', `/reset-password?token=${token}`);
+  await client.rawCall('POST', `/api/auth/reset-password?token=${token}`, { newPassword: `${cred.password}-new` });
+
+  const urls = lines.map((line) => JSON.parse(line) as { req?: { url?: string } }).flatMap((entry) => entry.req?.url ? [entry.req.url] : []);
+  assert.ok(urls.some((url) => url.startsWith(`/api/auth/reset-password/${REDACTED}`)), 'mail link request was logged (redacted)');
+  assert.ok(urls.some((url) => url === `/reset-password?token=${REDACTED}`), 'SPA landing request was logged (redacted)');
+  assert.ok(urls.some((url) => url === `/api/auth/reset-password?token=${REDACTED}`), 'query token request was logged (redacted)');
+  assert.ok(!lines.some((line) => line.includes(token)), 'no log line contains the token');
+});
+
+test('ログ用URLの除去：パスの再設定トークン、queryのtoken（大小・符号化したキーも）だけを置き換える', () => {
+  assert.equal(redactLogUrl('/api/auth/reset-password/abcDEF123?callbackURL=http%3A%2F%2Fx%2Freset-password'),
+    `/api/auth/reset-password/${REDACTED}?callbackURL=http%3A%2F%2Fx%2Freset-password`);
+  assert.equal(redactLogUrl('/reset-password?redirect=%2Fgoals&token=abc&x=1'), `/reset-password?redirect=%2Fgoals&token=${REDACTED}&x=1`);
+  assert.equal(redactLogUrl('/api/auth/reset-password?TOKEN=abc'), `/api/auth/reset-password?TOKEN=${REDACTED}`);
+  assert.equal(redactLogUrl('/api/auth/reset-password?%74oken=abc'), `/api/auth/reset-password?%74oken=${REDACTED}`);
+  assert.equal(redactLogUrl('/api/goals?view=r11'), '/api/goals?view=r11');
+  assert.equal(redactLogUrl('/api/auth/request-password-reset'), '/api/auth/request-password-reset');
+  assert.equal(redactLogUrl('/x?tokens=1&mytoken=2'), '/x?tokens=1&mytoken=2');
 });

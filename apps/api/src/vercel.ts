@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions';
 import { attachDatabasePool } from '@vercel/functions/db-connections';
 import type { FastifyInstance } from 'fastify';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -28,7 +29,9 @@ async function initialize(): Promise<FastifyInstance> {
     attachDatabasePool(authPool);
     const auth = createAuth({ pool: authPool, secret: authConfig.secret, baseURL: authConfig.baseURL,
       trustedOrigins: authConfig.trustedOrigins, signInMax: authConfig.signInMax, signUpMax: authConfig.signUpMax,
-      resetMax: authConfig.resetMax, mailer: createMailer(mailConfig) });
+      resetMax: authConfig.resetMax, mailer: createMailer(mailConfig),
+      // 応答後の再設定メール送信を、公式waitUntilでFunctionの終了前に完了させる。
+      background: waitUntil });
     app = await buildApp({ pool,
       // cwd/ProviderのWEB_DISTに依存せず、配備物内のWebを使う。SPA fallbackはbuildAppの既存実装。
       webDist: fileURLToPath(new URL('../../web/dist/', import.meta.url)),

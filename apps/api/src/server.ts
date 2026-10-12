@@ -1,4 +1,5 @@
 import { buildApp } from './app.ts';
+import { createBackgroundTasks } from './auth/background.ts';
 import { createMailer } from './auth/mail-transport.ts';
 import { createAuth } from './auth/options.ts';
 import { loadAuthConfig, loadConfig, loadMailConfig } from './config.ts';
@@ -12,6 +13,8 @@ const mailConfig = loadMailConfig(process.env);
 const pool = createAppPool({ connectionString: config.databaseUrl });
 // 認証は専用pool（int8を数値で読む）。接続数はアプリ用5＋認証用2を合算してDB側の上限と比べる。
 const authPool = createAuthPool({ connectionString: config.databaseUrl });
+// 再設定メールの送信は応答と切り離して走らせ、終了時に完了を待つ。
+const background = createBackgroundTasks();
 const auth = createAuth({
   pool: authPool,
   secret: authConfig.secret,
@@ -21,6 +24,7 @@ const auth = createAuth({
   signUpMax: authConfig.signUpMax,
   resetMax: authConfig.resetMax,
   mailer: createMailer(mailConfig),
+  background: background.run,
 });
 const app = await buildApp({
   pool,
@@ -49,6 +53,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   deadline.unref();
   try {
     await app.close(); // listenerを閉じ、処理中の要求を完了させる
+    await background.drain(); // 応答後に預かったメール送信を終えてから
     await pool.end(); // その後にDB接続を返す
     await authPool.end();
     app.log.info({ signal }, 'shutdown: complete');
