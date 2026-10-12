@@ -21,6 +21,28 @@ function SameNumbers($a, $b) {
     for ($i=0; $i -lt $a.Count; $i++) { if ([Math]::Abs($a[$i]-$b[$i]) -gt 0.001) { return $false } }
     return $true
 }
+function CheckArrow($svg, $style, $edge, [string]$side, [string]$context) {
+    $key = "${side}Arrow"
+    # Missing startArrow means none; an end style must be explicit rather
+    # than guessing draw.io's default end-arrow type.
+    Check ($side -ne 'end' -or $style.ContainsKey($key)) "$context missing end arrow style"
+    $kind = if ($style.ContainsKey($key)) { $style[$key] } else { 'none' }
+    Check ($kind -cin @('none','block')) "$context unsupported $side arrow type: $kind"
+    $reference = $edge.GetAttribute("marker-$side")
+    if ($kind -eq 'none') {
+        Check ($reference -in @('','none')) "$context $side arrow differs"
+        return
+    }
+    Check ($reference -cmatch '^url\(#([A-Za-z_][\w.-]*)\)$') "$context $side arrow marker differs"
+    $markerId = $Matches[1]
+    $markers = @($svg.SelectNodes('/*[local-name()="svg"]/*[local-name()="defs"]/*[local-name()="marker"]') | Where-Object { $_.GetAttribute('id') -ceq $markerId })
+    Check ($markers.Count -eq 1) "$context $side arrow marker missing or ambiguous"
+    $paths = @($markers[0].SelectNodes('*[local-name()="path"]'))
+    Check ($paths.Count -eq 1 -and $markers[0].ChildNodes.Count -eq 1) "$context unsupported $side arrow marker shape"
+    $d = $paths[0].GetAttribute('d')
+    Check (($d -replace '[^A-Za-z]','') -ceq 'MLLZ' -and (SameNumbers (Numbers $d) @(1,1,9,5,1,9)) -and $paths[0].GetAttribute('fill') -notin @('','none')) "$context $side arrow marker is not a filled block"
+    Check ($markers[0].GetAttribute('orient') -ceq 'auto-start-reverse') "$context unsupported $side arrow marker orientation"
+}
 function Geometry($cell, [int]$depth=0) {
     Check ($depth -lt $byId.Count) 'Cyclic source parent hierarchy'
     $g=$cell.SelectSingleNode('mxGeometry').CloneNode($true)
@@ -79,7 +101,8 @@ foreach ($name in @('system-architecture','user-flow')) {
         }
     }
     Check ($usedText.Count -eq $texts.Count) "$name extra/missing SVG labels"
-    $edges=@($model.SelectNodes('root/mxCell[@edge="1"]'));$svgEdges=@($svg.SelectNodes('//*[local-name()="path" and @marker-end]'))
+    # Identify unfilled edge paths independently of their arrowheads.
+    $edges=@($model.SelectNodes('root/mxCell[@edge="1"]'));$svgEdges=@($svg.SelectNodes('/*[local-name()="svg"]/*[local-name()="path" and @fill="none"]'))
     Check ($edges.Count -eq $svgEdges.Count) "$name edge counts differ"
     foreach ($cell in $edges) {
         Check ($cell.GetAttribute('parent') -eq '1') "$name unsupported grouped edge waypoints"
@@ -89,7 +112,8 @@ foreach ($name in @('system-architecture','user-flow')) {
         $points+=@(((Number $to.GetAttribute('x'))+(Number $style['entryX'])*(Number $to.GetAttribute('width'))),((Number $to.GetAttribute('y'))+(Number $style['entryY'])*(Number $to.GetAttribute('height'))))
         $matches=@($svgEdges | Where-Object { SameNumbers (Numbers $_.GetAttribute('d')) $points })
         Check ($matches.Count -eq 1) "$name edge path differs: $($cell.GetAttribute('id'))"
-        Check ($matches[0].HasAttribute('marker-start') -eq ($style['startArrow'] -eq 'block')) "$name edge direction differs"
+        CheckArrow $svg $style $matches[0] 'start' "$name edge $($cell.GetAttribute('id'))"
+        CheckArrow $svg $style $matches[0] 'end' "$name edge $($cell.GetAttribute('id'))"
     }
     Write-Output "PASS: $name labels $($texts.Count), vertices $($vertices.Count), edges $($edges.Count); page bounds and SVG/source structure."
 }

@@ -28,6 +28,8 @@ jobs:
           package-manager-cache: false
       - name: Check documentation and configuration
         run: node .github/scripts/ci-report.mjs run foundation -- pwsh -NoProfile -File ./scripts/check-foundation.ps1
+      - name: Check diagram synchronization regressions
+        run: pwsh -NoProfile -File ./scripts/tests/check-document-diagrams.test.ps1
       - name: Summarize verification
         if: ${{ always() }}
         run: node .github/scripts/ci-report.mjs summary foundation
