@@ -9,23 +9,33 @@ import { isSameSnapshot } from './snapshot.ts';
 
 export type TodaySnapshot = { goal: GoalR11; today: TodayR11; logs: Log[] };
 
-/** 食い違いを取り直す回数の上限。超えたら「表示をそろえられませんでした」と再読み込みを出す。 */
+/** 食い違いの再取得上限。超えたら再読み込みの案内を出す。 */
 const MAX_RESYNC = 3;
-/** 日付の切り替わりを確かめる間隔。端末の時計を Goal の timezone で読み、変わっていれば取り直す。 */
+/** Goal の timezone で日付の切り替わりを確かめる間隔。 */
 const DAY_CHECK_MS = 30_000;
 
 /**
- * Today 画面の取得（Goal・Today・記録の一覧）。
- * - 3つが同じ時点の材料か（snapshot.ts）を確かめ、そろっている組み合わせだけを snapshot として返す。
- *   食い違っている間は、最後にそろっていた snapshot を出したまま取り直す（古い見通しと新しい見出しを混ぜない）
- * - Goal の timezone で日付が変わったら、画面を開いたままでも取り直す（focus・mount・reconnect が起きなくても）。
- *   API の「今日」が進むまでは、確かめるたびに取り直す（取得中は重ねない）
- * - notBefore より前に届いたデータは使わない（ログインしている人が替わった直後の、前の人のキャッシュ。session-cache.ts）
+ * Goal・Today・記録の取得と、整合した snapshot の採用を所有する。
+ * - 食い違う間は最後の整合 snapshot を保持し、新しい見出しと古い見通しを混ぜない。
+ * - Goal の timezone で日付が変わったら、API の「今日」が進むまで再取得する。取得中は重ねない。
+ * - notBefore 以下の応答は採用しない。owner 再確認中は ∞ を渡す（D-30）。
  */
 export function useTodayData(goalId: string, notBefore = 0) {
-  const goalQuery = useQuery({ queryKey: goalKeys.detail(goalId), queryFn: ({ signal }) => goalsHttp.getGoal(goalId, signal), ...fetchPolicy });
-  const todayQuery = useQuery({ queryKey: todayKeys.today(goalId), queryFn: ({ signal }) => todayHttp.getToday(goalId, signal), ...fetchPolicy });
-  const logsQuery = useQuery({ queryKey: todayKeys.logs(goalId), queryFn: ({ signal }) => todayHttp.listLogs(goalId, signal), ...fetchPolicy });
+  const goalQuery = useQuery({
+    queryKey: goalKeys.detail(goalId),
+    queryFn: ({ signal }) => goalsHttp.getGoal(goalId, signal),
+    ...fetchPolicy,
+  });
+  const todayQuery = useQuery({
+    queryKey: todayKeys.today(goalId),
+    queryFn: ({ signal }) => todayHttp.getToday(goalId, signal),
+    ...fetchPolicy,
+  });
+  const logsQuery = useQuery({
+    queryKey: todayKeys.logs(goalId),
+    queryFn: ({ signal }) => todayHttp.listLogs(goalId, signal),
+    ...fetchPolicy,
+  });
   const refresh = () => void Promise.all([goalQuery.refetch(), todayQuery.refetch(), logsQuery.refetch()]);
 
   const goal = goalQuery.data;
@@ -34,35 +44,46 @@ export function useTodayData(goalId: string, notBefore = 0) {
   const fetching = goalQuery.isFetching || todayQuery.isFetching || logsQuery.isFetching;
   // 利用者が替わった後の取得で届いたものだけを材料にする
   const fresh = [goalQuery, todayQuery, logsQuery].every((q) => q.dataUpdatedAt > notBefore);
-  // 最後にそろっていた組み合わせ
   const lastGood = useRef<TodaySnapshot | undefined>(undefined);
-  // Today の取得失敗時に記録へ使う Goal も、notBefore より後に届いたものだけを採用する（同じ人かの確認中は更新しない、#190）
+  // Today 失敗時の記録に使う Goal も、owner 再確認中には更新しない。
   const acceptedGoal = useRef<GoalR11 | undefined>(undefined);
-  if (goal && goalQuery.dataUpdatedAt > notBefore) acceptedGoal.current = goal;
-  // 予測に使った設定（1回の量など）も含めて、応答の値だけで照らし合わせる（snapshot.ts）
+  if (goal && goalQuery.dataUpdatedAt > notBefore) {
+    acceptedGoal.current = goal;
+  }
+
+  // 予測に使った設定も含め、応答の値だけで照合する。
   const consistent = goal && today && logs && fresh ? isSameSnapshot(goal, today, logs) : null;
-  if (goal && today && logs && consistent) lastGood.current = { goal, today, logs };
+  if (goal && today && logs && consistent) {
+    lastGood.current = { goal, today, logs };
+  }
 
   // 食い違いを取り直す。取得中は待ち、そろったら数え直す
   const [resyncs, setResyncs] = useState(0);
   useEffect(() => {
-    if (consistent === true && resyncs !== 0) setResyncs(0);
+    if (consistent === true && resyncs !== 0) {
+      setResyncs(0);
+    }
     if (consistent === false && !fetching && resyncs < MAX_RESYNC) {
       setResyncs((n) => n + 1);
       refresh();
     }
-    // refresh は毎回作り直されるが、取り直しのきっかけは consistent・fetching・resyncs だけにする
+    // refresh の関数参照は変わるが、再取得の契機はこの3値だけに限定する。
   }, [consistent, fetching, resyncs]);
 
-  // Goal の timezone で日付が変わったら取り直す。API の「今日」が進むまで、取得中でなければ確かめるたびに
   const fetchingRef = useRef(fetching);
   fetchingRef.current = fetching;
   const shown = lastGood.current;
   useEffect(() => {
-    if (!shown) return undefined;
+    if (!shown) {
+      return undefined;
+    }
     const check = () => {
-      if (fetchingRef.current) return;
-      if (shouldRefetchForNewDay(shown.goal.timezone, shown.today.today, new Date())) refresh();
+      if (fetchingRef.current) {
+        return;
+      }
+      if (shouldRefetchForNewDay(shown.goal.timezone, shown.today.today, new Date())) {
+        refresh();
+      }
     };
     const timer = setInterval(check, DAY_CHECK_MS);
     return () => clearInterval(timer);
