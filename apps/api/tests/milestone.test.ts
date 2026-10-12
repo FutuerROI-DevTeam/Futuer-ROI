@@ -39,7 +39,11 @@ const expected = (r: MilestoneReport) => ({ expectedGoalSettingsRevision: r.goal
   expectedAnswerRevision: r.answerRevision, expectedParticipationId: r.participationId! });
 async function join(client: Client, goal: Goal) {
   const current = await report(client, goal);
-  check(await client.sendExact('PUT', `${path(goal)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: goal.goalSettingsRevision, expectedConsentRevision: current.consentRevision }), 204);
+  check(await client.sendExact('PUT', `${path(goal)}/participation`, {
+    policyVersion: POLICY,
+    expectedGoalSettingsRevision: goal.goalSettingsRevision,
+    expectedConsentRevision: current.consentRevision,
+  }), 204);
   return report(client, goal);
 }
 async function capture(client: Client, goal: Goal, candidate?: NonNullable<MilestoneReport['artifact']>, status = 201) {
@@ -49,18 +53,30 @@ async function capture(client: Client, goal: Goal, candidate?: NonNullable<Miles
 }
 async function fit(client: Client, goal: Goal) {
   const r = await report(client, goal);
-  return check(await client.sendExact('POST', `${path(goal)}/fits`, { ...expected(r), expectedFitGeneration: r.fitGeneration }), 200).json as unknown as NonNullable<MilestoneReport['artifact']>;
+  return check(await client.sendExact('POST', `${path(goal)}/fits`, {
+    ...expected(r),
+    expectedFitGeneration: r.fitGeneration,
+  }), 200).json as unknown as NonNullable<MilestoneReport['artifact']>;
 }
 async function warm(client: Client, goal: Goal, setDay: (day: number) => void) {
-  for (let d = 0; d <= 3; d++) { setDay(d); await record(client, goal, d, d % 2 ? 'DONE' : 'SKIPPED'); }
+  for (let d = 0; d <= 3; d++) {
+    setDay(d);
+    await record(client, goal, d, d % 2 ? 'DONE' : 'SKIPPED');
+  }
 }
 async function cycle(client: Client, goal: Goal, start: number, setDay: (day: number) => void) {
-  for (let d = start + 1; d <= start + 3; d++) { setDay(d); await record(client, goal, d, d === start + 1 ? 'DONE' : 'SKIPPED'); }
+  for (let d = start + 1; d <= start + 3; d++) {
+    setDay(d);
+    await record(client, goal, d, d === start + 1 ? 'DONE' : 'SKIPPED');
+  }
 }
 async function train(client: Client, goal: Goal, setDay: (day: number) => void) {
   await warm(client, goal, setDay);
   await join(client, goal);
-  for (const start of [3, 6, 9]) { await capture(client, goal); await cycle(client, goal, start, setDay); }
+  for (const start of [3, 6, 9]) {
+    await capture(client, goal);
+    await cycle(client, goal, start, setDay);
+  }
   return fit(client, goal);
 }
 function pauseNextCommit(pool: pg.Pool) {
@@ -73,20 +89,35 @@ function pauseNextCommit(pool: pg.Pool) {
       const query = client.query, release = client.release;
       client.query = ((...q: unknown[]) => {
         if (!claimed && typeof q[0] === 'string' && q[0].trim().toLowerCase() === 'commit') {
-          claimed = true; pool.connect = original;
-          return Promise.resolve(Reflect.apply(query, client, q)).then(async value => { reached = true; await gate; return value; });
+          claimed = true;
+          pool.connect = original;
+          return Promise.resolve(Reflect.apply(query, client, q)).then(async value => {
+            reached = true;
+            await gate;
+            return value;
+          });
         }
         return Reflect.apply(query, client, q);
       }) as typeof client.query;
-      client.release = (...releaseArgs) => { client.query = query; client.release = release; Reflect.apply(release, client, releaseArgs); };
+      client.release = (...releaseArgs) => {
+        client.query = query;
+        client.release = release;
+        Reflect.apply(release, client, releaseArgs);
+      };
       return client;
     });
   }) as typeof pool.connect;
-  return { restore: () => { pool.connect = original; open(); }, wait: async () => {
-    const until = Date.now() + 5000;
-    while (!reached && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 10));
-    assert.equal(reached, true, 'owned transaction did not reach its committed preparation');
-  } };
+  return {
+    restore: () => {
+      pool.connect = original;
+      open();
+    },
+    wait: async () => {
+      const until = Date.now() + 5000;
+      while (!reached && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 10));
+      assert.equal(reached, true, 'owned transaction did not reach its committed preparation');
+    },
+  };
 }
 
 test('#248 defaults OFF with no milestone tables; existing evaluation opt-in is separate', async t => {
@@ -99,10 +130,12 @@ test('#248 defaults OFF with no milestone tables; existing evaluation opt-in is 
   check(await a.sendExact('PUT', `${path(goal)}/participation`, { policyVersion: POLICY, expectedGoalSettingsRevision: 0, expectedConsentRevision: 0 }), 404);
 });
 test('#248 authenticated synthetic HTTP produces nonzero correction and a frozen prospective comparison', async t => {
-  let now = instant(0); const setDay = (d: number) => { now = instant(d); };
+  let now = instant(0);
+  const setDay = (d: number) => { now = instant(d); };
   const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options });
   const a = await signedInClient(stack.app, 'milestone-nonzero'), goal = await create(a);
-  await warm(a, goal, setDay); await join(a, goal);
+  await warm(a, goal, setDay);
+  await join(a, goal);
   for (const start of [3, 6, 9]) {
     const issued = await capture(a, goal);
     assert.equal(issued.q, 10);
@@ -111,7 +144,8 @@ test('#248 authenticated synthetic HTTP produces nonzero correction and a frozen
   }
   const baseline = check(await a.sendExact('GET', `/api/goals/${goal.id}/today?view=r11`), 200).json;
   const artifact = await fit(a, goal);
-  assert.equal(artifact.fit.status, 'FIT'); assert.ok(artifact.fit.u > 0);
+  assert.equal(artifact.fit.status, 'FIT');
+  assert.ok(artifact.fit.u > 0);
   assert.ok(artifact.fit.kktResidual! < 1e-12);
   assert.deepEqual(check(await a.sendExact('GET', `/api/goals/${goal.id}/today?view=r11`), 200).json, baseline);
   const preview = check(await a.sendExact('GET', `${path(goal)}/compare?artifactId=${artifact.id}&artifactHash=${artifact.hash}`), 200).json!;
@@ -121,7 +155,8 @@ test('#248 authenticated synthetic HTTP produces nonzero correction and a frozen
   assert.deepEqual(await capture(a, goal, undefined, 200), issued); // immutable same-day first issuance.
   await cycle(a, goal, 12, setDay);
   const r = await report(a, goal), fourth = r.forecasts.find(f => f.id === issued.id)!;
-  assert.equal(fourth.state, 'EVENT'); assert.equal(fourth.comparison.artifactId, artifact.id);
+  assert.equal(fourth.state, 'EVENT');
+  assert.equal(fourth.comparison.artifactId, artifact.id);
   assert.ok(fourth.milestoneScore.candidate! < fourth.milestoneScore.baseline!);
   assert.equal(fourth.finalScore.extrapolation, true);
   assert.equal(fourth.finalScore.baseline, fourth.finalScore.candidate); // early nonarrival is structural zero for this long final target.
@@ -136,7 +171,8 @@ test('#248 authenticated synthetic HTTP produces nonzero correction and a frozen
   assert.equal(stored.milestone.computation.method, 'BETA_BINOMIAL');
 });
 test('#248 authentication, owner/Goal separation, strict input and single active episode', async t => {
-  let now = instant(0); const setDay = (d: number) => { now = instant(d); };
+  let now = instant(0);
+  const setDay = (d: number) => { now = instant(d); };
   const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options, evaluation: { enabled: true, buildVersion: 'synthetic-evaluation' } });
   const a = await signedInClient(stack.app, 'milestone-owner'), b = await signedInClient(stack.app, 'milestone-other');
   const anon = new Client(stack.app, 'http://127.0.0.1:3000'), goal = await create(a), other = await create(a);
@@ -153,7 +189,8 @@ test('#248 authentication, owner/Goal separation, strict input and single active
   check(await a.sendExact('POST', `${path(goal)}/forecasts`, expected(r), { origin: 'https://untrusted.example.test' }), 403);
   check(await b.sendExact('POST', `${path(goal)}/forecasts`, expected(r)), 404);
   await capture(a, goal);
-  setDay(4); await record(a, goal, 4, 'DONE');
+  setDay(4);
+  await record(a, goal, 4, 'DONE');
   check(await a.sendExact('POST', `${path(goal)}/forecasts`, expected(await report(a, goal))), 409);
   assert.equal((await db.pool.query('select count(*)::int as n from milestone_forecast')).rows[0]!.n, 1);
   // FK binds participant, Goal and owner even below the route boundary.
@@ -162,13 +199,15 @@ test('#248 authentication, owner/Goal separation, strict input and single active
     values($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [randomUUID(), other.id, p.user_id, p.id, date(3), instant(3), instant(50), { schemaVersion: 'session-milestone-forecast-v1' }, 'a'.repeat(64)]), (error: unknown) => (error as { code: string }).code === '23503');
 });
 test('#248 late corrections/settings invalidate; expiry, withdrawal and Goal deletion purge only derived state', async t => {
-  let now = instant(0); const setDay = (d: number) => { now = instant(d); };
+  let now = instant(0);
+  const setDay = (d: number) => { now = instant(d); };
   const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options });
   const a = await signedInClient(stack.app, 'milestone-lifecycle'), goal = await create(a);
   const artifact = await train(a, goal, setDay);
   await db.pool.query("update action_log set status='SKIPPED',amount=null where goal_id=$1 and local_date=$2", [goal.id, date(4)]);
   let r = await report(a, goal);
-  assert.equal(r.artifact!.valid, false); assert.equal(r.artifact!.fit.u, 0);
+  assert.equal(r.artifact!.valid, false);
+  assert.equal(r.artifact!.fit.u, 0);
   assert.equal(r.artifact!.fit.reason, 'TRAINING_INPUT_CHANGED');
   check(await a.sendExact('GET', `${path(goal)}/compare?artifactId=${artifact.id}&artifactHash=${artifact.hash}`), 409);
   const changed = check(await a.sendExact('PATCH', `/api/goals/${goal.id}`, { expectedGoalSettingsRevision: 0, title: 'changed synthetic title' }), 200).json as unknown as Goal;
@@ -184,7 +223,8 @@ test('#248 late corrections/settings invalidate; expiry, withdrawal and Goal del
   assert.notEqual(newState.participationId, oldId);
   check(await a.sendExact('DELETE', `${path(changed)}/participation`, { expectedParticipationId: oldId }), 409);
   await capture(a, changed);
-  const expires = new Date(newState.participationExpiresAt!); now = expires;
+  const expires = new Date(newState.participationExpiresAt!);
+  now = expires;
   assert.equal((await report(a, changed)).participating, false);
   assert.equal((await db.pool.query('select count(*)::int as n from milestone_forecast')).rows[0]!.n, 1); // filtered is not physically purged.
   await purgeExpiredMilestone(db.pool, now);
@@ -195,27 +235,36 @@ test('#248 late corrections/settings invalidate; expiry, withdrawal and Goal del
   assert.equal((await db.pool.query('select count(*)::int as n from milestone_participation')).rows[0]!.n, 0);
 });
 test('#248 preparation races reject changed logs and withdrawn/rejoined fit generation', async t => {
-  let now = instant(0); const setDay = (d: number) => { now = instant(d); };
+  let now = instant(0);
+  const setDay = (d: number) => { now = instant(d); };
   const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options });
   const a = await signedInClient(stack.app, 'milestone-race'), goal = await create(a);
-  await warm(a, goal, setDay); let r = await join(a, goal);
-  const captureGate = pauseNextCommit(db.pool); t.after(captureGate.restore);
+  await warm(a, goal, setDay);
+  let r = await join(a, goal);
+  const captureGate = pauseNextCommit(db.pool);
+  t.after(captureGate.restore);
   const pending = a.sendExact('POST', `${path(goal)}/forecasts`, expected(r));
-  await captureGate.wait(); await record(a, goal, 3, 'DONE', 11); captureGate.restore();
+  await captureGate.wait();
+  await record(a, goal, 3, 'DONE', 11);
+  captureGate.restore();
   check(await pending, 409);
   assert.equal((await db.pool.query('select count(*)::int as n from milestone_forecast')).rows[0]!.n, 0);
   await capture(a, goal);
   r = await report(a, goal);
-  const fitGate = pauseNextCommit(db.pool); t.after(fitGate.restore);
+  const fitGate = pauseNextCommit(db.pool);
+  t.after(fitGate.restore);
   const fitting = a.sendExact('POST', `${path(goal)}/fits`, { ...expected(r), expectedFitGeneration: r.fitGeneration });
   await fitGate.wait();
   check(await a.sendExact('DELETE', `${path(goal)}/participation`, { expectedParticipationId: r.participationId! }), 204);
-  const restarted = await join(a, goal); assert.notEqual(restarted.participationId, r.participationId);
-  fitGate.restore(); check(await fitting, 409);
+  const restarted = await join(a, goal);
+  assert.notEqual(restarted.participationId, r.participationId);
+  fitGate.restore();
+  check(await fitting, 409);
   assert.equal((await db.pool.query('select count(*)::int as n from milestone_artifact')).rows[0]!.n, 0);
 });
 test('#248 compare reports expected domain states rather than internal errors', async t => {
-  let now = instant(0); const setDay = (d: number) => { now = instant(d); };
+  let now = instant(0);
+  const setDay = (d: number) => { now = instant(d); };
   const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options });
   const a = await signedInClient(stack.app, 'milestone-compare-state'), goal = await create(a);
   const artifact = await train(a, goal, setDay);
@@ -260,14 +309,20 @@ test('#248 accepted JOIN replay cannot restore consent after withdrawal or expir
 });
 
 test('#248 question-supported forecast remains EVENT after the first DONE changes only unitLocked', async t => {
-  let now = instant(0); const setDay = (d: number) => { now = instant(d); };
+  let now = instant(0);
+  const setDay = (d: number) => { now = instant(d); };
   const { db, stack } = await setup(t, { now: () => now, milestoneCalibration: options });
   const a = await signedInClient(stack.app, 'milestone-first-done');
   const goal = await create(a, { ...input, questionPrior: { a: 'HIGH', b: 'HIGH' } });
   assert.equal(goal.unitLocked, false);
-  for (let d = 0; d <= 3; d++) { setDay(d); await record(a, goal, d, 'SKIPPED'); }
+  for (let d = 0; d <= 3; d++) {
+    setDay(d);
+    await record(a, goal, d, 'SKIPPED');
+  }
   const r = await join(a, goal), issued = await capture(a, goal);
-  setDay(4); await record(a, goal, 4, 'DONE'); setDay(6);
+  setDay(4);
+  await record(a, goal, 4, 'DONE');
+  setDay(6);
   const current = await report(a, goal), observed = current.forecasts.find(f => f.id === issued.id)!;
   assert.equal(observed.state, 'EVENT');
   assert.deepEqual(observed.observation, { kind: 'EVENT', lower: 0, upper: 1 });

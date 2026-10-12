@@ -88,7 +88,10 @@ function pauseSnapshot(pool: pg.Pool) {
   }) as typeof pool.connect;
   return {
     open,
-    restore: () => { pool.connect = connect; open(); },
+    restore: () => {
+      pool.connect = connect;
+      open();
+    },
     wait: async () => {
       const deadline = Date.now() + 5_000;
       while (!reached && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
