@@ -15,7 +15,16 @@ const questions: Readonly<Record<Origin, string>> = {
 };
 const origins: readonly Origin[] = ["a", "b"];
 
-export function QuestionPriorFields({ value, onChange, disabled = false, fieldErrors = {}, className, externalHeadingId, chosen, onChoose }: QuestionPriorFieldsProps) {
+export function QuestionPriorFields({
+  value,
+  onChange,
+  disabled = false,
+  fieldErrors = {},
+  className,
+  externalHeadingId,
+  chosen,
+  onChoose,
+}: QuestionPriorFieldsProps) {
   if (externalHeadingId !== undefined && (typeof externalHeadingId !== "string" || !/^\S+$/.test(externalHeadingId))) {
     throw new TypeError("externalHeadingId must identify one existing visible heading.");
   }
@@ -43,7 +52,11 @@ export function QuestionPriorFields({ value, onChange, disabled = false, fieldEr
                     checked={(chosen?.[origin] ?? true) && value[origin] === option.value}
                     aria-describedby={error ? errorId : undefined}
                     aria-invalid={error ? true : undefined}
-                    onChange={() => { if (disabled) return; onChoose?.(origin); onChange({ ...value, [origin]: option.value }); }} />
+                    onChange={() => {
+                      if (disabled) return;
+                      onChoose?.(origin);
+                      onChange({ ...value, [origin]: option.value });
+                    }} />
                   {option.label}
                 </label>
               );
