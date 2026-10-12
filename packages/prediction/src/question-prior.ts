@@ -1,13 +1,28 @@
 import { DEFAULT_CONFIG } from './config.js';
-import { evaluateQuestionPriorAdapterCandidate, QuestionPriorAdapterCandidateError } from './question-prior-adapter-candidate.js';
-import type { QuestionPriorPredictionInput, QuestionPriorPredictionConfig, QuestionPriorPredictionResult,
-  QuestionPriorEvaluation, QuestionPriorValidationCause } from './question-prior-types.js';
+import {
+  evaluateQuestionPriorAdapterCandidate,
+  QuestionPriorAdapterCandidateError,
+} from './question-prior-adapter-candidate.js';
+import type {
+  QuestionPriorPredictionInput,
+  QuestionPriorPredictionConfig,
+  QuestionPriorPredictionResult,
+  QuestionPriorEvaluation,
+  QuestionPriorValidationCause,
+} from './question-prior-types.js';
 
 // #133: 依頼者承認されたR-11の公開境界。数値核と旧predictはそのまま使う。
 // mappingは保存時snapshotからserverが渡す。HTTP clientからBetaを受け取らない。
-export type { QuestionPriorAnswer, QuestionPriorAnswers, QuestionPriorMapping, QuestionPriorPredictionInput,
-  QuestionPriorPredictionConfig, QuestionPriorEvidenceSource, QuestionPriorPredictionResult,
-  QuestionPriorEvaluation } from './question-prior-types.js';
+export type {
+  QuestionPriorAnswer,
+  QuestionPriorAnswers,
+  QuestionPriorMapping,
+  QuestionPriorPredictionInput,
+  QuestionPriorPredictionConfig,
+  QuestionPriorEvidenceSource,
+  QuestionPriorPredictionResult,
+  QuestionPriorEvaluation,
+} from './question-prior-types.js';
 
 export class QuestionPriorError extends TypeError {
   readonly kind: 'input' | 'config';
@@ -22,8 +37,10 @@ export class QuestionPriorError extends TypeError {
   }
 }
 
-export function predictWithQuestionPrior(input: QuestionPriorPredictionInput,
-  config: QuestionPriorPredictionConfig = DEFAULT_CONFIG): QuestionPriorEvaluation {
+export function predictWithQuestionPrior(
+  input: QuestionPriorPredictionInput,
+  config: QuestionPriorPredictionConfig = DEFAULT_CONFIG,
+): QuestionPriorEvaluation {
   try {
     // adapterは両方の材料がある場合も完了予測を二重に計算しない。
     const adapterResult = evaluateQuestionPriorAdapterCandidate(input, config);
@@ -39,10 +56,17 @@ export function predictWithQuestionPrior(input: QuestionPriorPredictionInput,
       completion: adapterResult.completion,
       config: adapterResult.config,
     };
-    return { prediction, provenance: adapterResult.evidenceSource,
-      plan: !prediction.progress.completed && prediction.completion.status === 'insufficient' ? adapterResult.conditionalPlan : null };
+    return {
+      prediction,
+      provenance: adapterResult.evidenceSource,
+      plan: !prediction.progress.completed && prediction.completion.status === 'insufficient'
+        ? adapterResult.conditionalPlan
+        : null,
+    };
   } catch (error) {
-    if (error instanceof QuestionPriorAdapterCandidateError) throw new QuestionPriorError(error);
+    if (error instanceof QuestionPriorAdapterCandidateError) {
+      throw new QuestionPriorError(error);
+    }
     throw error;
   }
 }

@@ -47,11 +47,15 @@ export interface CompletionComputation {
 }
 
 export type Completion =
-  | { status: 'available'; scenario: 'TODAY_DONE' | 'CURRENT_STATE';
-      p50Days: number | null; p80Days: number | null;
+  | {
+      status: 'available';
+      scenario: 'TODAY_DONE' | 'CURRENT_STATE';
+      p50Days: number | null;
+      p80Days: number | null;
       // Engine内部の診断情報。HTTP serializerは既存DTOだけを返し、この項目を公開しない。
       // 旧保存fixtureの読取互換のため任意だが、新しいavailable結果は常に実方式を返す。
-      computation?: CompletionComputation }
+      computation?: CompletionComputation;
+    }
   | { status: 'insufficient'; reason: 'NO_DONE_ORIGIN_TRANSITION' | 'NO_SKIP_ORIGIN_TRANSITION' }
   | { status: 'completed' };
 
