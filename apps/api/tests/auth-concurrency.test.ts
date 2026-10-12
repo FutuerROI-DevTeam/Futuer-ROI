@@ -50,12 +50,12 @@ test('DB保存の認証制限は2instanceへの並列sign-in/sign-up・再起動
   async function start(): Promise<Stack> {
     const authPool = createAuthPool({ connectionString: db.connectionString, max: 2 });
     try {
-      const auth = createAuth({ pool: authPool, secret, baseURL: origin, signInMax: max, signUpMax: max });
+      const auth = createAuth({ pool: authPool, secret, baseURL: origin, signInMax: max, signUpMax: max, resetMax: max, mailer: async () => {} });
       const app = await buildApp({
         pool: db.pool, logger: false,
         auth: { instance: auth, baseURL: origin, allowedOrigins: [origin], trustProxyHops: 1 },
       });
-      const stack = { app, close: async () => { try { await app.close(); } finally { await authPool.end(); } } };
+      const stack = { app, mails: [], close: async () => { try { await app.close(); } finally { await authPool.end(); } } };
       stacks.push(stack);
       return stack;
     } catch (error) {

@@ -1,11 +1,13 @@
 import { buildApp } from './app.ts';
+import { createMailer } from './auth/mail-transport.ts';
 import { createAuth } from './auth/options.ts';
-import { loadAuthConfig, loadConfig } from './config.ts';
+import { loadAuthConfig, loadConfig, loadMailConfig } from './config.ts';
 import { createAppPool, createAuthPool } from './db/pool.ts';
 import { loadEvaluationOptions } from './evaluation/policy.ts';
 
 const config = loadConfig();
 const authConfig = loadAuthConfig(process.env, config);
+const mailConfig = loadMailConfig(process.env);
 const pool = createAppPool({ connectionString: config.databaseUrl });
 // 認証は専用pool（int8を数値で読む）。接続数はアプリ用5＋認証用2を合算してDB側の上限と比べる。
 const authPool = createAuthPool({ connectionString: config.databaseUrl });
@@ -16,6 +18,8 @@ const auth = createAuth({
   trustedOrigins: authConfig.trustedOrigins,
   signInMax: authConfig.signInMax,
   signUpMax: authConfig.signUpMax,
+  resetMax: authConfig.resetMax,
+  mailer: createMailer(mailConfig),
 });
 const app = await buildApp({
   pool,
@@ -56,4 +60,4 @@ process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
 
 await app.listen({ host: config.host, port: config.port });
-app.log.info({ baseURL: authConfig.baseURL, trustProxyHops: authConfig.trustProxyHops }, 'auth: configured');
+app.log.info({ baseURL: authConfig.baseURL, trustProxyHops: authConfig.trustProxyHops, mailTransport: mailConfig.transport }, 'auth: configured');

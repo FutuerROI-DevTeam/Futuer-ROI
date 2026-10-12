@@ -163,8 +163,23 @@ Evidenceは[Compose検証](../scripts/smoke-compose.sh)と[Application CI](../.g
 | session更新とlogout故障 | 保護APIでgetSessionが返す複数のSet-Cookieを転送し、DB expiry延長とCookie更新を揃える。画面は通信例外・API errorを表示しbusyをfinallyで解除、logout error時は遷移しない。#215で[削除確認hook](../apps/api/src/auth/sign-out.ts)を追加する（[失敗契約](#ログアウトの失敗と明示再試行215)） | Cookie消去前に署名tokenのDB削除完了を待つ。失敗・結果不明は503 `SIGN_OUT_UNCONFIRMED`、Cookie保持、明示再試行。503時の旧Cookie失効は保証しない。公開HTTPS・復旧担当等のD-24残条件は維持 |
 | Cookie | HttpOnly・SameSite=Lax・Path=/。`BETTER_AUTH_URL`がhttpsなら`Secure`と`__Secure-`接頭辞。本番（`NODE_ENV=production`）はhttpsのURLを必須にし、ローカルのコンテナ確認だけ`BETTER_AUTH_ALLOW_HTTP=1`で許可 | staging／本番で`Secure`が付かない設定ミスを起動時に止める |
 | 回数制限 | DB保存（`rateLimit`表）。1 IPあたり60秒にsign-in／sign-up各5回（`AUTH_SIGN_IN_MAX`／`AUTH_SIGN_UP_MAX`で上書き）、その他の認証endpointは100回。429の`X-Retry-After`は整数秒で、画面は残り秒数を数えて表示し、経過後に再試行できる | 再起動・複数instance・並列要求をまたいで効く（#84で実測）。現行アプリの[並列受入回帰](../apps/api/tests/auth-concurrency.test.ts)（#142）で、2instance・IP/endpoint隔離・拒否時のDB不変・再起動・期限切れ窓からの並列再開を確認する。共有回線のデモ会場向けの上限は未合意のため環境変数で変えられる |
-| Secret・URL | `BETTER_AUTH_SECRET`（本番必須、32文字以上。開発では`apps/api/.local/auth-secret`に自動生成）、`BETTER_AUTH_URL`（本番必須）、`AUTH_TRUSTED_ORIGINS`（任意）、`TRUST_PROXY_HOPS`（既定0） | 実値をGitへ入れず、開発者ごとの生成を手順から外す。proxyのhop数は公開先の実形式で確認する（#83） |
+| Secret・URL | `BETTER_AUTH_SECRET`（本番必須、32文字以上。開発では`apps/api/.local/auth-secret`に自動生成）、`BETTER_AUTH_URL`（本番必須）、`AUTH_TRUSTED_ORIGINS`（任意）、`TRUST_PROXY_HOPS`（既定0）。パスワード再設定メールの`MAIL_TRANSPORT`／`RESEND_API_KEY`／`MAIL_FROM`は[#256](#パスワード再設定256) | 実値をGitへ入れず、開発者ごとの生成を手順から外す。proxyのhop数は公開先の実形式で確認する（#83） |
 | 画面 | `/`は公開トップ（P-16）。`/login`・`/register`は[AuthPage](../apps/web/src/routes/AuthPage.tsx)。[router](../apps/web/src/router.tsx)はURLに現れない2つのまとまり（pathless layout route）で分ける：認証画面はログイン済みなら戻り先へ移り、Goalの5つの保護route（一覧・作成・Today・編集・履歴）はログインの確認を1か所で行う（未ログインは元のURLを戻り先にログインへ、確認できない通信失敗はログインへ送らず「接続できませんでした」）。ログイン後・ログアウト後は履歴を置き換える。戻り先はアプリ内pathだけ。ログアウトはmobileではGoal一覧、desktopでは全5保護routeで共有するAppShellのアカウントメニューから行う。セッション切れ（401）は理由付き（`reason=expired`）で再ログインへ誘導。404・エラー・読込中はルーター全体の既定の画面。Goalの記録の履歴は`/goals/$goalId/history`（カレンダー）。デスクトップ幅ではログイン必須の画面の外側（AppShell）に画面全体の上のバーを出す。上のバーは1段にし、Goalの作成・編集と記録の履歴では画面ごとの上のバーの代わりに戻り先と見出し（[DeskHeader](../apps/web/src/ui/components/DeskHeader.tsx)）を出す（#146） | R-01の画面要件。Goal・記録の画面は#78〜#81、デザインに合わせた画面とルート構成は#146 |
+
+#### パスワード再設定（#256）
+
+目的は、パスワードを忘れた本人が自分で再設定できること。固定版Better Auth 1.7.7はトークン生成・`verification`表への保存（1時間）・再設定URLの組み立てと、`/reset-password`での新パスワード保存を持つが、メール送信は`emailAndPassword.sendResetPassword`へ渡した関数が担い、未設定なら`/request-password-reset`を400 `RESET_PASSWORD_DISABLED`で拒否する。SDKには文面もテンプレートも無い。
+
+| 決める部分 | 採用 | 理由 |
+| --- | --- | --- |
+| 文面 | [reset-mail.ts](../apps/api/src/auth/reset-mail.ts)の純粋関数で日本語の件名・text・HTMLを作る。URLはHTMLでescape | 送信手段と切り離してテストする。利用者の言語は日本語（P-11） |
+| 送信手段 | [mailer.ts](../apps/api/src/auth/mailer.ts)。本番はResendのHTTP API（SDKを増やさずfetch 1本、10秒timeout）。`MAIL_TRANSPORT=log`は送らずpino互換JSONで本文を標準出力へ出す。選択は[mail-transport.ts](../apps/api/src/auth/mail-transport.ts) | 2026-10-12のチーム決定でResendを採用。Compose・smoke・開発は外部送信も資格情報も不要にする。Resendの応答本文は宛先を含み得るため例外・ログに入れない |
+| 設定 | `MAIL_TRANSPORT`（既定: 本番resend／他log）、`RESEND_API_KEY`、`MAIL_FROM`、`AUTH_RESET_MAX`（既定5）。本番で送信元・キーが無ければ起動時に拒否（[config.ts](../apps/api/src/config.ts)）。常駐server・Vercel entry・container-startで同じ検査 | 送れない本番を配信してから気付かない。Secretの実値はエラーへ出さない |
+| 失敗の扱い | SDKの`runInBackgroundOrAwait`は現設定（`backgroundTasks.handler`なし）では送信関数の完了を待ち、例外は自身のloggerへERRORを出して200を返す。アプリはこれを変えない | 登録の有無をstatusで漏らさないSDKの設計に従う。完了を待つためVercel Functionでも応答前に送信が終わる。送信失敗はサーバーログで検知する（監視は未整備） |
+| 回数制限 | `/request-password-reset`・`/reset-password`を1 IPあたり60秒に`AUTH_RESET_MAX`回。他endpointと同じDB保存 | 大量のメール要求でResendの枠を消費させない |
+| 画面 | ログイン画面の「パスワードを忘れた方」→[ForgotPasswordPage](../apps/web/src/routes/ForgotPasswordPage.tsx)（`/forgot-password`）→メールのURL（`/api/auth/reset-password/<token>?callbackURL=<origin>/reset-password`）→[ResetPasswordPage](../apps/web/src/routes/ResetPasswordPage.tsx)（`/reset-password?token=`／`?error=INVALID_TOKEN`）。判定は[reset.ts](../apps/web/src/auth/reset.ts)。要求後は登録の有無を区別せず「メールを送りました」、無効・期限切れ・使用済みは「このリンクは使えません」から再要求へ。保存後は自動ログインせずログインへ | 既存の認証画面（検査・429の待ち・エラー表示）の形に合わせる。戻り先は今開いているoriginの絶対URLにして、開発時のVite（5173）でも`trustedOrigins`の検査を通す |
+
+Evidence: [API回帰](../apps/api/tests/password-reset.test.ts)（要求→メール捕捉→リンク→保存→旧パスワード401／新パスワード200、未登録でも同じ応答、無効トークンのredirectと400、短いパスワード、429、送信失敗時の200）、[送信・設定回帰](../apps/api/tests/mailer.test.ts)（文面・Resend要求の形・失敗時の秘匿・log出力・設定検証）、[画面判定回帰](../apps/web/tests/password-reset.test.mjs)。Resendの実配送・ドメイン認証・公開HTTPSでのリンク到達は未確認で、Resendのアカウント作成はチーム作業。
 
 #### ログアウトの失敗と明示再試行（#215）
 

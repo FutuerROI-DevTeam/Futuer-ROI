@@ -43,7 +43,7 @@ Application CIの専用jobは秘密値・DBなしで`NODE_ENV=production`と実`
 公開操作が承認された段階で担当者が行うこと：
 
 1. 統合SHA、本人アカウント、無料条件・非商用適合・Organization接続条件を確認し、rootをrepository root、Framework PresetをOther、実Node版を記録する。`vercel.json`のbuild/install設定と実生成物を照合する。
-2. 承認された管理経路で`NODE_ENV=production`、`DATABASE_URL`、`BETTER_AUTH_SECRET`、公開HTTPSと一致する`BETTER_AUTH_URL`を設定する。値をGit・Issue・ログへ書かない。proxy実測に基づく設定判断は既存#83のゲートで行う。
+2. 承認された管理経路で`NODE_ENV=production`、`DATABASE_URL`、`BETTER_AUTH_SECRET`、公開HTTPSと一致する`BETTER_AUTH_URL`、パスワード再設定メール用の`RESEND_API_KEY`と`MAIL_FROM`（または送らない確認だけなら`MAIL_TRANSPORT=log`）を設定する。値をGit・Issue・ログへ書かない。proxy実測に基づく設定判断は既存#83のゲートで行う。
 3. 既存migrationをHTTPと分け、直結URLをその実行の`DATABASE_URL`へ供給して認証→アプリの順に実行する。`DIRECT_DATABASE_URL`という自動読取機能は既存CLIにない。schema確認・backup・復旧の受入も既存手順に従う。
 4. 実配備物でルート・query/body・全Set-Cookie・認可・SPA／フォント配信、app/auth両poolの実idle解放と休止後応答、公開runtime互換性・性能を確認する。未確認なら#83を完了にしない。
 

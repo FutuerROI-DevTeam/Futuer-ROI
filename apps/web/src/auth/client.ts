@@ -23,6 +23,10 @@ export function describeAuthError(code: string | undefined, fallback: string | u
       return 'パスワードが短すぎます。8文字以上にしてください。';
     case 'INVALID_EMAIL':
       return 'メールアドレスの形式が正しくありません。';
+    case 'INVALID_TOKEN':
+      return '再設定のリンクが無効か、有効期限が切れています。もう一度、再設定メールを送ってください。';
+    case 'RESET_PASSWORD_DISABLED':
+      return 'パスワードの再設定は現在利用できません。管理者に連絡してください。';
     default:
       return fallback || '処理に失敗しました。時間をおいて再試行してください。';
   }

@@ -103,6 +103,21 @@
   right: var(--fr-space-1);
 }
 
+/* 「パスワードを忘れた方」など、フォーム内の補助リンク（右寄せ・押しやすい高さ） */
+.fr-auth__aside {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: calc(-1 * var(--fr-space-2));
+  font-size: var(--fr-fs-help);
+}
+.fr-auth__done {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fr-space-4);
+  font-size: var(--fr-fs-body);
+  line-height: var(--fr-lh-body);
+}
+
 /* 公開トップ（P-16） */
 .fr-auth__lead {
   font-size: var(--fr-fs-body);

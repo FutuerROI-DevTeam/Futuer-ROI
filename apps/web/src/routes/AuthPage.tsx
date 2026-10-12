@@ -166,6 +166,11 @@ export function AuthPage({ mode, redirectTo, reason }: { mode: AuthMode; redirec
               </button>
             </div>
           </Field>
+          {mode === 'login' ? (
+            <p className="fr-auth__aside">
+              <Link to="/forgot-password" search={{ redirect: '/goals' }} className="fr-auth__link">{c.forgotLink}</Link>
+            </p>
+          ) : null}
           <Button type="submit" variant="primary" block busy={busy} disabled={wait !== null} {...(wait ? { icon: 'clock' as const } : {})}>
             {busy ? c.sending[mode] : wait ? c.waitButton(wait.clock, action) : c.submit[mode]}
           </Button>

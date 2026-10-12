@@ -52,7 +52,7 @@ export async function signOutFixture(baseURL = 'http://app.test') {
     return adapter;
   };
   // createAuthの設定は現行通り。テストのDB I/O factoryだけをPoolの位置へ渡す。
-  const auth = createAuth({ pool: database as unknown as Pool, secret: 'synthetic-test-only-secret-at-least-32-characters', baseURL, signInMax: 100, signUpMax: 100 });
+  const auth = createAuth({ pool: database as unknown as Pool, secret: 'synthetic-test-only-secret-at-least-32-characters', baseURL, signInMax: 100, signUpMax: 100, resetMax: 100, mailer: async () => {} });
   const context = await auth.$context;
   // 故障時のSDKログにCookieやDB実値を出さない。SDKの制御フローは変えない。
   context.logger.error = () => {};
